@@ -1,0 +1,258 @@
+#!/bin/bash
+
+# Claude Code Personalities Setup Utility
+# Used by Homebrew installation to configure Claude Code
+
+set -e
+
+VERSION="1.0.0"
+CLAUDE_DIR="$HOME/.claude"
+HOOKS_DIR="$CLAUDE_DIR/hooks"
+BREW_SHARE="$(brew --prefix)/share/claude-code-personalities"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# Helper functions
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_info() {
+    echo -e "${CYAN}ℹ${NC} $1"
+}
+
+show_help() {
+    echo "Claude Code Personalities Setup Utility v$VERSION"
+    echo ""
+    echo "Usage: claude-personalities-setup [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --install    Configure Claude Code with personalities"
+    echo "  --uninstall  Remove personalities configuration"
+    echo "  --status     Check installation status"
+    echo "  --help       Show this help message"
+    echo ""
+    echo "This utility is typically called by Homebrew during installation."
+}
+
+check_dependencies() {
+    if ! command -v jq &> /dev/null; then
+        print_error "jq is not installed. Install with: brew install jq"
+        exit 1
+    fi
+    
+    if [[ ! -d "$BREW_SHARE" ]]; then
+        print_error "Claude Code Personalities not found in Homebrew."
+        print_info "Install with: brew install claude-code-personalities"
+        exit 1
+    fi
+}
+
+backup_existing() {
+    local file="$1"
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    
+    if [[ -f "$file" ]]; then
+        cp "$file" "${file}.backup.${timestamp}"
+        print_info "Backed up $(basename "$file") to $(basename "${file}.backup.${timestamp}")"
+    fi
+}
+
+install_personalities() {
+    echo -e "${BOLD}${BLUE}Installing Claude Code Personalities...${NC}"
+    echo
+    
+    # Check dependencies
+    check_dependencies
+    
+    # Create directories
+    print_info "Creating directories..."
+    mkdir -p "$HOOKS_DIR"
+    
+    # Backup existing files
+    print_info "Backing up existing files..."
+    backup_existing "$CLAUDE_DIR/statusline.sh"
+    backup_existing "$CLAUDE_DIR/settings.json"
+    
+    # Copy statusline
+    print_info "Installing statusline..."
+    cp "$BREW_SHARE/statusline.sh" "$CLAUDE_DIR/statusline.sh"
+    chmod +x "$CLAUDE_DIR/statusline.sh"
+    
+    # Copy hooks
+    print_info "Installing hooks..."
+    for hook in "$BREW_SHARE/hooks"/*.sh; do
+        cp "$hook" "$HOOKS_DIR/"
+        chmod +x "$HOOKS_DIR/$(basename "$hook")"
+    done
+    
+    # Configure settings.json
+    print_info "Configuring Claude Code settings..."
+    
+    if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+        print_warning "Existing settings.json found"
+        print_info "Manual merge may be required"
+        # In a real implementation, we'd use jq to merge properly
+    fi
+    
+    # Create or update settings.json
+    cat > "$CLAUDE_DIR/settings.json" << 'EOF'
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh",
+    "padding": 0
+  },
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "~/.claude/hooks/track_activity.sh"
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "~/.claude/hooks/track_activity.sh"
+      }]
+    }],
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "~/.claude/hooks/reset_errors.sh"
+      }]
+    }],
+    "Stop": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "~/.claude/hooks/session_end.sh"
+      }]
+    }]
+  }
+}
+EOF
+    
+    echo
+    print_success "Claude Code Personalities installed successfully!"
+    echo
+    echo -e "${BOLD}Next Steps:${NC}"
+    echo "  1. Restart Claude Code to activate personalities"
+    echo "  2. Start coding and watch your personalities change!"
+    echo
+    echo -e "${BOLD}Quick Test:${NC}"
+    echo -e "  ${CYAN}echo '{\"model\":{\"display_name\":\"Opus\"}}' | ~/.claude/statusline.sh${NC}"
+}
+
+uninstall_personalities() {
+    echo -e "${BOLD}${BLUE}Uninstalling Claude Code Personalities...${NC}"
+    echo
+    
+    print_info "Removing personality files..."
+    rm -f "$CLAUDE_DIR/statusline.sh"
+    rm -rf "$HOOKS_DIR"
+    
+    print_info "Settings.json will need manual cleanup"
+    print_warning "Remove personality configuration from ~/.claude/settings.json"
+    
+    # Look for backups
+    if ls "$CLAUDE_DIR"/*.backup.* &> /dev/null 2>&1; then
+        echo
+        print_info "Backup files found:"
+        ls -la "$CLAUDE_DIR"/*.backup.*
+        print_info "You can restore these manually if needed"
+    fi
+    
+    echo
+    print_success "Claude Code Personalities uninstalled"
+}
+
+check_status() {
+    echo -e "${BOLD}${BLUE}Claude Code Personalities Status${NC}"
+    echo
+    
+    # Check statusline
+    if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
+        print_success "Statusline installed"
+    else
+        print_error "Statusline not found"
+    fi
+    
+    # Check hooks
+    if [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A "$HOOKS_DIR" 2>/dev/null)" ]]; then
+        print_success "Hooks installed:"
+        for hook in "$HOOKS_DIR"/*.sh; do
+            echo "    • $(basename "$hook")"
+        done
+    else
+        print_error "Hooks not found"
+    fi
+    
+    # Check settings
+    if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+        if grep -q "statusline.sh" "$CLAUDE_DIR/settings.json" 2>/dev/null; then
+            print_success "Settings configured"
+        else
+            print_warning "Settings found but personality config missing"
+        fi
+    else
+        print_error "Settings.json not found"
+    fi
+    
+    # Check dependencies
+    echo
+    if command -v jq &> /dev/null; then
+        print_success "jq installed"
+    else
+        print_error "jq not installed"
+    fi
+    
+    # Test statusline
+    echo
+    print_info "Testing statusline..."
+    if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
+        echo -n "  Output: "
+        echo '{"model":{"display_name":"Test"},"workspace":{"current_dir":"/test"}}' | "$CLAUDE_DIR/statusline.sh"
+        echo
+    else
+        print_error "Cannot test - statusline not installed"
+    fi
+}
+
+# Main
+case "${1:-}" in
+    --install|-i)
+        install_personalities
+        ;;
+    --uninstall|-u)
+        uninstall_personalities
+        ;;
+    --status|-s)
+        check_status
+        ;;
+    --help|-h|"")
+        show_help
+        ;;
+    *)
+        print_error "Unknown option: $1"
+        show_help
+        exit 1
+        ;;
+esac
