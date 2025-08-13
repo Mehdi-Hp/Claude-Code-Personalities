@@ -42,9 +42,9 @@ graph LR
 ├── statusline.sh                 # Main statusline script
 ├── settings.json                 # Claude Code configuration
 └── hooks/
-    ├── track_activity.sh        # Activity monitoring & personality assignment
-    ├── reset_errors.sh          # Resets error counter on new prompts
-    └── session_end.sh           # Cleanup after session ends
+    ├── personalities_track_activity.sh        # Activity monitoring & personality assignment
+    ├── personalities_reset_errors.sh          # Resets error counter on new prompts
+    └── personalities_session_end.sh           # Cleanup after session ends
 ```
 
 ### Temporary State Files
@@ -66,9 +66,9 @@ claude-code-personalities/
 ├── scripts/
 │   └── statusline.sh            # Source statusline script
 ├── hooks/
-│   ├── track_activity.sh       # Source activity hook
-│   ├── reset_errors.sh         # Source error reset hook
-│   └── session_end.sh          # Source session cleanup hook
+│   ├── personalities_track_activity.sh       # Source activity hook
+│   ├── personalities_reset_errors.sh         # Source error reset hook
+│   └── personalities_session_end.sh          # Source session cleanup hook
 ├── Formula/
 │   └── claude-code-personalities.rb  # Homebrew formula
 └── claude-personalities-setup    # Setup utility for Homebrew
@@ -107,9 +107,9 @@ claude-code-personalities/
 - Determines activity icon based on current activity
 - Colors: Bold for personality, gray for separators, colored model indicators
 
-### `hooks/track_activity.sh`
+### `hooks/personalities_track_activity.sh`
 
-**Location**: `~/.claude/hooks/track_activity.sh`  
+**Location**: `~/.claude/hooks/personalities_track_activity.sh`  
 **Purpose**: Monitors Claude's tool usage and assigns personalities  
 **Called by**: PreToolUse and PostToolUse events  
 
@@ -149,16 +149,16 @@ consecutive > 10  →  ┌༼◉ل͟◉༽┐ Hyperfocused Coder
 }
 ```
 
-### `hooks/reset_errors.sh`
+### `hooks/personalities_reset_errors.sh`
 
-**Location**: `~/.claude/hooks/reset_errors.sh`  
+**Location**: `~/.claude/hooks/personalities_reset_errors.sh`  
 **Purpose**: Resets error counter when user submits new prompt  
 **Called by**: UserPromptSubmit event  
 **Action**: Writes "0" to error count file  
 
-### `hooks/session_end.sh`
+### `hooks/personalities_session_end.sh`
 
-**Location**: `~/.claude/hooks/session_end.sh`  
+**Location**: `~/.claude/hooks/personalities_session_end.sh`  
 **Purpose**: Cleans up temporary files after session  
 **Called by**: Stop event  
 **Action**: Removes state and error files for the session  
@@ -180,27 +180,27 @@ consecutive > 10  →  ┌༼◉ل͟◉༽┐ Hyperfocused Coder
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "PostToolUse": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/reset_errors.sh"
+        "command": "~/.claude/hooks/personalities_reset_errors.sh"
       }]
     }],
     "Stop": [{
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/session_end.sh"
+        "command": "~/.claude/hooks/personalities_session_end.sh"
       }]
     }]
   }
@@ -310,7 +310,7 @@ echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | ~
 ### Test Hooks
 ```bash
 # Test activity tracking
-echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | ~/.claude/hooks/track_activity.sh
+echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | ~/.claude/hooks/personalities_track_activity.sh
 
 # Check state file
 cat /tmp/claude_activity_test.json
@@ -359,7 +359,7 @@ CLAUDE_DIR=/custom/path     # Use custom Claude directory
 ```
 
 ### Custom Personalities
-Edit `~/.claude/hooks/track_activity.sh` to add custom personalities:
+Edit `~/.claude/hooks/personalities_track_activity.sh` to add custom personalities:
 ```bash
 elif echo "$file" | grep -qiE "\.rs$"; then
   personality="🦀 Rust Developer"
@@ -374,7 +374,7 @@ Remove specific hooks from `settings.json` to disable features:
 ## Contributing
 
 1. Fork the repository
-2. Add new personalities to `track_activity.sh`
+2. Add new personalities to `personalities_track_activity.sh`
 3. Test with various Claude Code activities
 4. Submit PR with personality description
 

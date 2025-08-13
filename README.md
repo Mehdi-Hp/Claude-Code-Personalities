@@ -112,7 +112,7 @@ ls -la ~/.claude/statusline.sh
 ls -la ~/.claude/hooks/
 
 # Test hook execution
-echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | ~/.claude/hooks/track_activity.sh
+echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | ~/.claude/hooks/personalities_track_activity.sh
 ```
 
 ## Troubleshooting
@@ -140,7 +140,7 @@ echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js
 
 ### Add Your Own Personalities
 
-Edit `~/.claude/hooks/track_activity.sh` to add custom personalities:
+Edit `~/.claude/hooks/personalities_track_activity.sh` to add custom personalities:
 
 ```bash
 elif echo "$file" | grep -qiE "\.rs$"; then
@@ -151,7 +151,7 @@ elif echo "$file" | grep -qiE "\.go$"; then
 
 ### Adjust Frustration Levels
 
-Modify error thresholds in `track_activity.sh`:
+Modify error thresholds in `personalities_track_activity.sh`:
 
 ```bash
 if (( errors >= 10 )); then
@@ -189,7 +189,7 @@ For implementation details, architecture, and complete personality list, see [CL
 We welcome contributions! To add new personalities:
 
 1. Fork the repository
-2. Add personalities to `hooks/track_activity.sh`
+2. Add personalities to `hooks/personalities_track_activity.sh`
 3. Test with various Claude Code activities
 4. Submit a PR with description
 
