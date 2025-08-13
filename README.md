@@ -34,13 +34,13 @@ Our installer now features:
 ### One-Line Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
 ```
 
 ### Interactive Install
 
 ```bash
-git clone https://github.com/yourusername/claude-code-personalities
+git clone https://github.com/Mehdi-Hp/claude-code-personalities
 cd claude-code-personalities
 ./install.sh
 ```
@@ -49,7 +49,7 @@ cd claude-code-personalities
 ### Homebrew Install
 
 ```bash
-brew tap yourusername/claude-code
+brew tap Mehdi-Hp/claude-code
 brew install claude-code-personalities
 claude-personalities-setup --install
 ```
@@ -205,7 +205,7 @@ We welcome contributions! To add new personalities:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/claude-code-personalities/issues)
+- **Issues**: [GitHub Issues](https://github.com/Mehdi-Hp/claude-code-personalities/issues)
 - **Documentation**: [CLAUDE.md](CLAUDE.md)
 - **Claude Code**: [Official Docs](https://docs.anthropic.com/en/docs/claude-code)
 

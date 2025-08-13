@@ -283,19 +283,19 @@ Icons are defined using UTF-8 byte sequences:
 
 ### Quick Install
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
 ```
 
 ### Interactive Install
 ```bash
-git clone https://github.com/yourusername/claude-code-personalities
+git clone https://github.com/Mehdi-Hp/claude-code-personalities
 cd claude-code-personalities
 ./install.sh
 ```
 
 ### Homebrew
 ```bash
-brew tap yourusername/claude-code
+brew tap Mehdi-Hp/claude-code
 brew install claude-code-personalities
 claude-personalities-setup --install
 ```
