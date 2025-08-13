@@ -45,14 +45,6 @@ cd claude-code-personalities
 ./install.sh
 ```
 
-### Auto Mode (No Prompts)
-
-```bash
-# For CI/CD or automated setups
-./install.sh --auto
-# or
-export CLAUDE_AUTO_INSTALL=true && ./install.sh
-```
 
 ### Homebrew Install
 
