@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Claude Code Personalities - Interactive Quick Installer
+# Claude Code Personalities - Enhanced Interactive Installer with Job Tracking
 # Run: bash install.sh
 # Or: curl -fsSL [url] | bash --auto  (for non-interactive mode)
 
 set -e
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 AUTO_MODE=false
@@ -20,6 +20,9 @@ ICON_EDIT=$(printf '\xef\x81\x84')
 ICON_RUN=$(printf '\xef\x83\xa7')
 ICON_GEAR=$(printf '\xef\x80\x93')
 ICON_ROCKET=$(printf '\xef\x84\xb5')
+ICON_CHECK=$(printf '\xef\x80\x8c')
+ICON_STAR=$(printf '\xef\x80\x85')
+ICON_HEART=$(printf '\xef\x80\x84')
 
 # Check for auto mode
 for arg in "$@"; do
@@ -51,11 +54,17 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 BOLD='\033[1m'
+DIM='\033[2m'
+ITALIC='\033[3m'
 NC='\033[0m'
+
+# Progress tracking
+TOTAL_STEPS=6
+CURRENT_STEP=0
 
 # Helper functions
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${GREEN}${ICON_CHECK}${NC} $1"
 }
 
 print_warning() {
@@ -70,6 +79,43 @@ print_info() {
     echo -e "${CYAN}ℹ${NC} $1"
 }
 
+print_step() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    local percent=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+    local filled=$((CURRENT_STEP * 30 / TOTAL_STEPS))
+    local empty=$((30 - filled))
+    
+    echo
+    echo -e "${BOLD}Progress: [${GREEN}$(printf '%.0s━' $(seq 1 $filled))${DIM}$(printf '%.0s━' $(seq 1 $empty))${NC}${BOLD}] ${percent}%${NC}"
+    echo
+    
+    # Animated rainbow divider
+    local colors=("${RED}" "${YELLOW}" "${GREEN}" "${CYAN}" "${BLUE}" "${MAGENTA}")
+    local divider=""
+    for i in {0..59}; do
+        local color_idx=$((i % 6))
+        divider="${divider}${colors[$color_idx]}✦${NC}"
+    done
+    echo -e "$divider"
+    echo -e "${BOLD}${BLUE}Step $CURRENT_STEP/$TOTAL_STEPS:${NC} ${BOLD}$1${NC}"
+    echo -e "$divider"
+    echo
+}
+
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='⣾⣽⣻⢿⡿⣟⣯⣷'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
 confirm_action() {
     if [[ "$AUTO_MODE" == true ]]; then
         return 0
@@ -77,14 +123,15 @@ confirm_action() {
     
     local message="$1"
     
-    echo -e "${CYAN}$message${NC}"
+    echo -e "${CYAN}${ICON_STAR} $message${NC}"
     echo
-    echo -e "${YELLOW}[Enter] Yes | [q] Quit: ${NC}"
+    echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} to continue or ${BOLD}[q]${NC} to quit: "
     read -n 1 -r response
     echo # Add newline after single char input
     
     if [[ "$response" == "q" ]] || [[ "$response" == "Q" ]]; then
-        echo -e "${YELLOW}Installation cancelled.${NC}"
+        echo
+        echo -e "${YELLOW}${ICON_HEART} Installation cancelled. See you later!${NC}"
         exit 0
     fi
     
@@ -93,40 +140,43 @@ confirm_action() {
 
 # Header
 clear
-echo -e "${BOLD}${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${BLUE}║  ( ꩜ ᯅ ꩜;)⁭⁭ Claude Code Personalities Installer v${VERSION}  ║${NC}"
-echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
+echo
+echo -e "${BOLD}${CYAN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
+echo -e "${BOLD}${CYAN}    ║${NC}  ${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}                  ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}    ║${NC}            ${DIM}Enhanced Installer v${VERSION}${NC}                       ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
+echo -e "${BOLD}${CYAN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
+echo
+echo -e "     ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
+echo -e "        ${ITALIC}on what it's doing - from debugging to git management!${NC}"
 echo
 
 if [[ "$AUTO_MODE" == true ]]; then
     print_info "Running in automatic mode (no prompts)"
 else
-    echo -e "${CYAN}This interactive installer will guide you through the setup.${NC}"
-    echo -e "${CYAN}You'll be prompted before any files are modified.${NC}"
+    echo -e "     ${CYAN}This interactive installer will guide you through the setup.${NC}"
+    echo -e "     ${CYAN}You'll be prompted before any files are modified.${NC}"
 fi
 echo
 
 # Preview
-echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}What this installer does:${NC}"
-echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "  ${CYAN}1.${NC} Check for Claude Code and jq dependencies"
-echo -e "  ${CYAN}2.${NC} Test icon rendering (and provide Nerd Fonts info if needed)"
-echo -e "  ${CYAN}3.${NC} Back up any existing configurations"
-echo -e "  ${CYAN}4.${NC} Install the personality statusline script"
-echo -e "  ${CYAN}5.${NC} Install activity tracking hooks"
-echo -e "  ${CYAN}6.${NC} Configure Claude Code settings"
-echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
+echo -e "  ${BOLD}╭─────────────────────────────────────────────────────────────╮${NC}"
+echo -e "  ${BOLD}│                 ${MAGENTA}Installation Overview${NC}                      ${BOLD}│${NC}"
+echo -e "  ${BOLD}├─────────────────────────────────────────────────────────────┤${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}1.${NC} ${ICON_SEARCH} Check for Claude Code and jq dependencies        ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}2.${NC} ${ICON_CODE} Test icon rendering (Nerd Fonts)                 ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}3.${NC} ${ICON_FOLDER} Back up any existing configurations             ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}4.${NC} ${ICON_EDIT} Install the personality statusline script       ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}5.${NC} ${ICON_GEAR} Install activity tracking hooks                 ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}6.${NC} ${ICON_RUN} Configure Claude Code settings                   ${BOLD}│${NC}"
+echo -e "  ${BOLD}╰─────────────────────────────────────────────────────────────╯${NC}"
 echo
 
 confirm_action "Ready to begin installation?"
 
 # Step 1: Check dependencies
-echo
-echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 1/6:${NC} ${BOLD}Checking dependencies...${NC}"
-echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo
+print_step "Checking dependencies..."
 
 # Check if Claude Code is installed
 if [[ ! -d "$CLAUDE_DIR" ]]; then
@@ -167,24 +217,24 @@ else
 fi
 
 # Step 2: Icon rendering test
+print_step "Testing icon rendering..."
+echo -e "  ${BOLD}Icon Test:${NC}"
 echo
-echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 2/6:${NC} ${BOLD}Testing icon rendering...${NC}"
-echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
+echo -e "  ╭──────────────────────────────────────────────────────────╮"
+echo -e "  │  If you see proper icons below, you're all set!          │"
+echo -e "  │  Otherwise, consider installing Nerd Fonts.               │"
+echo -e "  ╰──────────────────────────────────────────────────────────╯"
 echo
-echo "  The personalities use special icons. Let's test if they render correctly:"
-echo "  (These are the actual icons you'll see in your Claude Code statusline)"
+echo -e "    ${ICON_FOLDER} Folder    ${ICON_EDIT} Edit     ${ICON_SEARCH} Search   ${ICON_RUN} Run"
+echo -e "    ${ICON_BUG} Bug       ${ICON_GEAR} Gear     ${ICON_CODE} Code     ${ICON_ROCKET} Rocket"
 echo
-printf "  %s %s %s %s %s %s %s %s\n" "$ICON_FOLDER" "$ICON_EDIT" "$ICON_SEARCH" "$ICON_RUN" "$ICON_BUG" "$ICON_GEAR" "$ICON_CODE" "$ICON_ROCKET"
-echo
-echo "  If you see boxes, question marks, or garbled text instead of icons,"
-echo "  you should install Nerd Fonts for the best experience:"
-echo -e "  ${CYAN}https://www.nerdfonts.com/font-downloads${NC}"
+echo -e "  ${DIM}If you see boxes or question marks, install Nerd Fonts:${NC}"
 echo -e "  ${CYAN}brew install --cask font-hack-nerd-font${NC}"
+echo -e "  ${DIM}More info: ${CYAN}https://www.nerdfonts.com${NC}"
 echo
-echo -e "${CYAN}Do the icons above display correctly?${NC}"
+echo -e "${CYAN}${ICON_STAR} Do the icons display correctly?${NC}"
 echo
-echo -e "${YELLOW}[Enter] Yes, looks good | [q] Quit: ${NC}"
+echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} if icons look good, ${BOLD}[q]${NC} to quit: "
 read -n 1 -r font_response
 echo
 
@@ -200,11 +250,7 @@ else
 fi
 
 # Step 3: Backup existing files
-echo
-echo -e "${YELLOW}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 3/6:${NC} ${BOLD}Backing up existing files...${NC}"
-echo -e "${YELLOW}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo
+print_step "Backing up existing files..."
 
 BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUPS_MADE=false
@@ -217,14 +263,19 @@ files_to_backup=0
 [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
 
 if [[ $files_to_backup -gt 0 ]]; then
-    echo "  Found existing files that can be backed up:"
-    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "    • ${CYAN}statusline.sh${NC}"
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "    • ${CYAN}settings.json${NC}"
-    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "    • ${CYAN}hooks/${NC}"
+    echo -e "  ${BOLD}${YELLOW}⚠ Found existing Claude Code configuration${NC}"
     echo
-    echo -e "${CYAN}Back up existing files?${NC}"
+    echo -e "  ╭──────────────────────────────────────────────────────────╮"
+    echo -e "  │  The following files will be backed up:                   │"
+    echo -e "  ├──────────────────────────────────────────────────────────┤"
+    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  │  ${ICON_EDIT} ${CYAN}statusline.sh${NC}                                       │"
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  │  ${ICON_GEAR} ${CYAN}settings.json${NC}                                       │"
+    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  │  ${ICON_FOLDER} ${CYAN}hooks/         ${NC}                                      │"
+    echo -e "  ╰──────────────────────────────────────────────────────────╯"
     echo
-    echo -e "${YELLOW}[Enter] Yes, back up | [s] Skip backups | [q] Quit: ${NC}"
+    echo -e "${CYAN}${ICON_STAR} Create backups before proceeding?${NC}"
+    echo
+    echo -ne "  ${GREEN}➜${NC} ${BOLD}[Enter]${NC} to backup | ${BOLD}[s]${NC} skip backups | ${BOLD}[q]${NC} quit: "
     read -n 1 -r backup_response
     echo
     
@@ -259,11 +310,7 @@ else
 fi
 
 # Step 4: Install statusline
-echo
-echo -e "${GREEN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 4/6:${NC} ${BOLD}Installing personality statusline...${NC}"
-echo -e "${GREEN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo
+print_step "Installing personality statusline..."
 echo -e "  ${CYAN}Purpose:${NC} Displays text-face personalities and status icons"
 echo -e "  ${CYAN}Target:${NC}  ~/.claude/statusline.sh"
 echo -e "  ${CYAN}Size:${NC}    ~3KB"
@@ -293,11 +340,7 @@ else
 fi
 
 # Step 5: Install hooks
-echo
-echo -e "${BLUE}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 5/6:${NC} ${BOLD}Installing activity tracking hooks...${NC}"
-echo -e "${BLUE}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo
+print_step "Installing activity tracking hooks..."
 echo "  Hooks to install:"
 echo -e "    ${CYAN}•${NC} personalities_track_activity.sh - Assigns personalities based on activity"
 echo -e "    ${CYAN}•${NC} personalities_reset_errors.sh - Resets frustration on new prompts"
@@ -352,11 +395,7 @@ else
 fi
 
 # Step 6: Update settings.json
-echo
-echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo -e "${BOLD}${BLUE}Step 6/6:${NC} ${BOLD}Configuring Claude Code settings...${NC}"
-echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
-echo
+print_step "Configuring Claude Code settings..."
 
 # Define the personality configuration
 PERSONALITY_CONFIG='{
@@ -475,29 +514,44 @@ fi
 
 # Completion
 echo
-echo -e "${GREEN}✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨${NC}"
-echo -e "${GREEN}${BOLD}🎉 Installation Complete! 🎉${NC}"
-echo -e "${GREEN}✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨${NC}"
+echo -e "${BOLD}Progress: [${GREEN}$(printf '%.0s━' $(seq 1 30))${NC}${BOLD}] 100%${NC}"
+echo
+echo -e "${GREEN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}    ║                                                           ║${NC}"
+echo -e "${GREEN}    ║${NC}       ${BOLD}${GREEN}${ICON_CHECK} Installation Complete! ${ICON_CHECK}${NC}                     ${GREEN}║${NC}"
+echo -e "${GREEN}    ║${NC}                                                           ${GREEN}║${NC}"
+echo -e "${GREEN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
 
-echo -e "${BOLD}Installed Personalities:${NC}"
-echo -e "  ${MAGENTA}•${NC} Frustrated Developer - Gets angry with errors"
-echo -e "  ${MAGENTA}•${NC} Mischievous Debugger - When debugging code"
-echo -e "  ${MAGENTA}•${NC} Bug Hunter - When searching with grep"
-echo -e "  ${MAGENTA}•${NC} Code Wizard - General coding mode"
-echo -e "  ${MAGENTA}•${NC} Git Manager - During git operations"
-echo -e "  ${MAGENTA}•${NC} And 25+ more context-aware personalities!"
+echo -e "${BOLD}  ${ICON_STAR} Sample Personalities Installed:${NC}"
+echo
+echo -e "    ${BOLD}(╯°□°)╯${NC}  Frustrated Developer ${DIM}- Gets angry with errors${NC}"
+echo -e "    ${BOLD}( ͡° ͜ʖ ͡°)${NC} Mischievous Debugger ${DIM}- When debugging code${NC}"
+echo -e "    ${BOLD}(つ◉益◉)つ${NC} Bug Hunter ${DIM}- When searching with grep${NC}"
+echo -e "    ${BOLD}ʕ•ᴥ•ʔ${NC}     Code Wizard ${DIM}- General coding mode${NC}"
+echo -e "    ${BOLD}┗(▀̿Ĺ̯▀̿ ̿)┓${NC} Git Manager ${DIM}- During git operations${NC}"
+echo
+echo -e "    ${ITALIC}And 25+ more context-aware personalities!${NC}"
 echo
 
-echo -e "${BOLD}Next Steps:${NC}"
-echo -e "  1. ${CYAN}Restart Claude Code${NC} to activate personalities"
-echo "  2. Start coding and watch your personalities change!"
+echo -e "${BOLD}  ${ICON_ROCKET} Next Steps:${NC}"
+echo
+echo -e "    ${GREEN}1.${NC} Restart Claude Code to activate personalities"
+echo -e "    ${GREEN}2.${NC} Start coding and watch your personalities change!"
+echo -e "    ${GREEN}3.${NC} Check out the README for customization options"
 echo
 
 if [[ "$BACKUPS_MADE" == true ]]; then
-    echo -e "${BOLD}Backups:${NC}"
-    echo -e "  Your original files were backed up with timestamp: ${CYAN}$BACKUP_TIMESTAMP${NC}"
+    echo -e "${BOLD}  ${ICON_FOLDER} Backups:${NC}"
+    echo -e "    Your original files were backed up with timestamp:"
+    echo -e "    ${CYAN}$BACKUP_TIMESTAMP${NC}"
     echo
 fi
 
-print_success "Enjoy your new Claude Code personalities! 🎭"
+# Fun celebratory message
+echo -e "  ${BOLD}${MAGENTA}╭────────────────────────────────────────────────────────╮${NC}"
+echo -e "  ${BOLD}${MAGENTA}│${NC}  ${ICON_HEART} ${BOLD}Thank you for installing Claude Code Personalities!${NC} ${ICON_HEART} ${BOLD}${MAGENTA}│${NC}"
+echo -e "  ${BOLD}${MAGENTA}│${NC}          ${ITALIC}May your debugging be swift and your${NC}          ${BOLD}${MAGENTA}│${NC}"
+echo -e "  ${BOLD}${MAGENTA}│${NC}            ${ITALIC}errors be few. Happy coding! 🎉${NC}              ${BOLD}${MAGENTA}│${NC}"
+echo -e "  ${BOLD}${MAGENTA}╰────────────────────────────────────────────────────────╯${NC}"
+echo
