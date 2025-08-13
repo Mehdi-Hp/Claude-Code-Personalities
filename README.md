@@ -1,4 +1,4 @@
-# Claude Code Personalities
+# ૮ ․ ․ ྀིა Claude Code Personalities
 
 > Dynamic text-face personalities for Claude Code's statusline
 
