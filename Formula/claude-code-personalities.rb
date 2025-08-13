@@ -49,7 +49,7 @@ class ClaudeCodePersonalities < Formula
 
   test do
     # Test that jq dependency works
-    assert_match "1.0.0", shell_output("echo '{\"version\":\"1.0.0\"}' | jq -r .version")
+    assert_match "1.1.0", shell_output("echo '{\"version\":\"1.1.0\"}' | jq -r .version")
     
     # Test that the setup utility exists
     assert_predicate bin/"claude-personalities-setup", :exist?
