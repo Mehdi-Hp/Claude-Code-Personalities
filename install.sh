@@ -10,7 +10,16 @@ VERSION="1.0.0"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 AUTO_MODE=false
-SKIP_ALL=false
+
+# Nerd Font icons (same ones used in the personality system)
+ICON_FOLDER=$(printf '\xef\x81\xbb')
+ICON_CODE=$(printf '\xef\x84\xa1')
+ICON_BUG=$(printf '\xef\x86\x88')
+ICON_SEARCH=$(printf '\xef\x80\x82')
+ICON_EDIT=$(printf '\xef\x81\x84')
+ICON_RUN=$(printf '\xef\x83\xa7')
+ICON_GEAR=$(printf '\xef\x80\x93')
+ICON_ROCKET=$(printf '\xef\x84\xb5')
 
 # Check for auto mode
 for arg in "$@"; do
@@ -62,50 +71,31 @@ print_info() {
 }
 
 confirm_action() {
-    if [[ "$AUTO_MODE" == true ]] || [[ "$SKIP_ALL" == true ]]; then
+    if [[ "$AUTO_MODE" == true ]]; then
         return 0
     fi
     
     local message="$1"
-    local allow_skip="${2:-false}"
     
     echo -e "${CYAN}$message${NC}"
+    echo
+    echo -e "${YELLOW}[Enter] Yes | [q] Quit: ${NC}"
+    read -n 1 -r response
+    echo # Add newline after single char input
     
-    if [[ "$allow_skip" == "true" ]]; then
-        echo -e "${YELLOW}[Enter] Continue | [s] Skip | [a] Yes to all | [q] Quit: ${NC}"
-        read -r response
-        case "$response" in
-            [sS])
-                return 1
-                ;;
-            [aA])
-                SKIP_ALL=true
-                return 0
-                ;;
-            [qQ])
-                echo -e "${YELLOW}Installation cancelled.${NC}"
-                exit 0
-                ;;
-            *)
-                return 0
-                ;;
-        esac
-    else
-        echo -e "${YELLOW}[Enter] Continue | [q] Quit: ${NC}"
-        read -r response
-        if [[ "$response" == "q" ]] || [[ "$response" == "Q" ]]; then
-            echo -e "${YELLOW}Installation cancelled.${NC}"
-            exit 0
-        fi
+    if [[ "$response" == "q" ]] || [[ "$response" == "Q" ]]; then
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 0
     fi
+    
     return 0
 }
 
 # Header
 clear
-echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${BLUE}║     🎭 Claude Code Personalities Installer v${VERSION}    ║${NC}"
-echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════════════╝${NC}"
+echo -e "${BOLD}${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${BLUE}║  ( ꩜ ᯅ ꩜;)⁭⁭ Claude Code Personalities Installer v${VERSION}  ║${NC}"
+echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
 echo
 
 if [[ "$AUTO_MODE" == true ]]; then
@@ -117,32 +107,46 @@ fi
 echo
 
 # Preview
+echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}What this installer does:${NC}"
-echo "  ${CYAN}1.${NC} Check for required dependencies (jq)"
-echo "  ${CYAN}2.${NC} Create ~/.claude directories if needed"
-echo "  ${CYAN}3.${NC} Back up any existing configurations"
-echo "  ${CYAN}4.${NC} Install the personality statusline script"
-echo "  ${CYAN}5.${NC} Install activity tracking hooks"
-echo "  ${CYAN}6.${NC} Configure Claude Code settings"
-echo
-echo -e "${BOLD}Personalities you'll get:${NC}"
-echo "  ${MAGENTA}•${NC} (┛ಠДಠ)┛彡┻━┻ Frustrated Developer"
-echo "  ${MAGENTA}•${NC} ( ͡° ͜ʖ ͡°) Mischievous Debugger"
-echo "  ${MAGENTA}•${NC} ʕ•ᴥ•ʔ Code Wizard"
-echo "  ${MAGENTA}•${NC} And 30+ more dynamic personalities!"
+echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
+echo -e "  ${CYAN}1.${NC} Check for Claude Code and jq dependencies"
+echo -e "  ${CYAN}2.${NC} Test icon rendering (and provide Nerd Fonts info if needed)"
+echo -e "  ${CYAN}3.${NC} Back up any existing configurations"
+echo -e "  ${CYAN}4.${NC} Install the personality statusline script"
+echo -e "  ${CYAN}5.${NC} Install activity tracking hooks"
+echo -e "  ${CYAN}6.${NC} Configure Claude Code settings"
+echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
 
 confirm_action "Ready to begin installation?"
 
 # Step 1: Check dependencies
 echo
+echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}${BLUE}Step 1/6:${NC} ${BOLD}Checking dependencies...${NC}"
+echo -e "${CYAN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
+
+# Check if Claude Code is installed
+if [[ ! -d "$CLAUDE_DIR" ]]; then
+    print_error "Claude Code is not installed (missing ~/.claude directory)"
+    echo
+    echo "Please install Claude Code first:"
+    echo -e "  ${CYAN}https://docs.anthropic.com/en/docs/claude-code${NC}"
+    echo
+    exit 1
+else
+    print_success "Claude Code is installed"
+fi
+
+# Create hooks directory if it doesn't exist (silently)
+mkdir -p "$HOOKS_DIR"
 
 if ! command -v jq &> /dev/null; then
     print_warning "jq not found (required for JSON processing)"
     echo "  jq is needed for the personalities to work properly."
-    echo "  Install with: ${CYAN}brew install jq${NC}"
+    echo -e "  Install with: ${CYAN}brew install jq${NC}"
     
     if [[ "$AUTO_MODE" == false ]]; then
         echo
@@ -162,87 +166,109 @@ else
     print_success "jq is installed"
 fi
 
-# Check for Nerd Fonts
-if fc-list 2>/dev/null | grep -qi "nerd" &> /dev/null; then
-    print_success "Nerd Fonts detected"
-elif ls ~/Library/Fonts/*Nerd* &> /dev/null 2>&1; then
-    print_success "Nerd Fonts detected"
-else
-    print_warning "Nerd Fonts not detected (icons may not display)"
-    print_info "Install with: brew install --cask font-hack-nerd-font"
-fi
-
-# Step 2: Create directories
+# Step 2: Icon rendering test
 echo
-echo -e "${BOLD}${BLUE}Step 2/6:${NC} ${BOLD}Creating directories...${NC}"
+echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
+echo -e "${BOLD}${BLUE}Step 2/6:${NC} ${BOLD}Testing icon rendering...${NC}"
+echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
-echo "  Will create (if needed):"
-echo "    • ${CYAN}~/.claude${NC}"
-echo "    • ${CYAN}~/.claude/hooks${NC}"
+echo "  The personalities use special icons. Let's test if they render correctly:"
+echo "  (These are the actual icons you'll see in your Claude Code statusline)"
+echo
+printf "  %s %s %s %s %s %s %s %s\n" "$ICON_FOLDER" "$ICON_EDIT" "$ICON_SEARCH" "$ICON_RUN" "$ICON_BUG" "$ICON_GEAR" "$ICON_CODE" "$ICON_ROCKET"
+echo
+echo "  If you see boxes, question marks, or garbled text instead of icons,"
+echo "  you should install Nerd Fonts for the best experience:"
+echo -e "  ${CYAN}https://www.nerdfonts.com/font-downloads${NC}"
+echo -e "  ${CYAN}brew install --cask font-hack-nerd-font${NC}"
+echo
+echo -e "${CYAN}Do the icons above display correctly?${NC}"
+echo
+echo -e "${YELLOW}[Enter] Yes, looks good | [q] Quit: ${NC}"
+read -n 1 -r font_response
+echo
 
-confirm_action "Create these directories?" true
-
-if [[ $? -eq 0 ]]; then
-    mkdir -p "$HOOKS_DIR"
-    print_success "Directories ready"
+if [[ "$font_response" == "q" ]] || [[ "$font_response" == "Q" ]]; then
+    echo -e "${YELLOW}Installation cancelled.${NC}"
+    echo
+    echo "If icons didn't display correctly, install Nerd Fonts with:"
+    echo -e "  ${CYAN}brew install --cask font-hack-nerd-font${NC}"
+    echo -e "  ${CYAN}https://www.nerdfonts.com/font-downloads${NC}"
+    exit 0
 else
-    print_info "Skipped directory creation"
+    print_success "Great! Proceeding with installation"
 fi
 
 # Step 3: Backup existing files
 echo
+echo -e "${YELLOW}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}${BLUE}Step 3/6:${NC} ${BOLD}Backing up existing files...${NC}"
+echo -e "${YELLOW}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
 
 BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUPS_MADE=false
+SKIP_BACKUPS=false
 
-if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
-    print_warning "Found existing statusline.sh"
-    confirm_action "Back up existing statusline.sh?" true
+# Check what files exist that could be backed up
+files_to_backup=0
+[[ -f "$CLAUDE_DIR/statusline.sh" ]] && ((files_to_backup++))
+[[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
+[[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
+
+if [[ $files_to_backup -gt 0 ]]; then
+    echo "  Found existing files that can be backed up:"
+    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "    • ${CYAN}statusline.sh${NC}"
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "    • ${CYAN}settings.json${NC}"
+    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "    • ${CYAN}hooks/${NC}"
+    echo
+    echo -e "${CYAN}Back up existing files?${NC}"
+    echo
+    echo -e "${YELLOW}[Enter] Yes, back up | [s] Skip backups | [q] Quit: ${NC}"
+    read -n 1 -r backup_response
+    echo
     
-    if [[ $? -eq 0 ]]; then
-        cp "$CLAUDE_DIR/statusline.sh" "$CLAUDE_DIR/statusline.sh.backup.$BACKUP_TIMESTAMP"
-        print_success "Backed up to statusline.sh.backup.$BACKUP_TIMESTAMP"
-        BACKUPS_MADE=true
+    if [[ "$backup_response" == "q" ]] || [[ "$backup_response" == "Q" ]]; then
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 0
+    elif [[ "$backup_response" == "s" ]] || [[ "$backup_response" == "S" ]]; then
+        print_info "Skipping backups - existing files will be overwritten"
+        SKIP_BACKUPS=true
+    else
+        # Perform backups
+        if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
+            cp "$CLAUDE_DIR/statusline.sh" "$CLAUDE_DIR/statusline.sh.backup.$BACKUP_TIMESTAMP"
+            print_success "Backed up statusline.sh.backup.$BACKUP_TIMESTAMP"
+            BACKUPS_MADE=true
+        fi
+        
+        if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+            cp "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/settings.json.backup.$BACKUP_TIMESTAMP"
+            print_success "Backed up settings.json.backup.$BACKUP_TIMESTAMP"
+            BACKUPS_MADE=true
+        fi
+        
+        if [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]]; then
+            cp -r "$HOOKS_DIR" "${HOOKS_DIR}.backup.$BACKUP_TIMESTAMP"
+            print_success "Backed up hooks.backup.$BACKUP_TIMESTAMP"
+            BACKUPS_MADE=true
+        fi
     fi
-fi
-
-if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-    print_warning "Found existing settings.json"
-    confirm_action "Back up existing settings.json?" true
-    
-    if [[ $? -eq 0 ]]; then
-        cp "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/settings.json.backup.$BACKUP_TIMESTAMP"
-        print_success "Backed up to settings.json.backup.$BACKUP_TIMESTAMP"
-        BACKUPS_MADE=true
-    fi
-fi
-
-if [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]]; then
-    print_warning "Found existing hooks"
-    confirm_action "Back up existing hooks?" true
-    
-    if [[ $? -eq 0 ]]; then
-        cp -r "$HOOKS_DIR" "${HOOKS_DIR}.backup.$BACKUP_TIMESTAMP"
-        print_success "Backed up to hooks.backup.$BACKUP_TIMESTAMP"
-        BACKUPS_MADE=true
-    fi
-fi
-
-if [[ "$BACKUPS_MADE" == false ]]; then
+else
     print_info "No existing files to back up"
 fi
 
 # Step 4: Install statusline
 echo
+echo -e "${GREEN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}${BLUE}Step 4/6:${NC} ${BOLD}Installing personality statusline...${NC}"
+echo -e "${GREEN}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
-echo "  ${CYAN}Purpose:${NC} Displays text-face personalities and status icons"
-echo "  ${CYAN}Target:${NC}  ~/.claude/statusline.sh"
-echo "  ${CYAN}Size:${NC}    ~3KB"
+echo -e "  ${CYAN}Purpose:${NC} Displays text-face personalities and status icons"
+echo -e "  ${CYAN}Target:${NC}  ~/.claude/statusline.sh"
+echo -e "  ${CYAN}Size:${NC}    ~3KB"
 
-confirm_action "Install statusline.sh?" true
+confirm_action "Install statusline.sh?"
 
 if [[ $? -eq 0 ]]; then
     # Determine the script directory
@@ -268,14 +294,16 @@ fi
 
 # Step 5: Install hooks
 echo
+echo -e "${BLUE}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}${BLUE}Step 5/6:${NC} ${BOLD}Installing activity tracking hooks...${NC}"
+echo -e "${BLUE}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
 echo "  Hooks to install:"
-echo "    ${CYAN}•${NC} personalities_track_activity.sh - Assigns personalities based on activity"
-echo "    ${CYAN}•${NC} personalities_reset_errors.sh - Resets frustration on new prompts"
-echo "    ${CYAN}•${NC} personalities_session_end.sh - Cleans up after sessions"
+echo -e "    ${CYAN}•${NC} personalities_track_activity.sh - Assigns personalities based on activity"
+echo -e "    ${CYAN}•${NC} personalities_reset_errors.sh - Resets frustration on new prompts"
+echo -e "    ${CYAN}•${NC} personalities_session_end.sh - Cleans up after sessions"
 
-confirm_action "Install all hook scripts?" true
+confirm_action "Install all hook scripts?"
 
 if [[ $? -eq 0 ]]; then
     # Determine the script directory
@@ -325,32 +353,13 @@ fi
 
 # Step 6: Update settings.json
 echo
+echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo -e "${BOLD}${BLUE}Step 6/6:${NC} ${BOLD}Configuring Claude Code settings...${NC}"
+echo -e "${MAGENTA}✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦${NC}"
 echo
 
-if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-    echo "  ${YELLOW}Existing settings.json detected${NC}"
-    echo "  Will add personality configuration to your current settings"
-    echo
-    confirm_action "Update settings.json?" true
-    
-    if [[ $? -eq 0 ]]; then
-        # For simplicity, we'll create a new one
-        # In production, use jq to properly merge
-        print_warning "Manual merge may be required for complex settings"
-        print_info "Creating new settings with personality config"
-    else
-        print_info "Skipped settings.json update"
-        print_warning "You'll need to manually configure hooks in settings.json"
-    fi
-else
-    echo "  Creating new settings.json with personality configuration"
-    confirm_action "Create settings.json?" true
-fi
-
-if [[ $? -eq 0 ]]; then
-    cat > "$CLAUDE_DIR/settings.json" << 'EOF'
-{
+# Define the personality configuration
+PERSONALITY_CONFIG='{
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh",
@@ -385,39 +394,109 @@ if [[ $? -eq 0 ]]; then
       }]
     }]
   }
-}
-EOF
-    print_success "Configuration complete"
+}'
+
+if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+    echo -e "  ${YELLOW}Existing settings.json detected${NC}"
+    echo "  Will merge personality configuration with your current settings"
+    echo
+    confirm_action "Update settings.json?"
+    
+    if [[ $? -eq 0 ]]; then
+        # Check if jq is available for proper JSON merging
+        if command -v jq &> /dev/null; then
+            print_info "Using jq to merge settings..."
+            
+            # Create a temporary file for the merged config
+            TEMP_SETTINGS=$(mktemp)
+            
+            # Merge the configurations, with personality config taking precedence for statusLine and hooks
+            jq -s '.[0] * .[1]' "$CLAUDE_DIR/settings.json" <(echo "$PERSONALITY_CONFIG") > "$TEMP_SETTINGS" 2>/dev/null
+            
+            if [[ $? -eq 0 ]] && [[ -s "$TEMP_SETTINGS" ]]; then
+                # Verify the JSON is valid
+                if jq empty "$TEMP_SETTINGS" 2>/dev/null; then
+                    mv "$TEMP_SETTINGS" "$CLAUDE_DIR/settings.json"
+                    print_success "Successfully merged personality configuration with existing settings"
+                else
+                    rm -f "$TEMP_SETTINGS"
+                    print_error "Failed to create valid JSON during merge"
+                    print_info "Creating new settings.json with personality config (backup was created)"
+                    echo "$PERSONALITY_CONFIG" | jq '.' > "$CLAUDE_DIR/settings.json"
+                fi
+            else
+                rm -f "$TEMP_SETTINGS"
+                print_warning "Failed to merge configurations"
+                print_info "Creating new settings.json with personality config (backup was created)"
+                echo "$PERSONALITY_CONFIG" | jq '.' > "$CLAUDE_DIR/settings.json"
+            fi
+        else
+            # Fallback: No jq available, use basic approach
+            print_warning "jq not found - cannot merge settings automatically"
+            echo
+            echo "  Options:"
+            echo "  1. Your existing settings have been backed up"
+            echo "  2. We'll create a new settings.json with personality config"
+            echo "  3. You can manually merge your backup after installation"
+            echo
+            confirm_action "Replace settings.json with personality config?"
+            
+            if [[ $? -eq 0 ]]; then
+                echo "$PERSONALITY_CONFIG" > "$CLAUDE_DIR/settings.json"
+                print_success "Created new settings.json with personality config"
+                print_info "Your original settings are in: settings.json.backup.$BACKUP_TIMESTAMP"
+                print_info "You may want to manually merge any custom settings from the backup"
+            else
+                print_info "Skipped settings.json update"
+                print_warning "You'll need to manually configure hooks in settings.json"
+            fi
+        fi
+    else
+        print_info "Skipped settings.json update"
+        print_warning "You'll need to manually configure hooks in settings.json"
+    fi
+else
+    echo "  Creating new settings.json with personality configuration"
+    confirm_action "Create settings.json?"
+    
+    if [[ $? -eq 0 ]]; then
+        # Create new settings.json
+        if command -v jq &> /dev/null; then
+            echo "$PERSONALITY_CONFIG" | jq '.' > "$CLAUDE_DIR/settings.json"
+        else
+            echo "$PERSONALITY_CONFIG" > "$CLAUDE_DIR/settings.json"
+        fi
+        print_success "Created settings.json with personality config"
+    else
+        print_info "Skipped settings.json creation"
+        print_warning "You'll need to manually create and configure settings.json"
+    fi
 fi
 
 # Completion
 echo
-echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}✨ Installation Complete!${NC}"
-echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨${NC}"
+echo -e "${GREEN}${BOLD}🎉 Installation Complete! 🎉${NC}"
+echo -e "${GREEN}✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨ ✨${NC}"
 echo
 
 echo -e "${BOLD}Installed Personalities:${NC}"
-echo "  ${MAGENTA}•${NC} (┛ಠДಠ)┛彡┻━┻ Frustrated Developer"
-echo "  ${MAGENTA}•${NC} ( ͡° ͜ʖ ͡°) Mischievous Debugger"
-echo "  ${MAGENTA}•${NC} (つ◉益◉)つ Bug Hunter"
-echo "  ${MAGENTA}•${NC} ʕ•ᴥ•ʔ Code Wizard"
-echo "  ${MAGENTA}•${NC} ┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager"
-echo "  ${MAGENTA}•${NC} And 25+ more!"
-echo
-
-echo -e "${BOLD}Quick Test:${NC}"
-echo -e "${CYAN}  echo '{\"model\":{\"display_name\":\"Opus\"}}' | ~/.claude/statusline.sh${NC}"
+echo -e "  ${MAGENTA}•${NC} Frustrated Developer - Gets angry with errors"
+echo -e "  ${MAGENTA}•${NC} Mischievous Debugger - When debugging code"
+echo -e "  ${MAGENTA}•${NC} Bug Hunter - When searching with grep"
+echo -e "  ${MAGENTA}•${NC} Code Wizard - General coding mode"
+echo -e "  ${MAGENTA}•${NC} Git Manager - During git operations"
+echo -e "  ${MAGENTA}•${NC} And 25+ more context-aware personalities!"
 echo
 
 echo -e "${BOLD}Next Steps:${NC}"
-echo "  1. ${CYAN}Restart Claude Code${NC} to activate personalities"
+echo -e "  1. ${CYAN}Restart Claude Code${NC} to activate personalities"
 echo "  2. Start coding and watch your personalities change!"
 echo
 
 if [[ "$BACKUPS_MADE" == true ]]; then
     echo -e "${BOLD}Backups:${NC}"
-    echo "  Your original files were backed up with timestamp: ${CYAN}$BACKUP_TIMESTAMP${NC}"
+    echo -e "  Your original files were backed up with timestamp: ${CYAN}$BACKUP_TIMESTAMP${NC}"
     echo
 fi
 
