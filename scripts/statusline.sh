@@ -85,10 +85,13 @@ elif (( error_count > 0 )); then
   printf " \033[33m%s\033[0m" "$ICON_WARNING"
 fi
 
-# Model
+# Model with version (using North Star icon)
+ICON_NORTH_STAR=$(printf '\xef\x93\xb5')
 case "$model_name" in
-  *[Oo]pus*) printf " \033[90m•\033[0m \033[35m[%s opus]\033[0m" "$ICON_GEAR" ;;
-  *[Ss]onnet*) printf " \033[90m•\033[0m \033[36m[%s sonnet]\033[0m" "$ICON_CODE" ;;
-  *[Hh]aiku*) printf " \033[90m•\033[0m \033[32m[%s haiku]\033[0m" "$ICON_TERMINAL" ;;
+  *[Oo]pus*4.1*) printf " \033[90m•\033[0m \033[35m[%s Opus 4.1]\033[0m" "$ICON_NORTH_STAR" ;;
+  *[Oo]pus*) printf " \033[90m•\033[0m \033[35m[%s Opus]\033[0m" "$ICON_NORTH_STAR" ;;
+  *[Ss]onnet*3.5*) printf " \033[90m•\033[0m \033[36m[%s Sonnet 3.5]\033[0m" "$ICON_NORTH_STAR" ;;
+  *[Ss]onnet*) printf " \033[90m•\033[0m \033[36m[%s Sonnet]\033[0m" "$ICON_NORTH_STAR" ;;
+  *[Hh]aiku*) printf " \033[90m•\033[0m \033[32m[%s Haiku]\033[0m" "$ICON_NORTH_STAR" ;;
   *) printf " \033[90m•\033[0m [%s]" "$model_name" ;;
 esac

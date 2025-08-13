@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# Claude Code Personalities - Enhanced Interactive Installer with Job Tracking
+# Claude Code Personalities - Enhanced Interactive Installer
 # Run: bash install.sh
-# Or: curl -fsSL [url] | bash --auto  (for non-interactive mode)
+# Or: curl -fsSL [url] | bash
 
 set -e
 
 VERSION="1.1.0"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
-AUTO_MODE=false
 
 # Nerd Font icons (same ones used in the personality system)
 ICON_FOLDER=$(printf '\xef\x81\xbb')
@@ -24,27 +23,18 @@ ICON_CHECK=$(printf '\xef\x80\x8c')
 ICON_STAR=$(printf '\xef\x80\x85')
 ICON_HEART=$(printf '\xef\x80\x84')
 
-# Check for auto mode
+# Check for help
 for arg in "$@"; do
     case $arg in
-        --auto|-a)
-            AUTO_MODE=true
-            ;;
         --help|-h)
             echo "Claude Code Personalities Installer v$VERSION"
             echo "Usage: bash install.sh [OPTIONS]"
             echo "Options:"
-            echo "  --auto, -a    Run in automatic mode (no prompts)"
             echo "  --help, -h    Show this help message"
             exit 0
             ;;
     esac
 done
-
-# Also check environment variable
-if [[ "$CLAUDE_AUTO_INSTALL" == "true" ]]; then
-    AUTO_MODE=true
-fi
 
 # Colors
 RED='\033[0;31m'
@@ -117,10 +107,6 @@ spinner() {
 }
 
 confirm_action() {
-    if [[ "$AUTO_MODE" == true ]]; then
-        return 0
-    fi
-    
     local message="$1"
     
     echo -e "${CYAN}${ICON_STAR} $message${NC}"
@@ -151,13 +137,8 @@ echo
 echo -e "     ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
 echo -e "        ${ITALIC}on what it's doing - from debugging to git management!${NC}"
 echo
-
-if [[ "$AUTO_MODE" == true ]]; then
-    print_info "Running in automatic mode (no prompts)"
-else
-    echo -e "     ${CYAN}This interactive installer will guide you through the setup.${NC}"
-    echo -e "     ${CYAN}You'll be prompted before any files are modified.${NC}"
-fi
+echo -e "     ${CYAN}This interactive installer will guide you through the setup.${NC}"
+echo -e "     ${CYAN}You'll be prompted before any files are modified.${NC}"
 echo
 
 # Preview
