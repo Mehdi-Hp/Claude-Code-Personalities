@@ -295,7 +295,7 @@ if [[ $? -eq 0 ]]; then
         cp "$SCRIPT_DIR/scripts/statusline.sh" "$CLAUDE_DIR/statusline.sh"
     else
         # Fallback: try to download from GitHub
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/scripts/statusline.sh" \
+        curl -fsSL "https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/scripts/statusline.sh" \
              -o "$CLAUDE_DIR/statusline.sh" 2>/dev/null || {
             print_error "Could not find or download statusline.sh"
             exit 1
@@ -327,7 +327,7 @@ if [[ $? -eq 0 ]]; then
     if [[ -f "$SCRIPT_DIR/hooks/personalities_track_activity.sh" ]]; then
         cp "$SCRIPT_DIR/hooks/personalities_track_activity.sh" "$HOOKS_DIR/personalities_track_activity.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_track_activity.sh" \
+        curl -fsSL "https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/hooks/personalities_track_activity.sh" \
              -o "$HOOKS_DIR/personalities_track_activity.sh" 2>/dev/null || {
             print_error "Could not find or download personalities_track_activity.sh"
         }
@@ -340,7 +340,7 @@ if [[ $? -eq 0 ]]; then
     if [[ -f "$SCRIPT_DIR/hooks/personalities_reset_errors.sh" ]]; then
         cp "$SCRIPT_DIR/hooks/personalities_reset_errors.sh" "$HOOKS_DIR/personalities_reset_errors.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_reset_errors.sh" \
+        curl -fsSL "https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/hooks/personalities_reset_errors.sh" \
              -o "$HOOKS_DIR/personalities_reset_errors.sh" 2>/dev/null || {
             print_error "Could not find or download personalities_reset_errors.sh"
         }
@@ -353,7 +353,7 @@ if [[ $? -eq 0 ]]; then
     if [[ -f "$SCRIPT_DIR/hooks/personalities_session_end.sh" ]]; then
         cp "$SCRIPT_DIR/hooks/personalities_session_end.sh" "$HOOKS_DIR/personalities_session_end.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_session_end.sh" \
+        curl -fsSL "https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/hooks/personalities_session_end.sh" \
              -o "$HOOKS_DIR/personalities_session_end.sh" 2>/dev/null || {
             print_error "Could not find or download personalities_session_end.sh"
         }
