@@ -32,35 +32,36 @@ STATE_FILE="/tmp/claude_activity_${session_id}.json"
 
 # Default values
 personality="( ˘ ³˘) Booting Up"
-activity="starting"
+activity="Starting"
 current_job=""
 activity_icon="$ICON_ROCKET"
-activity_text="starting"
+activity_text="Starting"
 error_count=0
 
 # Read state if exists
 if [[ -f "$STATE_FILE" ]]; then
   personality=$(jq -r '.personality // "( ˘ ³˘) Booting Up"' "$STATE_FILE" 2>/dev/null)
-  activity=$(jq -r '.activity // "starting"' "$STATE_FILE" 2>/dev/null)
+  activity=$(jq -r '.activity // "Starting"' "$STATE_FILE" 2>/dev/null)
   current_job=$(jq -r '.current_job // ""' "$STATE_FILE" 2>/dev/null)
   error_count=$(jq -r '.error_count // 0' "$STATE_FILE" 2>/dev/null)
   consecutive=$(jq -r '.consecutive_actions // 0' "$STATE_FILE" 2>/dev/null)
 
-  # Set activity icon and text
-  case "$activity" in
+  # Set activity icon and text (use activity directly as it's already capitalized)
+  activity_text="$activity"
+  case "${activity,,}" in  # Convert to lowercase for matching only
     editing)
       activity_icon="$ICON_EDIT"
-      activity_text="editing"
-      (( consecutive > 5 )) && activity_icon="$ICON_FIRE" && activity_text="intense"
+      (( consecutive > 5 )) && activity_icon="$ICON_FIRE" && activity_text="Intense"
       ;;
-    writing) activity_icon="$ICON_EDIT"; activity_text="creating" ;;
-    executing) activity_icon="$ICON_RUN"; activity_text="running" ;;
-    exploring) activity_icon="$ICON_SEARCH"; activity_text="searching" ;;
-    debugging) activity_icon="$ICON_BUG"; activity_text="debugging" ;;
-    testing) activity_icon="$ICON_RUN"; activity_text="testing" ;;
-    reviewing) activity_icon="$ICON_EYE"; activity_text="reviewing" ;;
-    thinking) activity_icon="$ICON_THINK"; activity_text="thinking" ;;
-    *) activity_icon="$ICON_ROCKET"; activity_text="working" ;;
+    writing) activity_icon="$ICON_EDIT"; activity_text="Creating" ;;
+    executing) activity_icon="$ICON_RUN"; activity_text="Running" ;;
+    exploring) activity_icon="$ICON_SEARCH" ;;
+    searching) activity_icon="$ICON_SEARCH" ;;
+    debugging) activity_icon="$ICON_BUG" ;;
+    testing) activity_icon="$ICON_RUN" ;;
+    reviewing) activity_icon="$ICON_EYE" ;;
+    thinking) activity_icon="$ICON_THINK" ;;
+    *) activity_icon="$ICON_ROCKET"; activity_text="Working" ;;
   esac
 fi
 
