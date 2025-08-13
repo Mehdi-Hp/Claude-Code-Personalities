@@ -482,7 +482,9 @@ fi
 # Completion
 echo
 echo
-echo -e "  ${GREEN}Installation Complete${NC}"
+echo -e "  ${BOLD}╭─────────────────────────────────────────────────────────────╮${NC}"
+echo -e "  ${BOLD}│${NC}                    ${GREEN}Installation Complete${NC}                    ${BOLD}│${NC}"
+echo -e "  ${BOLD}╰─────────────────────────────────────────────────────────────╯${NC}"
 echo
 echo -e "  ${BOLD}Next Steps:${NC}"
 echo
