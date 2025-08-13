@@ -24,13 +24,53 @@ fi
 
 cmd=$(echo "$tool_input" | jq -r '.command // ""' 2>/dev/null)
 file=$(echo "$tool_input" | jq -r '.file_path // ""' 2>/dev/null)
+pattern=$(echo "$tool_input" | jq -r '.pattern // ""' 2>/dev/null)
 
+# Set activity and current job/task
+current_job=""
 case "$tool_name" in
-  "Edit"|"MultiEdit") activity="editing" ;;
-  "Write") activity="writing" ;;
-  "Bash") activity="executing" ;;
-  "Read"|"Grep") activity="exploring" ;;
-  *) activity="thinking" ;;
+  "Edit"|"MultiEdit") 
+    activity="editing"
+    if [[ -n "$file" ]]; then
+      current_job=$(basename "$file")
+    fi
+    ;;
+  "Write") 
+    activity="writing"
+    if [[ -n "$file" ]]; then
+      current_job=$(basename "$file")
+    fi
+    ;;
+  "Bash") 
+    activity="executing"
+    if [[ -n "$cmd" ]]; then
+      # Truncate long commands and extract the meaningful part
+      if echo "$cmd" | grep -q "^git "; then
+        current_job=$(echo "$cmd" | cut -d' ' -f1-3 | head -c 30)
+      elif echo "$cmd" | grep -qE "^(npm|yarn|pnpm) "; then
+        current_job=$(echo "$cmd" | cut -d' ' -f1-2 | head -c 30)
+      else
+        current_job=$(echo "$cmd" | head -c 30)
+      fi
+    fi
+    ;;
+  "Read") 
+    activity="exploring"
+    if [[ -n "$file" ]]; then
+      current_job=$(basename "$file")
+    fi
+    ;;
+  "Grep")
+    activity="exploring"
+    if [[ -n "$pattern" ]]; then
+      # Show truncated pattern for grep searches
+      current_job=$(echo "$pattern" | head -c 20)
+    fi
+    ;;
+  *) 
+    activity="thinking"
+    current_job=""
+    ;;
 esac
 
 [[ "$activity" == "$prev_activity" ]] && ((consecutive++)) || consecutive=1
@@ -138,7 +178,7 @@ else
         personality="(っ˘ڡ˘ς) Compression Chef"
       # Environment/Shell
       elif echo "$cmd" | grep -qiE "^(export |source |echo |env|set |alias |history)"; then
-        personality="(∗´ര ᎑ ര`∗) Environment Enchanter"
+        personality="(∗´ര ᎑ ര\`∗) Environment Enchanter"
       # Version control (non-git)
       elif echo "$cmd" | grep -qiE "^(svn |hg |cvs |diff |patch )"; then
         personality="(╯︵╰,) Code Historian"
@@ -168,6 +208,7 @@ cat > "$STATE_FILE" <<JSON
 {
   "session_id": "$session_id",
   "activity": "$activity",
+  "current_job": "$current_job",
   "personality": "$personality",
   "consecutive_actions": $consecutive,
   "error_count": $errors
