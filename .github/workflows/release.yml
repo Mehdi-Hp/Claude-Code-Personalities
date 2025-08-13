@@ -29,7 +29,7 @@ jobs:
       - name: Generate Release Notes
         run: |
           cat > release-notes.md << 'EOF'
-          ## 🎭 Claude Code Personalities ${{ steps.version.outputs.version }}
+          ## Claude Code Personalities ${{ steps.version.outputs.version }}
 
           ### Installation
 
@@ -96,9 +96,9 @@ jobs:
       
       - name: Post-release summary
         run: |
-          echo "✅ Release ${{ steps.version.outputs.tag }} completed!"
+          echo "Release ${{ steps.version.outputs.tag }} completed!"
           echo ""
-          echo "📦 Release URL: https://github.com/kumamaki/claude-code-personalities/releases/tag/${{ steps.version.outputs.tag }}"
+          echo "Release URL: https://github.com/kumamaki/claude-code-personalities/releases/tag/${{ steps.version.outputs.tag }}"
           echo ""
-          echo "🍺 Users can install with:"
+          echo "Users can install with:"
           echo "  brew install kumamaki/claude-code-personalities/claude-code-personalities"
