@@ -1,8 +1,8 @@
-# 🎭 Claude Code Personalities
+# Claude Code Personalities
 
 > Dynamic text-face personalities for Claude Code's statusline that change based on what Claude is doing
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-v1.0.60+-purple)
 
@@ -12,23 +12,32 @@ Claude Code Personalities gives your Claude Code assistant a dynamic, context-aw
 
 ### Features
 
-- **🎭 30+ Dynamic Personalities** - From calm to frustrated, each with unique text-faces
-- **🔍 Context-Aware** - Personalities change based on files, commands, and errors
-- **📊 Activity Tracking** - Monitors tool usage (Edit, Bash, Grep, etc.)
-- **😤 Error State Management** - Claude gets progressively more frustrated with errors
-- **🎨 Nerd Font Icons** - Beautiful visual indicators for status and activity
-- **💾 Session Persistence** - Maintains state across your Claude Code session
-- **🤖 Model Indicators** - Different icons for Opus, Sonnet, and Haiku
+- **30+ Dynamic Personalities** - From calm to frustrated, each with unique text-faces
+- **Context-Aware** - Personalities change based on files, commands, and errors
+- **Activity Tracking** - Monitors tool usage (Edit, Bash, Grep, etc.)
+- **Error State Management** - Claude gets progressively more frustrated with errors
+- **Nerd Font Icons** - Beautiful visual indicators for status and activity
+- **Session Persistence** - Maintains state across your Claude Code session
+- **Model Indicators** - Different icons for Opus, Sonnet, and Haiku
 
 ## Quick Start
 
-### 🚀 One-Line Install
+### ✨ Enhanced Installer (v1.1.0)
+
+Our installer now features:
+- **📊 Progress Tracking** - Visual progress bar showing installation steps
+- **🎨 Beautiful UI** - Colorful, formatted output with box drawings
+- **🔍 Dependency Checking** - Automatic detection of Claude Code and jq
+- **💾 Smart Backups** - Timestamped backups of existing configurations
+- **🎯 Icon Testing** - Verify Nerd Fonts are properly installed
+
+### One-Line Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/install.sh | bash
 ```
 
-### 🎯 Interactive Install
+### Interactive Install
 
 ```bash
 git clone https://github.com/yourusername/claude-code-personalities
@@ -36,7 +45,16 @@ cd claude-code-personalities
 ./install.sh
 ```
 
-### 🍺 Homebrew Install
+### Auto Mode (No Prompts)
+
+```bash
+# For CI/CD or automated setups
+./install.sh --auto
+# or
+export CLAUDE_AUTO_INSTALL=true && ./install.sh
+```
+
+### Homebrew Install
 
 ```bash
 brew tap yourusername/claude-code
@@ -102,7 +120,7 @@ All existing files are backed up with timestamps before modification.
 echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | ~/.claude/statusline.sh
 ```
 
-Expected output: `( ˘ ³˘) Booting Up • 📁 test • 🚀 starting • [⚙️ opus]`
+Expected output: `( ˘ ³˘) Booting Up • [folder] test • [rocket] starting • [gear] opus]`
 
 ### Check Installation
 
@@ -144,9 +162,9 @@ Edit `~/.claude/hooks/personalities_track_activity.sh` to add custom personaliti
 
 ```bash
 elif echo "$file" | grep -qiE "\.rs$"; then
-  personality="🦀 Rust Developer"
+  personality="(◕ᴗ◕) Rust Developer"
 elif echo "$file" | grep -qiE "\.go$"; then
-  personality="🐹 Gopher"
+  personality="(⌐■_■) Gopher"
 ```
 
 ### Adjust Frustration Levels
@@ -155,7 +173,7 @@ Modify error thresholds in `personalities_track_activity.sh`:
 
 ```bash
 if (( errors >= 10 )); then
-  personality="🌋 VOLCANIC RAGE"
+  personality="【╯°□°】╯︵ ┻━┻ VOLCANIC RAGE"
 elif (( errors >= 5 )); then
   personality="(╯°□°)╯︵ ┻━┻ Table Flipper"
 ```
@@ -212,4 +230,4 @@ Created for Claude Code by the community. Special thanks to:
 
 ---
 
-*Enhance your Claude Code experience with dynamic personalities! 🎭*
+*Enhance your Claude Code experience with dynamic personalities!*
