@@ -3,7 +3,7 @@ class ClaudeCodePersonalities < Formula
   homepage "https://github.com/yourusername/claude-code-personalities"
   url "https://github.com/yourusername/claude-code-personalities/archive/v1.0.0.tar.gz"
   sha256 "PLACEHOLDER_SHA256"
-  license "MIT"
+  license "WTFPL"
 
   depends_on "jq"
 

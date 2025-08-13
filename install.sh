@@ -271,9 +271,9 @@ echo
 echo -e "${BOLD}${BLUE}Step 5/6:${NC} ${BOLD}Installing activity tracking hooks...${NC}"
 echo
 echo "  Hooks to install:"
-echo "    ${CYAN}•${NC} track_activity.sh - Assigns personalities based on activity"
-echo "    ${CYAN}•${NC} reset_errors.sh - Resets frustration on new prompts"
-echo "    ${CYAN}•${NC} session_end.sh - Cleans up after sessions"
+echo "    ${CYAN}•${NC} personalities_track_activity.sh - Assigns personalities based on activity"
+echo "    ${CYAN}•${NC} personalities_reset_errors.sh - Resets frustration on new prompts"
+echo "    ${CYAN}•${NC} personalities_session_end.sh - Cleans up after sessions"
 
 confirm_action "Install all hook scripts?" true
 
@@ -281,44 +281,44 @@ if [[ $? -eq 0 ]]; then
     # Determine the script directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
-    # Install track_activity.sh
-    print_info "Installing track_activity.sh..."
-    if [[ -f "$SCRIPT_DIR/hooks/track_activity.sh" ]]; then
-        cp "$SCRIPT_DIR/hooks/track_activity.sh" "$HOOKS_DIR/track_activity.sh"
+    # Install personalities_track_activity.sh
+    print_info "Installing personalities_track_activity.sh..."
+    if [[ -f "$SCRIPT_DIR/hooks/personalities_track_activity.sh" ]]; then
+        cp "$SCRIPT_DIR/hooks/personalities_track_activity.sh" "$HOOKS_DIR/personalities_track_activity.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/track_activity.sh" \
-             -o "$HOOKS_DIR/track_activity.sh" 2>/dev/null || {
-            print_error "Could not find or download track_activity.sh"
+        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_track_activity.sh" \
+             -o "$HOOKS_DIR/personalities_track_activity.sh" 2>/dev/null || {
+            print_error "Could not find or download personalities_track_activity.sh"
         }
     fi
-    chmod +x "$HOOKS_DIR/track_activity.sh"
-    print_success "Installed track_activity.sh"
+    chmod +x "$HOOKS_DIR/personalities_track_activity.sh"
+    print_success "Installed personalities_track_activity.sh"
 
-    # Install reset_errors.sh
-    print_info "Installing reset_errors.sh..."
-    if [[ -f "$SCRIPT_DIR/hooks/reset_errors.sh" ]]; then
-        cp "$SCRIPT_DIR/hooks/reset_errors.sh" "$HOOKS_DIR/reset_errors.sh"
+    # Install personalities_reset_errors.sh
+    print_info "Installing personalities_reset_errors.sh..."
+    if [[ -f "$SCRIPT_DIR/hooks/personalities_reset_errors.sh" ]]; then
+        cp "$SCRIPT_DIR/hooks/personalities_reset_errors.sh" "$HOOKS_DIR/personalities_reset_errors.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/reset_errors.sh" \
-             -o "$HOOKS_DIR/reset_errors.sh" 2>/dev/null || {
-            print_error "Could not find or download reset_errors.sh"
+        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_reset_errors.sh" \
+             -o "$HOOKS_DIR/personalities_reset_errors.sh" 2>/dev/null || {
+            print_error "Could not find or download personalities_reset_errors.sh"
         }
     fi
-    chmod +x "$HOOKS_DIR/reset_errors.sh"
-    print_success "Installed reset_errors.sh"
+    chmod +x "$HOOKS_DIR/personalities_reset_errors.sh"
+    print_success "Installed personalities_reset_errors.sh"
 
-    # Install session_end.sh
-    print_info "Installing session_end.sh..."
-    if [[ -f "$SCRIPT_DIR/hooks/session_end.sh" ]]; then
-        cp "$SCRIPT_DIR/hooks/session_end.sh" "$HOOKS_DIR/session_end.sh"
+    # Install personalities_session_end.sh
+    print_info "Installing personalities_session_end.sh..."
+    if [[ -f "$SCRIPT_DIR/hooks/personalities_session_end.sh" ]]; then
+        cp "$SCRIPT_DIR/hooks/personalities_session_end.sh" "$HOOKS_DIR/personalities_session_end.sh"
     else
-        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/session_end.sh" \
-             -o "$HOOKS_DIR/session_end.sh" 2>/dev/null || {
-            print_error "Could not find or download session_end.sh"
+        curl -fsSL "https://raw.githubusercontent.com/yourusername/claude-code-personalities/main/hooks/personalities_session_end.sh" \
+             -o "$HOOKS_DIR/personalities_session_end.sh" 2>/dev/null || {
+            print_error "Could not find or download personalities_session_end.sh"
         }
     fi
-    chmod +x "$HOOKS_DIR/session_end.sh"
-    print_success "Installed session_end.sh"
+    chmod +x "$HOOKS_DIR/personalities_session_end.sh"
+    print_success "Installed personalities_session_end.sh"
 else
     print_info "Skipped hooks installation"
 fi
@@ -361,27 +361,27 @@ if [[ $? -eq 0 ]]; then
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "PostToolUse": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/reset_errors.sh"
+        "command": "~/.claude/hooks/personalities_reset_errors.sh"
       }]
     }],
     "Stop": [{
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/session_end.sh"
+        "command": "~/.claude/hooks/personalities_session_end.sh"
       }]
     }]
   }

@@ -123,27 +123,27 @@ install_personalities() {
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "PostToolUse": [{
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/track_activity.sh"
+        "command": "~/.claude/hooks/personalities_track_activity.sh"
       }]
     }],
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/reset_errors.sh"
+        "command": "~/.claude/hooks/personalities_reset_errors.sh"
       }]
     }],
     "Stop": [{
       "matcher": "",
       "hooks": [{
         "type": "command",
-        "command": "~/.claude/hooks/session_end.sh"
+        "command": "~/.claude/hooks/personalities_session_end.sh"
       }]
     }]
   }
