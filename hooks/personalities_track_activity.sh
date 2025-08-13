@@ -26,49 +26,66 @@ cmd=$(echo "$tool_input" | jq -r '.command // ""' 2>/dev/null)
 file=$(echo "$tool_input" | jq -r '.file_path // ""' 2>/dev/null)
 pattern=$(echo "$tool_input" | jq -r '.pattern // ""' 2>/dev/null)
 
+# Helper function to trim long filenames
+trim_filename() {
+  local name="$1"
+  local max_len="${2:-20}"
+  
+  # Get just the filename without path
+  name=$(basename "$name")
+  
+  # If filename is too long, truncate it but keep extension
+  if [[ ${#name} -gt $max_len ]]; then
+    local ext="${name##*.}"
+    local base="${name%.*}"
+    local keep_len=$((max_len - ${#ext} - 4))  # -4 for "..." and "."
+    if [[ $keep_len -gt 0 ]]; then
+      name="${base:0:$keep_len}...${ext}"
+    else
+      name="${name:0:$max_len}"
+    fi
+  fi
+  
+  echo "$name"
+}
+
 # Set activity and current job/task
 current_job=""
 case "$tool_name" in
   "Edit"|"MultiEdit") 
-    activity="editing"
+    activity="Editing"
     if [[ -n "$file" ]]; then
-      current_job=$(basename "$file")
+      current_job=$(trim_filename "$file")
     fi
     ;;
   "Write") 
-    activity="writing"
+    activity="Writing"
     if [[ -n "$file" ]]; then
-      current_job=$(basename "$file")
+      current_job=$(trim_filename "$file")
     fi
     ;;
   "Bash") 
-    activity="executing"
+    activity="Executing"
     if [[ -n "$cmd" ]]; then
-      # Truncate long commands and extract the meaningful part
-      if echo "$cmd" | grep -q "^git "; then
-        current_job=$(echo "$cmd" | cut -d' ' -f1-3 | head -c 30)
-      elif echo "$cmd" | grep -qE "^(npm|yarn|pnpm) "; then
-        current_job=$(echo "$cmd" | cut -d' ' -f1-2 | head -c 30)
-      else
-        current_job=$(echo "$cmd" | head -c 30)
-      fi
+      # Just show the command name, not the full command
+      current_job=$(echo "$cmd" | cut -d' ' -f1 | cut -d'/' -f1)
     fi
     ;;
   "Read") 
-    activity="exploring"
+    activity="Exploring"
     if [[ -n "$file" ]]; then
-      current_job=$(basename "$file")
+      current_job=$(trim_filename "$file")
     fi
     ;;
   "Grep")
-    activity="exploring"
+    activity="Searching"
     if [[ -n "$pattern" ]]; then
       # Show truncated pattern for grep searches
       current_job=$(echo "$pattern" | head -c 20)
     fi
     ;;
   *) 
-    activity="thinking"
+    activity="Thinking"
     current_job=""
     ;;
 esac
