@@ -1,6 +1,6 @@
 # Claude Code Personalities
 
-> 🎭 Dynamic text-face personalities for Claude Code's statusline that change based on what Claude is doing
+> Dynamic text-face personalities for Claude Code's statusline
 
 Give your Claude Code assistant a dynamic, context-aware statusline with 30+ text-face emoticons that change based on Claude's current activity. Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠДಠ)┛彡┻━┻ Frustrated Developer` when encountering errors!
 
@@ -10,14 +10,6 @@ Give your Claude Code assistant a dynamic, context-aware statusline with 30+ tex
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kumamaki/claude-code-personalities/main/install.sh | bash
-```
-
-### Manual Install
-
-```bash
-git clone https://github.com/kumamaki/claude-code-personalities
-cd claude-code-personalities
-./install.sh
 ```
 
 ### Homebrew
