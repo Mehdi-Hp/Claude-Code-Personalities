@@ -23,13 +23,13 @@ model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null
 
 STATE_FILE="/tmp/claude_activity_${session_id}.json"
 
-personality="( Ø ³Ø) Booting Up"
+personality="( ï¿½ ï¿½ï¿½) Booting Up"
 activity_icon="$ICON_ROCKET"
 activity_text="starting"
 error_count=0
 
 if [[ -f "$STATE_FILE" ]]; then
-  personality=$(jq -r '.personality // "( Ø ³Ø) Booting Up"' "$STATE_FILE" 2>/dev/null)
+  personality=$(jq -r '.personality // "( ï¿½ ï¿½ï¿½) Booting Up"' "$STATE_FILE" 2>/dev/null)
   activity=$(jq -r '.activity // "starting"' "$STATE_FILE" 2>/dev/null)
   error_count=$(jq -r '.error_count // 0' "$STATE_FILE" 2>/dev/null)
   consecutive=$(jq -r '.consecutive_actions // 0' "$STATE_FILE" 2>/dev/null)
@@ -62,8 +62,8 @@ elif (( error_count > 0 )); then
 fi
 
 case "$model_name" in
-  *[Oo]pus*) printf " \033[90m"\033[0m \033[35m[%s opus]\033[0m" "$ICON_GEAR" ;;
-  *[Ss]onnet*) printf " \033[90m"\033[0m \033[36m[%s sonnet]\033[0m" "$ICON_CODE" ;;
-  *[Hh]aiku*) printf " \033[90m"\033[0m \033[32m[%s haiku]\033[0m" "$ICON_TERMINAL" ;;
+  *[Oo]pus*) printf " \033[90m"\033[0m \033[35m[%s Opus 4.1]\033[0m" "$ICON_GEAR" ;;
+  *[Ss]onnet*) printf " \033[90m"\033[0m \033[36m[%s Sonnet 4]\033[0m" "$ICON_CODE" ;;
+  *[Hh]aiku*) printf " \033[90m"\033[0m \033[32m[%s Haiku]\033[0m" "$ICON_TERMINAL" ;;
   *) printf " \033[90m"\033[0m [%s]" "$model_name" ;;
 esac
