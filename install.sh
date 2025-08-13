@@ -71,21 +71,11 @@ print_info() {
 
 print_step() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
-    local percent=$((CURRENT_STEP * 100 / TOTAL_STEPS))
-    local filled=$((CURRENT_STEP * 30 / TOTAL_STEPS))
-    local empty=$((30 - filled))
     
     echo
-    echo -e "${BOLD}Progress: [${GREEN}$(printf '%.0s━' $(seq 1 $filled))${DIM}$(printf '%.0s━' $(seq 1 $empty))${NC}${BOLD}] ${percent}%${NC}"
-    echo
     
-    # Animated rainbow divider
-    local colors=("${RED}" "${YELLOW}" "${GREEN}" "${CYAN}" "${BLUE}" "${MAGENTA}")
-    local divider=""
-    for i in {0..59}; do
-        local color_idx=$((i % 6))
-        divider="${divider}${colors[$color_idx]}✦${NC}"
-    done
+    # Dim gray divider
+    local divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
     echo -e "$divider"
     echo -e "${BOLD}${BLUE}Step $CURRENT_STEP/$TOTAL_STEPS:${NC} ${BOLD}$1${NC}"
     echo -e "$divider"
@@ -109,7 +99,7 @@ spinner() {
 confirm_action() {
     local message="$1"
     
-    echo -e "${CYAN}${ICON_STAR} $message${NC}"
+    echo -e "${CYAN} $message${NC}"
     echo
     echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} to continue or ${BOLD}[q]${NC} to quit: "
     read -n 1 -r response
@@ -129,32 +119,30 @@ clear
 echo
 echo -e "${BOLD}${CYAN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}    ║${NC}  ${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}                  ${BOLD}${CYAN}║${NC}"
-echo -e "${BOLD}${CYAN}    ║${NC}            ${DIM}Enhanced Installer v${VERSION}${NC}                       ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}    ║        ${NC}  ${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}              ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
 echo -e "     ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
 echo -e "        ${ITALIC}on what it's doing - from debugging to git management!${NC}"
 echo
-echo -e "     ${CYAN}This interactive installer will guide you through the setup.${NC}"
 echo -e "     ${CYAN}You'll be prompted before any files are modified.${NC}"
 echo
 
 # Preview
 echo -e "  ${BOLD}╭─────────────────────────────────────────────────────────────╮${NC}"
-echo -e "  ${BOLD}│                 ${MAGENTA}Installation Overview${NC}                      ${BOLD}│${NC}"
+echo -e "  ${BOLD}│                 ${MAGENTA}Installation Overview${NC}                       ${BOLD}│${NC}"
 echo -e "  ${BOLD}├─────────────────────────────────────────────────────────────┤${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}1.${NC} ${ICON_SEARCH} Check for Claude Code and jq dependencies        ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}2.${NC} ${ICON_CODE} Test icon rendering (Nerd Fonts)                 ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}3.${NC} ${ICON_FOLDER} Back up any existing configurations             ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}4.${NC} ${ICON_EDIT} Install the personality statusline script       ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}5.${NC} ${ICON_GEAR} Install activity tracking hooks                 ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}6.${NC} ${ICON_RUN} Configure Claude Code settings                   ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}1.${NC} Check for Claude Code and jq dependencies               ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}2.${NC} Test icon rendering (Nerd Fonts)                        ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}3.${NC} Back up any existing configurations                     ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}4.${NC} Install the personality statusline script               ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}5.${NC} Install activity tracking hooks                         ${BOLD}│${NC}"
+echo -e "  ${BOLD}│${NC}  ${GREEN}6.${NC} Configure Claude Code settings                          ${BOLD}│${NC}"
 echo -e "  ${BOLD}╰─────────────────────────────────────────────────────────────╯${NC}"
 echo
 
-confirm_action "Ready to begin installation?"
+confirm_action ""
 
 # Step 1: Check dependencies
 print_step "Checking dependencies..."
@@ -203,7 +191,7 @@ echo -e "  ${BOLD}Icon Test:${NC}"
 echo
 echo -e "  ╭──────────────────────────────────────────────────────────╮"
 echo -e "  │  If you see proper icons below, you're all set!          │"
-echo -e "  │  Otherwise, consider installing Nerd Fonts.               │"
+echo -e "  │  Otherwise, consider installing Nerd Fonts.              │"
 echo -e "  ╰──────────────────────────────────────────────────────────╯"
 echo
 echo -e "    ${ICON_FOLDER} Folder    ${ICON_EDIT} Edit     ${ICON_SEARCH} Search   ${ICON_RUN} Run"
@@ -213,7 +201,7 @@ echo -e "  ${DIM}If you see boxes or question marks, install Nerd Fonts:${NC}"
 echo -e "  ${CYAN}brew install --cask font-hack-nerd-font${NC}"
 echo -e "  ${DIM}More info: ${CYAN}https://www.nerdfonts.com${NC}"
 echo
-echo -e "${CYAN}${ICON_STAR} Do the icons display correctly?${NC}"
+echo -e "${CYAN} Do the icons display correctly?${NC}"
 echo
 echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} if icons look good, ${BOLD}[q]${NC} to quit: "
 read -n 1 -r font_response
@@ -254,7 +242,7 @@ if [[ $files_to_backup -gt 0 ]]; then
     [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  │  ${ICON_FOLDER} ${CYAN}hooks/         ${NC}                                      │"
     echo -e "  ╰──────────────────────────────────────────────────────────╯"
     echo
-    echo -e "${CYAN}${ICON_STAR} Create backups before proceeding?${NC}"
+    echo -e "${CYAN} Create backups before proceeding?${NC}"
     echo
     echo -ne "  ${GREEN}➜${NC} ${BOLD}[Enter]${NC} to backup | ${BOLD}[s]${NC} skip backups | ${BOLD}[q]${NC} quit: "
     read -n 1 -r backup_response
@@ -495,8 +483,6 @@ fi
 
 # Completion
 echo
-echo -e "${BOLD}Progress: [${GREEN}$(printf '%.0s━' $(seq 1 30))${NC}${BOLD}] 100%${NC}"
-echo
 echo -e "${GREEN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}    ║                                                           ║${NC}"
 echo -e "${GREEN}    ║${NC}       ${BOLD}${GREEN}${ICON_CHECK} Installation Complete! ${ICON_CHECK}${NC}                     ${GREEN}║${NC}"
@@ -504,7 +490,7 @@ echo -e "${GREEN}    ║${NC}                                                   
 echo -e "${GREEN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
 
-echo -e "${BOLD}  ${ICON_STAR} Sample Personalities Installed:${NC}"
+echo -e "${BOLD}  Sample Personalities Installed:${NC}"
 echo
 echo -e "    ${BOLD}(╯°□°)╯${NC}  Frustrated Developer ${DIM}- Gets angry with errors${NC}"
 echo -e "    ${BOLD}( ͡° ͜ʖ ͡°)${NC} Mischievous Debugger ${DIM}- When debugging code${NC}"
