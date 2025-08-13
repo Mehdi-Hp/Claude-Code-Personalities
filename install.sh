@@ -54,31 +54,32 @@ CURRENT_STEP=0
 
 # Helper functions
 print_success() {
-    echo -e "${GREEN}${ICON_CHECK}${NC} $1"
+    echo -e "  ${GREEN}${ICON_CHECK} ${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    echo -e "  ${YELLOW}⚠${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "  ${RED}✗${NC} $1"
 }
 
 print_info() {
-    echo -e "${CYAN}ℹ${NC} $1"
+    echo -e "  ${CYAN}ℹ${NC} $1"
 }
 
 print_step() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
     
     echo
+    echo
     
     # Dim gray divider
     local divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
-    echo -e "$divider"
-    echo -e "${BOLD}${BLUE}Step $CURRENT_STEP/$TOTAL_STEPS:${NC} ${BOLD}$1${NC}"
-    echo -e "$divider"
+    echo -e "  $divider"
+    echo -e "  ${BOLD}${BLUE}Step $CURRENT_STEP/$TOTAL_STEPS:${NC} ${BOLD}$1${NC}"
+    echo -e "  $divider"
     echo
 }
 
@@ -99,7 +100,7 @@ spinner() {
 confirm_action() {
     local message="$1"
     
-    echo -e "${CYAN} $message${NC}"
+    echo -e " ${CYAN} $message${NC}"
     echo
     echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} to continue or ${BOLD}[q]${NC} to quit: "
     read -n 1 -r response
@@ -117,16 +118,16 @@ confirm_action() {
 # Header
 clear
 echo
-echo -e "${BOLD}${CYAN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}    ║        ${NC}  ${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}              ${BOLD}${CYAN}║${NC}"
-echo -e "${BOLD}${CYAN}    ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
+echo -e "${BOLD}${CYAN}   ║        ${NC}  ${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}              ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
+echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "     ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
-echo -e "        ${ITALIC}on what it's doing - from debugging to git management!${NC}"
+echo -e "   ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
+echo -e "   ${ITALIC}on what it's doing - from debugging to git management!${NC}"
 echo
-echo -e "     ${CYAN}You'll be prompted before any files are modified.${NC}"
+echo -e "   ${CYAN}You'll be prompted before any files are modified.${NC}"
 echo
 
 # Preview
@@ -187,8 +188,6 @@ fi
 
 # Step 2: Icon rendering test
 print_step "Testing icon rendering..."
-echo -e "  ${BOLD}Icon Test:${NC}"
-echo
 echo -e "  ╭──────────────────────────────────────────────────────────╮"
 echo -e "  │  If you see proper icons below, you're all set!          │"
 echo -e "  │  Otherwise, consider installing Nerd Fonts.              │"
@@ -201,7 +200,7 @@ echo -e "  ${DIM}If you see boxes or question marks, install Nerd Fonts:${NC}"
 echo -e "  ${CYAN}brew install --cask font-hack-nerd-font${NC}"
 echo -e "  ${DIM}More info: ${CYAN}https://www.nerdfonts.com${NC}"
 echo
-echo -e "${CYAN} Do the icons display correctly?${NC}"
+echo -e "${CYAN}  Do the icons display correctly?${NC}"
 echo
 echo -ne "  ${GREEN}➜${NC} Press ${BOLD}[Enter]${NC} if icons look good, ${BOLD}[q]${NC} to quit: "
 read -n 1 -r font_response
@@ -232,17 +231,17 @@ files_to_backup=0
 [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
 
 if [[ $files_to_backup -gt 0 ]]; then
-    echo -e "  ${BOLD}${YELLOW}⚠ Found existing Claude Code configuration${NC}"
+    echo -e "  ${BOLD}${YELLOW} Found existing Claude Code configuration${NC}"
     echo
     echo -e "  ╭──────────────────────────────────────────────────────────╮"
-    echo -e "  │  The following files will be backed up:                   │"
+    echo -e "  │  The following files will be backed up:                  │"
     echo -e "  ├──────────────────────────────────────────────────────────┤"
-    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  │  ${ICON_EDIT} ${CYAN}statusline.sh${NC}                                       │"
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  │  ${ICON_GEAR} ${CYAN}settings.json${NC}                                       │"
-    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  │  ${ICON_FOLDER} ${CYAN}hooks/         ${NC}                                      │"
+    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  │  ${CYAN}statusline.sh${NC}                                           │"
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  │  ${CYAN}settings.json${NC}                                           │"
+    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  │  ${CYAN}hooks/         ${NC}                                         │"
     echo -e "  ╰──────────────────────────────────────────────────────────╯"
     echo
-    echo -e "${CYAN} Create backups before proceeding?${NC}"
+    echo -e "${CYAN}  Create backups before proceeding?${NC}"
     echo
     echo -ne "  ${GREEN}➜${NC} ${BOLD}[Enter]${NC} to backup | ${BOLD}[s]${NC} skip backups | ${BOLD}[q]${NC} quit: "
     read -n 1 -r backup_response
@@ -283,6 +282,7 @@ print_step "Installing personality statusline..."
 echo -e "  ${CYAN}Purpose:${NC} Displays text-face personalities and status icons"
 echo -e "  ${CYAN}Target:${NC}  ~/.claude/statusline.sh"
 echo -e "  ${CYAN}Size:${NC}    ~3KB"
+echo
 
 confirm_action "Install statusline.sh?"
 
@@ -314,6 +314,7 @@ echo "  Hooks to install:"
 echo -e "    ${CYAN}•${NC} personalities_track_activity.sh - Assigns personalities based on activity"
 echo -e "    ${CYAN}•${NC} personalities_reset_errors.sh - Resets frustration on new prompts"
 echo -e "    ${CYAN}•${NC} personalities_session_end.sh - Cleans up after sessions"
+echo
 
 confirm_action "Install all hook scripts?"
 
@@ -405,7 +406,6 @@ PERSONALITY_CONFIG='{
 }'
 
 if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-    echo -e "  ${YELLOW}Existing settings.json detected${NC}"
     echo "  Will merge personality configuration with your current settings"
     echo
     confirm_action "Update settings.json?"
@@ -413,8 +413,6 @@ if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
     if [[ $? -eq 0 ]]; then
         # Check if jq is available for proper JSON merging
         if command -v jq &> /dev/null; then
-            print_info "Using jq to merge settings..."
-            
             # Create a temporary file for the merged config
             TEMP_SETTINGS=$(mktemp)
             
@@ -483,42 +481,12 @@ fi
 
 # Completion
 echo
-echo -e "${GREEN}    ╔═══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}    ║                                                           ║${NC}"
-echo -e "${GREEN}    ║${NC}       ${BOLD}${GREEN}${ICON_CHECK} Installation Complete! ${ICON_CHECK}${NC}                     ${GREEN}║${NC}"
-echo -e "${GREEN}    ║${NC}                                                           ${GREEN}║${NC}"
-echo -e "${GREEN}    ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-
-echo -e "${BOLD}  Sample Personalities Installed:${NC}"
+echo -e "  ${GREEN}Installation Complete${NC}"
 echo
-echo -e "    ${BOLD}(╯°□°)╯${NC}  Frustrated Developer ${DIM}- Gets angry with errors${NC}"
-echo -e "    ${BOLD}( ͡° ͜ʖ ͡°)${NC} Mischievous Debugger ${DIM}- When debugging code${NC}"
-echo -e "    ${BOLD}(つ◉益◉)つ${NC} Bug Hunter ${DIM}- When searching with grep${NC}"
-echo -e "    ${BOLD}ʕ•ᴥ•ʔ${NC}     Code Wizard ${DIM}- General coding mode${NC}"
-echo -e "    ${BOLD}┗(▀̿Ĺ̯▀̿ ̿)┓${NC} Git Manager ${DIM}- During git operations${NC}"
-echo
-echo -e "    ${ITALIC}And 25+ more context-aware personalities!${NC}"
-echo
-
-echo -e "${BOLD}  ${ICON_ROCKET} Next Steps:${NC}"
+echo -e "  ${BOLD}Next Steps:${NC}"
 echo
 echo -e "    ${GREEN}1.${NC} Restart Claude Code to activate personalities"
 echo -e "    ${GREEN}2.${NC} Start coding and watch your personalities change!"
 echo -e "    ${GREEN}3.${NC} Check out the README for customization options"
-echo
-
-if [[ "$BACKUPS_MADE" == true ]]; then
-    echo -e "${BOLD}  ${ICON_FOLDER} Backups:${NC}"
-    echo -e "    Your original files were backed up with timestamp:"
-    echo -e "    ${CYAN}$BACKUP_TIMESTAMP${NC}"
-    echo
-fi
-
-# Fun celebratory message
-echo -e "  ${BOLD}${MAGENTA}╭────────────────────────────────────────────────────────╮${NC}"
-echo -e "  ${BOLD}${MAGENTA}│${NC}  ${ICON_HEART} ${BOLD}Thank you for installing Claude Code Personalities!${NC} ${ICON_HEART} ${BOLD}${MAGENTA}│${NC}"
-echo -e "  ${BOLD}${MAGENTA}│${NC}          ${ITALIC}May your debugging be swift and your${NC}          ${BOLD}${MAGENTA}│${NC}"
-echo -e "  ${BOLD}${MAGENTA}│${NC}            ${ITALIC}errors be few. Happy coding! 🎉${NC}              ${BOLD}${MAGENTA}│${NC}"
-echo -e "  ${BOLD}${MAGENTA}╰────────────────────────────────────────────────────────╯${NC}"
 echo
