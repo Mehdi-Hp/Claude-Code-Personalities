@@ -6,7 +6,7 @@
 
 set -e
 
-VERSION="1.0.3"
+VERSION="1.0.4"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 
