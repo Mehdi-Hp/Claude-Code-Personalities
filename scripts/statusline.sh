@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version of Claude Code Personalities
-VERSION="1.0.3"  # Default fallback - updated by release.sh
+VERSION="1.0.4"  # Default fallback - updated by release.sh
 
 # Try to read version from Homebrew installation
 BREW_PREFIX=$(brew --prefix 2>/dev/null)
@@ -75,65 +75,13 @@ if [[ -f "$STATE_FILE" ]]; then
   esac
 fi
 
-# Update check (once per day)
-UPDATE_CHECK_FILE="/tmp/claude_personalities_update_check.json"
+# Update check disabled - use 'claude-code-personalities --check-update' instead
 update_available=false
 latest_version=""
 
-# Function to check if we should check for updates
-should_check_update() {
-  if [[ ! -f "$UPDATE_CHECK_FILE" ]]; then
-    return 0  # No cache file, should check
-  fi
-  
-  # Check if cache is older than 24 hours
-  local last_check=$(jq -r '.timestamp // 0' "$UPDATE_CHECK_FILE" 2>/dev/null || echo 0)
-  local current_time=$(date +%s)
-  local time_diff=$((current_time - last_check))
-  
-  # 86400 seconds = 24 hours
-  if (( time_diff > 86400 )); then
-    return 0  # Cache is old, should check
-  fi
-  
-  return 1  # Cache is fresh, don't check
-}
 
-# Check for updates if needed
-if should_check_update; then
-  # Try to fetch latest version from GitHub (with timeout to not slow down statusline)
-  if latest=$(curl -sL --max-time 2 https://api.github.com/repos/Mehdi-Hp/claude-code-personalities/releases/latest 2>/dev/null | jq -r ".tag_name" 2>/dev/null); then
-    if [[ -n "$latest" ]] && [[ "$latest" != "null" ]]; then
-      # Remove 'v' prefix if present for comparison
-      latest_clean="${latest#v}"
-      current_clean="${VERSION#v}"
-      
-      # Cache the result
-      echo "{\"latest_version\": \"$latest\", \"current_version\": \"$VERSION\", \"timestamp\": $(date +%s)}" > "$UPDATE_CHECK_FILE"
-      
-      # Simple version comparison (works for semantic versioning)
-      if [[ "$latest_clean" != "$current_clean" ]]; then
-        update_available=true
-        latest_version="$latest"
-      fi
-    fi
-  fi
-elif [[ -f "$UPDATE_CHECK_FILE" ]]; then
-  # Read from cache
-  cached_latest=$(jq -r '.latest_version // ""' "$UPDATE_CHECK_FILE" 2>/dev/null)
-  cached_current=$(jq -r '.current_version // ""' "$UPDATE_CHECK_FILE" 2>/dev/null)
-  
-  if [[ -n "$cached_latest" ]] && [[ "$cached_current" == "$VERSION" ]]; then
-    # Remove 'v' prefix for comparison
-    latest_clean="${cached_latest#v}"
-    current_clean="${VERSION#v}"
-    
-    if [[ "$latest_clean" != "$current_clean" ]]; then
-      update_available=true
-      latest_version="$cached_latest"
-    fi
-  fi
-fi
+# Update checking removed from statusline to avoid cache issues
+# Users should run: claude-code-personalities --check-update
 
 # Directory name
 dir_name=$(basename "${current_dir:-~}")
