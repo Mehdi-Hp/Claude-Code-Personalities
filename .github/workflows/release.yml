@@ -87,18 +87,21 @@ jobs:
             sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/claude-code-personalities.rb
             sed -i "s|archive/v[0-9.]*\.tar\.gz|archive/${{ steps.version.outputs.tag }}.tar.gz|" Formula/claude-code-personalities.rb
             
-            # Check if there are changes to commit
-            if [[ -n $(git status -s) ]]; then
+            # Check if there are actual changes to the formula file
+            if git diff --quiet Formula/claude-code-personalities.rb; then
+              echo "No formula changes needed"
+            else
               echo "Formula updated, committing changes..."
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
               git add Formula/claude-code-personalities.rb
               git commit -m "chore: update formula SHA256 for ${{ steps.version.outputs.tag }} [skip ci]"
               git push origin main
-            else
-              echo "No formula changes needed"
             fi
           fi
+          
+          # Clean up temporary files
+          rm -f release.tar.gz release-notes.md
       
       - name: Sync to Tap Repository
         env:
