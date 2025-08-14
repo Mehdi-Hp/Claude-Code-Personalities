@@ -43,7 +43,7 @@ else
     mkdir -p "$TAP_PATH"
     cd "$TAP_PATH"
     git init
-    git remote add origin "git@github.com:kumamaki/$TAP_REPO.git"
+    git remote add origin "git@personal:kumamaki/$TAP_REPO.git"
 fi
 
 # Copy formula
