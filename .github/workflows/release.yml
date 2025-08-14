@@ -106,7 +106,7 @@ jobs:
           
           # Clone tap repository
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_deploy_key -o StrictHostKeyChecking=no"
-          git clone git@github.com:Mehdi-Hp/homebrew-claude-code-personalities.git tap-repo || {
+          git clone git@personal:Mehdi-Hp/homebrew-claude-code-personalities.git tap-repo || {
             echo "Tap repository not found, skipping sync"
             exit 0
           }
