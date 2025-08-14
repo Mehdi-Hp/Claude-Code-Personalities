@@ -183,13 +183,21 @@ else
     git push origin main
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Pushed formula update"
     
-    # Step 9: Sync to tap repository
-    echo -e "${BLUE}$(printf '\xef\x81\x9f') Syncing to tap repository...${NC}"
-    if [ -f "./sync-tap.sh" ]; then
-        ./sync-tap.sh --push
+    # Step 9: Always sync to tap repository (this is how users get updates)
+    echo -e "${BLUE}$(printf '\xef\x81\x9f') Updating tap repository...${NC}"
+    
+    # Sync formula to tap
+    TAP_PATH="../homebrew-claude-code-personalities"
+    if [ -d "$TAP_PATH" ]; then
+        cp Formula/claude-code-personalities.rb "$TAP_PATH/claude-code-personalities.rb"
+        cd "$TAP_PATH"
+        git add claude-code-personalities.rb
+        git commit -m "release: $TAG" -m "SHA256: $SHA256"
+        git push origin main
+        cd - > /dev/null
         echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Tap repository updated"
     else
-        echo -e "  ${YELLOW}$(printf '\xef\x81\xb1')${NC} sync-tap.sh not found, skipping tap sync"
+        echo -e "  ${YELLOW}$(printf '\xef\x81\xb1')${NC} Tap repository not found locally"
     fi
 fi
 
