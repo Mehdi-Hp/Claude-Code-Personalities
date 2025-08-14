@@ -1,6 +1,11 @@
 # Claude Code Personalities
 
-> 🎭 Dynamic text-face personalities for Claude Code's statusline that change based on what Claude is doing
+> Dynamic text-face personalities for Claude Code's statusline that change based on what Claude is doing
+
+## Important Rules
+
+- **NO EMOJIS**: Never use emojis in any files or output
+- **Nerd Font Icons Only**: If icons are needed, use Nerd Font UTF-8 byte sequences only (e.g., `$(printf '\xef\x81\xbb')` for folder icon)
 
 ## What is This?
 
