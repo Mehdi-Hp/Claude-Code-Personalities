@@ -18,12 +18,30 @@ NC='\033[0m'
 # Get current version
 CURRENT_VERSION=$(cat .version 2>/dev/null || echo "0.0.0")
 
+# Calculate suggested next versions
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+NEXT_PATCH="$MAJOR.$MINOR.$((PATCH + 1))"
+NEXT_MINOR="$MAJOR.$((MINOR + 1)).0"
+NEXT_MAJOR="$((MAJOR + 1)).0.0"
+
 # Get version from argument or prompt
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
     echo -e "${CYAN}Current version: $CURRENT_VERSION${NC}"
-    echo -ne "${BLUE}Enter new version: ${NC}"
-    read VERSION
+    echo -e "${CYAN}Suggested versions:${NC}"
+    echo -e "  ${GREEN}1)${NC} Patch: $NEXT_PATCH (bug fixes, small changes)"
+    echo -e "  ${GREEN}2)${NC} Minor: $NEXT_MINOR (new features, backwards compatible)"
+    echo -e "  ${GREEN}3)${NC} Major: $NEXT_MAJOR (breaking changes)"
+    echo
+    echo -ne "${BLUE}Enter version number or choice (1/2/3): ${NC}"
+    read VERSION_INPUT
+    
+    case "$VERSION_INPUT" in
+        1) VERSION="$NEXT_PATCH" ;;
+        2) VERSION="$NEXT_MINOR" ;;
+        3) VERSION="$NEXT_MAJOR" ;;
+        *) VERSION="$VERSION_INPUT" ;;
+    esac
 fi
 
 # Validate version format
