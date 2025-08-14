@@ -9,36 +9,32 @@ Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠ�
 
 ## Installation
 
-### Quick Install
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
 ```
 
-### Homebrew
+## Updating
+
+Claude Code Personalities includes automatic update checking:
 
 ```bash
-# Option 1: Direct install
-brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
+# Check for updates
+claude-code-personalities check-update
 
-# Option 2: Via tap
-brew tap Mehdi-Hp/claude-code-personalities
-brew install claude-code-personalities
-
-# Then run setup
-claude-code-personalities --install
+# Update to latest version
+claude-code-personalities update
 ```
 
-## Uninstallation
+The statusline will show `[⬆ Update vX.X.X]` when a new version is available.
 
-To remove personalities and restore original settings:
+## Commands
 
 ```bash
-# Restore original Claude Code settings
-claude-code-personalities --uninstall
-
-# Remove from Homebrew
-brew uninstall claude-code-personalities
+claude-code-personalities status        # Check installation status
+claude-code-personalities update        # Update to latest version
+claude-code-personalities check-update  # Check for available updates
+claude-code-personalities uninstall     # Remove personalities
+claude-code-personalities help          # Show help
 ```
 
 ## Requirements
