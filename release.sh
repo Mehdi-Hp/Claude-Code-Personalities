@@ -15,10 +15,14 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# Get current version
+CURRENT_VERSION=$(cat .version 2>/dev/null || echo "0.0.0")
+
 # Get version from argument or prompt
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-    echo -ne "${BLUE}Enter version (e.g., 1.1.0): ${NC}"
+    echo -e "${CYAN}Current version: $CURRENT_VERSION${NC}"
+    echo -ne "${BLUE}Enter new version: ${NC}"
     read VERSION
 fi
 
@@ -48,6 +52,10 @@ fi
 
 # Step 2: Update version in files
 echo -e "${BLUE}$(printf '\xef\x81\x84') Updating version in files...${NC}"
+
+# Update .version file
+echo "$VERSION" > .version
+echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated .version"
 
 # Update install.sh
 if grep -q 'VERSION="[0-9.]*"' install.sh; then
