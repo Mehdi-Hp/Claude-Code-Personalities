@@ -4,7 +4,7 @@ class ClaudeCodePersonalities < Formula
   url "https://github.com/Mehdi-Hp/claude-code-personalities/archive/v1.0.1.tar.gz"
   sha256 "e4619c8d565766554f2acd090f5d10f63128345a5be24caae559ea687ad18bf7"  # Will be updated by release script
   license "WTFPL"
-  version "1.0.1"
+  version "1.0.2"
 
   depends_on "jq"
 
