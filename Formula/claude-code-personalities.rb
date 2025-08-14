@@ -2,7 +2,7 @@ class ClaudeCodePersonalities < Formula
   desc "Dynamic text-face personalities for Claude Code's statusline"
   homepage "https://github.com/Mehdi-Hp/claude-code-personalities"
   url "https://github.com/Mehdi-Hp/claude-code-personalities/archive/v1.1.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"
+  sha256 "b3a31fe5fde33547d379ccddfc0f235aff9d1dd6540db0f16b9362ebbffc047f"
   license "WTFPL"
 
   depends_on "jq"
