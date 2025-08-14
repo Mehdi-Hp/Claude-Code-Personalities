@@ -27,6 +27,18 @@ brew install claude-code-personalities
 claude-personalities-setup --install
 ```
 
+## Uninstallation
+
+To remove personalities and restore original settings:
+
+```bash
+# Restore original Claude Code settings
+claude-personalities-setup --uninstall
+
+# Remove from Homebrew
+brew uninstall claude-code-personalities
+```
+
 ## Requirements
 
 - Claude Code v1.0.60+
