@@ -74,19 +74,57 @@ jobs:
           echo "SHA256: $SHA256"
           
           # Update formula with new SHA256 and URL
-          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" claude-code-personalities.rb
-          sed -i "s|archive/v[0-9.]*\.tar\.gz|archive/${{ steps.version.outputs.tag }}.tar.gz|" claude-code-personalities.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/claude-code-personalities.rb
+          sed -i "s|archive/v[0-9.]*\.tar\.gz|archive/${{ steps.version.outputs.tag }}.tar.gz|" Formula/claude-code-personalities.rb
           
           # Check if there are changes to commit
           if [[ -n $(git status -s) ]]; then
             echo "Formula updated, committing changes..."
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add claude-code-personalities.rb
+            git add Formula/claude-code-personalities.rb
             git commit -m "chore: update formula SHA256 for ${{ steps.version.outputs.tag }} [skip ci]"
             git push origin HEAD:main
           else
             echo "No formula changes needed"
+          fi
+      
+      - name: Sync to Tap Repository
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        run: |
+          # Only sync if deploy key is configured
+          if [ -z "$TAP_DEPLOY_KEY" ]; then
+            echo "TAP_DEPLOY_KEY not configured, skipping tap sync"
+            exit 0
+          fi
+          
+          # Setup SSH for tap repo
+          mkdir -p ~/.ssh
+          echo "$TAP_DEPLOY_KEY" > ~/.ssh/tap_deploy_key
+          chmod 600 ~/.ssh/tap_deploy_key
+          
+          # Clone tap repository
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_deploy_key -o StrictHostKeyChecking=no"
+          git clone git@github.com:Mehdi-Hp/homebrew-claude-code-personalities.git tap-repo || {
+            echo "Tap repository not found, skipping sync"
+            exit 0
+          }
+          
+          # Copy formula to tap repo (at root, not in Formula directory)
+          cp Formula/claude-code-personalities.rb tap-repo/claude-code-personalities.rb
+          
+          # Commit and push if changes
+          cd tap-repo
+          if [[ -n $(git status -s) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add claude-code-personalities.rb
+            git commit -m "chore: sync formula for ${{ steps.version.outputs.tag }} release"
+            git push origin main
+            echo "Tap repository updated successfully"
+          else
+            echo "No changes needed in tap repository"
           fi
       
       - name: Post-release summary
