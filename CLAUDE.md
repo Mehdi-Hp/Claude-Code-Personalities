@@ -68,15 +68,15 @@ claude-code-personalities/
 ├── README.md                     # User-facing documentation
 ├── LICENSE                       # MIT License
 ├── install.sh                    # Quick installer script
+├── bin/
+│   └── claude-code-personalities  # Main command-line utility
 ├── scripts/
 │   └── statusline.sh            # Source statusline script
 ├── hooks/
 │   ├── personalities_track_activity.sh       # Source activity hook
 │   ├── personalities_reset_errors.sh         # Source error reset hook
 │   └── personalities_session_end.sh          # Source session cleanup hook
-├── Formula/
-│   └── claude-code-personalities.rb  # Homebrew formula
-└── claude-code-personalities      # Setup utility for Homebrew
+└── .version                      # Version file
 ```
 
 ## File Details
@@ -291,24 +291,21 @@ Icons are defined using UTF-8 byte sequences:
 curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
 ```
 
-### Interactive Install
+### Manual Install
 ```bash
 git clone https://github.com/Mehdi-Hp/claude-code-personalities
 cd claude-code-personalities
 ./install.sh
 ```
 
-### Homebrew
+## Updating
+
 ```bash
-# Option 1: Direct install
-brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
+# Check for updates
+claude-code-personalities check-update
 
-# Option 2: Via tap
-brew tap Mehdi-Hp/claude-code-personalities
-brew install claude-code-personalities
-
-# Then run setup
-claude-code-personalities --install
+# Update to latest version
+claude-code-personalities update
 ```
 
 ## Testing
@@ -348,6 +345,11 @@ cat /tmp/claude_debug.json
 2. Verify settings.json has hook configuration
 3. Check state file exists: `ls /tmp/claude_activity_*.json`
 4. Ensure jq is installed: `brew install jq`
+
+### Update Not Working
+1. Check command is installed: `which claude-code-personalities`
+2. Run status check: `claude-code-personalities status`
+3. Try manual update: `claude-code-personalities update`
 
 ### Always Shows "Booting Up"
 - State file isn't being created/read
