@@ -258,9 +258,9 @@ consecutive > 10  →  ┌༼◉ل͟◉༽┐ Hyperfocused Coder
 - `( ˘ ³˘)` **Booting Up** - Initial startup
 
 ### Time-Based
-- `☕(◡ ‿ ◡ ✿)` **Morning Engineer** - 6 AM - 12 PM
-- `【≽ܫ≼】` **Afternoon Thinker** - 12 PM - 5 PM
-- `(◕‿◕)` **Evening Explorer** - 5 PM - 10 PM
+- `( ˶˘ ³˘)☕` **Morning Engineer** - 6 AM - 12 PM
+- `(つ°ヮ°)つ` **Afternoon Thinker** - 12 PM - 5 PM
+- `(￣ω￣;)` **Evening Explorer** - 5 PM - 10 PM
 - `˙ ͜ʟ˙` **Night Coder** - 10 PM - 6 AM
 
 ## Nerd Font Icons Reference

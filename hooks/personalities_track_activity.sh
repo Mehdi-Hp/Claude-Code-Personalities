@@ -128,11 +128,13 @@ elif (( consecutive > 10 )); then
 else
   hour=$(date +%H)
   if (( hour >= 6 && hour < 12 )); then
-    personality="☕(◡ ‿ ◡ ✿) Coffee Powered"
+    # Coffee icon: f0f4 (Font Awesome coffee)
+    ICON_COFFEE=$(printf '\xef\x83\xb4')
+    personality="( ˶˘ ³˘)${ICON_COFFEE} Coffee Powered"
   elif (( hour >= 12 && hour < 17 )); then
-    personality="【≽ܫ≼】 Afternoon Thinker"
+    personality="(つ°ヮ°)つ Afternoon Thinker"
   elif (( hour >= 17 && hour < 22 )); then
-    personality="(◕‿◕) Evening Explorer"
+    personality="(￣ω￣;) Evening Explorer"
   else
     personality="˙ ͜ʟ˙ Night Coder"
   fi
