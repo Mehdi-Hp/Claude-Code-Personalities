@@ -11,7 +11,7 @@ CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 VERSION_FILE="$CLAUDE_DIR/.personalities_version"
 INSTALL_DIR="$CLAUDE_DIR/personalities"
-BIN_PATH="/usr/local/bin/claude-code-personalities"
+BIN_PATH="$HOME/.local/bin/claude-code-personalities"
 
 # Colors
 RED='\033[0;31m'
@@ -245,12 +245,21 @@ do_install() {
     # Cleanup
     rm -rf "$temp_dir"
     
-    # Install this command to /usr/local/bin if not already there
+    # Install this command to ~/.local/bin if not already there
     if [[ "$0" != "$BIN_PATH" ]]; then
+        # Create directory if it doesn't exist
+        mkdir -p "$(dirname "$BIN_PATH")"
+        
         print_info "Installing command to $BIN_PATH..."
-        sudo cp "$0" "$BIN_PATH"
-        sudo chmod +x "$BIN_PATH"
+        cp "$0" "$BIN_PATH"
+        chmod +x "$BIN_PATH"
         print_success "Command installed to $BIN_PATH"
+        
+        # Check if ~/.local/bin is in PATH
+        if [[ ":$PATH:" != *":$(dirname "$BIN_PATH"):"* ]]; then
+            print_warning "$(dirname "$BIN_PATH") is not in your PATH"
+            echo "Add to your shell config: export PATH=\"\$HOME/.local/bin:\$PATH\""
+        fi
     fi
     
     echo ""
@@ -296,8 +305,10 @@ do_update() {
     # Update this command itself
     if [[ -f "$temp_dir/bin/claude-code-personalities" ]]; then
         print_info "Updating command..."
-        sudo cp "$temp_dir/bin/claude-code-personalities" "$BIN_PATH"
-        sudo chmod +x "$BIN_PATH"
+        # Ensure directory exists
+        mkdir -p "$(dirname "$BIN_PATH")"
+        cp "$temp_dir/bin/claude-code-personalities" "$BIN_PATH"
+        chmod +x "$BIN_PATH"
         print_success "Command updated"
     fi
     
