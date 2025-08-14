@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Version of Claude Code Personalities
-VERSION="1.0.4"  # Default fallback - updated by release.sh
+VERSION="1.0.5"  # Default fallback
 
-# Try to read version from Homebrew installation
-BREW_PREFIX=$(brew --prefix 2>/dev/null)
-if [[ -n "$BREW_PREFIX" ]] && [[ -f "$BREW_PREFIX/share/claude-code-personalities/.version" ]]; then
-    VERSION=$(cat "$BREW_PREFIX/share/claude-code-personalities/.version")
+# Try to read version from installation
+VERSION_FILE="$HOME/.claude/.personalities_version"
+if [[ -f "$VERSION_FILE" ]]; then
+    VERSION=$(cat "$VERSION_FILE")
 fi
 
 # Nerd Font icons (UTF-8 byte sequences)
@@ -75,13 +75,30 @@ if [[ -f "$STATE_FILE" ]]; then
   esac
 fi
 
-# Update check disabled - use 'claude-code-personalities --check-update' instead
+# Simple update check (once per session, no caching)
+UPDATE_CHECK_FILE="/tmp/claude_personalities_session_${session_id}.update"
 update_available=false
 latest_version=""
 
-
-# Update checking removed from statusline to avoid cache issues
-# Users should run: claude-code-personalities --check-update
+# Check for updates once per session
+if [[ ! -f "$UPDATE_CHECK_FILE" ]]; then
+  # Mark that we've checked this session
+  touch "$UPDATE_CHECK_FILE" 2>/dev/null || true
+  
+  # Quick check with very short timeout to not slow down statusline
+  if latest=$(curl -sL --max-time 1 https://api.github.com/repos/Mehdi-Hp/claude-code-personalities/releases/latest 2>/dev/null | jq -r ".tag_name" 2>/dev/null); then
+    if [[ -n "$latest" ]] && [[ "$latest" != "null" ]]; then
+      latest_clean="${latest#v}"
+      current_clean="${VERSION#v}"
+      
+      # Simple version comparison
+      if [[ "$latest_clean" != "$current_clean" ]]; then
+        update_available=true
+        latest_version="$latest"
+      fi
+    fi
+  fi
+fi
 
 # Directory name
 dir_name=$(basename "${current_dir:-~}")
