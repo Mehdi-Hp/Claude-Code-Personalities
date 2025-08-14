@@ -1,246 +1,185 @@
 #!/bin/bash
 
-# Claude Code Personalities Release Script
-# Usage: ./release.sh [version]
-# Example: ./release.sh 1.2.0
+# Release script for Claude Code Personalities
+# This script automates the release process
 
 set -e
 
-# Colors for output
+# Icons (same ones used in the personality system)
+ICON_ROCKET=$(printf '\xef\x84\xb5')
+ICON_CHECK=$(printf '\xef\x80\x8c')
+ICON_STAR=$(printf '\xef\x80\x85')
+ICON_PACKAGE=$(printf '\xef\x86\x87')
+ICON_GIT=$(printf '\xef\x84\xa6')
+ICON_TAG=$(printf '\xef\x81\x92')
+ICON_UPLOAD=$(printf '\xef\x82\x93')
+ICON_WARNING=$(printf '\xef\x81\xb1')
+
+# Colors
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-RED='\033[0;31m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# Get current version
-CURRENT_VERSION=$(cat .version 2>/dev/null || echo "0.0.0")
+echo -e "${BOLD}${CYAN}${ICON_ROCKET} Claude Code Personalities Release Script${NC}"
+echo ""
 
-# Calculate suggested next versions
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-NEXT_PATCH="$MAJOR.$MINOR.$((PATCH + 1))"
-NEXT_MINOR="$MAJOR.$((MINOR + 1)).0"
-NEXT_MAJOR="$((MAJOR + 1)).0.0"
-
-# Get version from argument or prompt
-VERSION="${1:-}"
-if [[ -z "$VERSION" ]]; then
-    echo -e "${CYAN}Current version: $CURRENT_VERSION${NC}"
-    echo -e "${CYAN}Suggested versions:${NC}"
-    echo -e "  ${GREEN}1)${NC} Patch: $NEXT_PATCH (bug fixes, small changes)"
-    echo -e "  ${GREEN}2)${NC} Minor: $NEXT_MINOR (new features, backwards compatible)"
-    echo -e "  ${GREEN}3)${NC} Major: $NEXT_MAJOR (breaking changes)"
-    echo
-    echo -ne "${BLUE}Enter version number or choice (1/2/3): ${NC}"
-    read VERSION_INPUT
-    
-    case "$VERSION_INPUT" in
-        1) VERSION="$NEXT_PATCH" ;;
-        2) VERSION="$NEXT_MINOR" ;;
-        3) VERSION="$NEXT_MAJOR" ;;
-        *) VERSION="$VERSION_INPUT" ;;
-    esac
-fi
-
-# Validate version format
-if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${RED}$(printf '\xef\x81\x97') Error: Version must be in format X.Y.Z${NC}"
+# Step 1: Check if on main branch
+echo -e "${BLUE}${ICON_GIT} Checking branch...${NC}"
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
+    echo -e "${RED}Error: Not on main branch (currently on $CURRENT_BRANCH)${NC}"
+    echo "Please switch to main branch: git checkout main"
     exit 1
 fi
+echo -e "  ${GREEN}${ICON_CHECK}${NC} On main branch"
 
+# Step 2: Check for uncommitted changes
+echo -e "${BLUE}${ICON_GIT} Checking for uncommitted changes...${NC}"
+if ! git diff-index --quiet HEAD --; then
+    echo -e "${RED}Error: You have uncommitted changes${NC}"
+    echo "Please commit or stash your changes first"
+    exit 1
+fi
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Working directory clean"
+
+# Step 3: Pull latest changes
+echo -e "${BLUE}${ICON_GIT} Pulling latest changes...${NC}"
+git pull origin main
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Up to date with origin"
+
+# Step 4: Determine version
+echo ""
+echo -e "${BLUE}${ICON_TAG} Version Management${NC}"
+CURRENT_VERSION=$(cat .version 2>/dev/null || echo "0.0.0")
+echo -e "Current version: ${CYAN}$CURRENT_VERSION${NC}"
+echo ""
+echo "What type of release is this?"
+echo "  1) Patch (bug fixes)"
+echo "  2) Minor (new features, backwards compatible)"
+echo "  3) Major (breaking changes)"
+echo -n "Select (1-3): "
+read -n 1 RELEASE_TYPE
+echo ""
+
+# Parse current version
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+# Increment version based on type
+case $RELEASE_TYPE in
+    1)
+        PATCH=$((PATCH + 1))
+        ;;
+    2)
+        MINOR=$((MINOR + 1))
+        PATCH=0
+        ;;
+    3)
+        MAJOR=$((MAJOR + 1))
+        MINOR=0
+        PATCH=0
+        ;;
+    *)
+        echo -e "${RED}Invalid selection${NC}"
+        exit 1
+        ;;
+esac
+
+VERSION="$MAJOR.$MINOR.$PATCH"
 TAG="v$VERSION"
 
-echo -e "${BOLD}${CYAN}$(printf '\xef\x84\xb5') Releasing Claude Code Personalities $TAG${NC}\n"
+echo ""
+echo -e "New version: ${GREEN}$VERSION${NC}"
+echo -n "Continue with release? (y/N): "
+read -n 1 CONFIRM
+echo ""
 
-# Step 1: Check for uncommitted changes
-echo -e "${BLUE}$(printf '\xef\x80\x8c') Checking for uncommitted changes...${NC}"
-if [[ -n $(git status -s) ]]; then
-    echo -e "${YELLOW}$(printf '\xef\x81\xb1')  You have uncommitted changes:${NC}"
-    git status -s
-    echo
-    echo -ne "${YELLOW}Continue anyway? (y/N): ${NC}"
-    read -r response
-    if [[ "$response" != "y" ]] && [[ "$response" != "Y" ]]; then
-        echo -e "${RED}Release cancelled${NC}"
-        exit 1
-    fi
+if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+    echo "Release cancelled"
+    exit 0
 fi
 
-# Step 2: Update version in files
-echo -e "${BLUE}$(printf '\xef\x81\x84') Updating version in files...${NC}"
-
-# Update .version file
+# Step 5: Update version files
+echo ""
+echo -e "${BLUE}${ICON_PACKAGE} Updating version files...${NC}"
 echo "$VERSION" > .version
-echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated .version"
+sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/statusline.sh
+sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" bin/claude-code-personalities
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Updated version to $VERSION"
 
-# Update install.sh
-if grep -q 'VERSION="[0-9.]*"' install.sh; then
-    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" install.sh
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated install.sh"
-fi
+# Step 6: Commit version changes
+echo -e "${BLUE}${ICON_GIT} Committing version changes...${NC}"
+git add .version scripts/statusline.sh bin/claude-code-personalities
+git commit -m "chore: bump version to $VERSION"
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Committed version changes"
 
-# Update claude-code-personalities
-if grep -q 'VERSION="[0-9.]*"' claude-code-personalities; then
-    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" claude-code-personalities
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated claude-code-personalities"
-fi
+# Step 7: Create and push tag
+echo -e "${BLUE}${ICON_TAG} Creating tag $TAG...${NC}"
+git tag -a "$TAG" -m "Release $TAG"
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Tag created"
 
-# Update scripts/statusline.sh
-if grep -q 'VERSION="[0-9.]*"' scripts/statusline.sh; then
-    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/statusline.sh
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated scripts/statusline.sh"
-fi
-
-# Update Formula version (not the URL yet)
-if grep -q 'version "[0-9.]*"' Formula/claude-code-personalities.rb 2>/dev/null; then
-    sed -i '' "s/version \"[0-9.]*\"/version \"$VERSION\"/" Formula/claude-code-personalities.rb
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated Formula version"
-fi
-
-# Commit version updates if any changes
-if [[ -n $(git status -s) ]]; then
-    echo -e "${BLUE}$(printf '\xef\x80\x89') Committing version updates...${NC}"
-    git add -A
-    git commit -m "chore: bump version to $VERSION"
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Committed version changes"
-fi
-
-# Step 3: Push latest changes
-echo -e "${BLUE}$(printf '\xef\x82\x93') Pushing to GitHub...${NC}"
+echo -e "${BLUE}${ICON_UPLOAD} Pushing changes and tag...${NC}"
 git push origin main
-echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Pushed to main branch"
+git push origin "$TAG"
+echo -e "  ${GREEN}${ICON_CHECK}${NC} Pushed to GitHub"
 
-# Step 4: Create and push tag
-echo -e "${BLUE}$(printf '\xef\x80\xac')  Creating tag $TAG...${NC}"
-if git tag -l | grep -q "^$TAG$"; then
-    echo -e "${YELLOW}$(printf '\xef\x81\xb1')  Tag $TAG already exists. Delete it first? (y/N): ${NC}"
-    read -r response
-    if [[ "$response" == "y" ]] || [[ "$response" == "Y" ]]; then
-        git tag -d "$TAG"
-        git push origin --delete "$TAG" 2>/dev/null || true
-    else
-        echo -e "${RED}Release cancelled${NC}"
-        exit 1
-    fi
+# Step 8: Create release notes
+echo ""
+echo -e "${BLUE}${ICON_PACKAGE} Creating GitHub release...${NC}"
+
+# Get commits since last tag
+LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+if [[ -n "$LAST_TAG" ]]; then
+    COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges)
+else
+    COMMITS=$(git log --pretty=format:"- %s" --no-merges -10)
 fi
 
-git tag -a "$TAG" -m "Release $TAG - Claude Code Personalities
+RELEASE_NOTES="## Changes
 
-Enhanced installer with visual improvements and better user experience."
-git push origin "$TAG"
-echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Created and pushed tag $TAG"
+$COMMITS
 
-# Step 5: Create GitHub release
-echo -e "${BLUE}$(printf '\xef\x86\x87') Creating GitHub release...${NC}"
+## Installation
 
-# Create release notes
-RELEASE_NOTES="## $(printf '\xef\x86\x8d') Claude Code Personalities $VERSION
-
-### Installation
-
-#### Quick Install
 \`\`\`bash
 curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
 \`\`\`
 
-#### Homebrew
+## Updating
+
 \`\`\`bash
-brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
+claude-code-personalities update
 \`\`\`
-
-### Documentation
-
-See [CLAUDE.md](https://github.com/Mehdi-Hp/claude-code-personalities/blob/main/CLAUDE.md) for:
-- Complete personality list (30+ personalities)
-- Customization guide
-- Technical details
 "
 
-# Check if gh is installed
-if ! command -v gh &> /dev/null; then
-    echo -e "${YELLOW}$(printf '\xef\x81\xb1')  GitHub CLI (gh) not found. Install with: brew install gh${NC}"
-    echo -e "${YELLOW}   Please create the release manually at:${NC}"
-    echo -e "${CYAN}   https://github.com/Mehdi-Hp/claude-code-personalities/releases/new${NC}"
-else
-    gh release create "$TAG" \
-        --title "$TAG - Claude Code Personalities" \
-        --notes "$RELEASE_NOTES" \
+# Check if gh CLI is available
+if command -v gh &> /dev/null; then
+    echo "$RELEASE_NOTES" | gh release create "$TAG" \
+        --title "Release $TAG" \
+        --notes-file - \
         --latest
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Created GitHub release"
-fi
-
-# Step 6: Calculate SHA256 for Homebrew
-echo -e "${BLUE}$(printf '\xef\x80\xa3') Calculating SHA256 for Homebrew formula...${NC}"
-echo -e "  ${CYAN}Waiting for GitHub to process the release...${NC}"
-sleep 5
-
-# Try to get SHA256
-MAX_RETRIES=3
-RETRY_COUNT=0
-SHA256=""
-
-while [[ $RETRY_COUNT -lt $MAX_RETRIES ]] && [[ -z "$SHA256" ]]; do
-    SHA256=$(curl -sL "https://github.com/Mehdi-Hp/claude-code-personalities/archive/$TAG.tar.gz" | shasum -a 256 | cut -d' ' -f1)
-    
-    if [[ -z "$SHA256" ]] || [[ "$SHA256" == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]]; then
-        # Empty file hash, GitHub hasn't processed it yet
-        SHA256=""
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
-            echo -e "  ${YELLOW}Retrying in 5 seconds... ($RETRY_COUNT/$MAX_RETRIES)${NC}"
-            sleep 5
-        fi
-    fi
-done
-
-if [[ -z "$SHA256" ]]; then
-    echo -e "${YELLOW}$(printf '\xef\x81\xb1')  Could not calculate SHA256 automatically${NC}"
-    echo -e "${YELLOW}   Please run this command manually after GitHub processes the release:${NC}"
-    echo -e "${CYAN}   curl -sL https://github.com/Mehdi-Hp/claude-code-personalities/archive/$TAG.tar.gz | shasum -a 256${NC}"
+    echo -e "  ${GREEN}${ICON_CHECK}${NC} GitHub release created"
 else
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} SHA256: ${BOLD}$SHA256${NC}"
-    
-    # Step 7: Update Formula with SHA256
-    echo -e "${BLUE}$(printf '\xef\x81\x99') Updating Homebrew formula...${NC}"
-    sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/claude-code-personalities.rb
-    sed -i '' "s|archive/v[0-9.]*\.tar\.gz|archive/$TAG.tar.gz|" Formula/claude-code-personalities.rb
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated formula with SHA256"
-    
-    # Step 8: Commit and push formula update
-    echo -e "${BLUE}$(printf '\xef\x82\x93') Pushing formula update...${NC}"
-    git add Formula/claude-code-personalities.rb
-    git commit -m "chore: update formula SHA256 for $TAG release"
-    git push origin main
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Pushed formula update"
-    
-    # Step 9: Always sync to tap repository (this is how users get updates)
-    echo -e "${BLUE}$(printf '\xef\x81\x9f') Updating tap repository...${NC}"
-    
-    # Sync formula to tap
-    TAP_PATH="../homebrew-claude-code-personalities"
-    if [ -d "$TAP_PATH" ]; then
-        cp Formula/claude-code-personalities.rb "$TAP_PATH/claude-code-personalities.rb"
-        cd "$TAP_PATH"
-        git add claude-code-personalities.rb
-        git commit -m "release: $TAG" -m "SHA256: $SHA256"
-        git push origin main
-        cd - > /dev/null
-        echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Tap repository updated"
-    else
-        echo -e "  ${YELLOW}$(printf '\xef\x81\xb1')${NC} Tap repository not found locally"
-    fi
+    echo -e "${YELLOW}${ICON_WARNING}  GitHub CLI (gh) not found. Install with: brew install gh${NC}"
+    echo ""
+    echo "Please create the release manually at:"
+    echo "https://github.com/Mehdi-Hp/claude-code-personalities/releases/new"
+    echo ""
+    echo "Tag: $TAG"
+    echo ""
+    echo "Release notes:"
+    echo "$RELEASE_NOTES"
 fi
 
-# Success message
-echo
-echo -e "${GREEN}${BOLD}$(printf '\xef\x80\x8c') Release $TAG completed successfully!${NC}"
-echo
-echo -e "${BOLD}Users can now install with:${NC}"
-echo
-echo -e "${CYAN}Homebrew:${NC}"
-echo "  brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities"
-echo
-echo -e "${CYAN}View release at:${NC}"
-echo "  https://github.com/Mehdi-Hp/claude-code-personalities/releases/tag/$TAG"
+echo ""
+echo -e "${BOLD}${GREEN}${ICON_STAR} Release $TAG complete!${NC}"
+echo ""
+echo -e "${CYAN}Installation:${NC}"
+echo "  curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash"
+echo ""
+echo -e "${CYAN}Update:${NC}"
+echo "  claude-code-personalities update"
+echo ""

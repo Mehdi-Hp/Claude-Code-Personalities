@@ -1,4 +1,4 @@
-name: Auto Release
+name: Release
 
 on:
   push:
@@ -17,7 +17,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Get version from tag
         id: version
@@ -30,122 +29,59 @@ jobs:
         run: |
           cat > release-notes.md << 'EOF'
           ## Claude Code Personalities ${{ steps.version.outputs.version }}
-
+          
           ### Installation
-
-          #### Quick Install
+          
           ```bash
           curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
           ```
-
-          #### Homebrew
+          
+          ### Updating
+          
           ```bash
-          brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
+          claude-code-personalities update
           ```
-
+          
           ### What's New
           See [CLAUDE.md](https://github.com/Mehdi-Hp/claude-code-personalities/blob/main/CLAUDE.md) for complete documentation.
-
+          
           ### Features
           - 30+ dynamic personalities that change based on Claude's activity
-          - Context-aware statusline with Nerd Font icons
-          - Error state management with progressive frustration levels
-          - Beautiful installer with visual progress tracking
+          - Context-aware statusline with activity tracking
+          - Automatic update checking and self-updating
+          - Session persistence
+          - Error state management
+          
+          ### Commands
+          
+          ```bash
+          claude-code-personalities status        # Check installation status
+          claude-code-personalities update        # Update to latest version
+          claude-code-personalities check-update  # Check for available updates
+          claude-code-personalities uninstall     # Remove personalities
+          claude-code-personalities help          # Show help
+          ```
           EOF
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          files: |
+            release-notes.md
           body_path: release-notes.md
-          draft: false
-          prerelease: false
-          name: "${{ steps.version.outputs.tag }} - Claude Code Personalities"
-      
-      - name: Wait for release to be available
-        run: sleep 10
-      
-      - name: Calculate SHA256 and Update Formula
-        run: |
-          # First, switch to main branch and pull latest changes
-          git checkout main
-          git pull origin main
-          
-          # Calculate SHA256 from the release tarball
-          echo "Downloading release tarball..."
-          curl -sL "https://github.com/Mehdi-Hp/claude-code-personalities/archive/${{ steps.version.outputs.tag }}.tar.gz" -o release.tar.gz
-          
-          SHA256=$(shasum -a 256 release.tar.gz | cut -d' ' -f1)
-          echo "SHA256: $SHA256"
-          
-          # Check if formula already has this SHA256 (release.sh might have updated it)
-          CURRENT_SHA=$(grep 'sha256 "' Formula/claude-code-personalities.rb | sed 's/.*sha256 "\(.*\)"/\1/')
-          
-          if [ "$CURRENT_SHA" = "$SHA256" ]; then
-            echo "Formula already has correct SHA256, skipping update"
-          else
-            # Update formula with new SHA256 and URL
-            sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/claude-code-personalities.rb
-            sed -i "s|archive/v[0-9.]*\.tar\.gz|archive/${{ steps.version.outputs.tag }}.tar.gz|" Formula/claude-code-personalities.rb
-            
-            # Check if there are actual changes to the formula file
-            if git diff --quiet Formula/claude-code-personalities.rb; then
-              echo "No formula changes needed"
-            else
-              echo "Formula updated, committing changes..."
-              git config user.name "github-actions[bot]"
-              git config user.email "github-actions[bot]@users.noreply.github.com"
-              git add Formula/claude-code-personalities.rb
-              git commit -m "chore: update formula SHA256 for ${{ steps.version.outputs.tag }} [skip ci]"
-              git push origin main
-            fi
-          fi
-          
-          # Clean up temporary files
-          rm -f release.tar.gz release-notes.md
-      
-      - name: Sync to Tap Repository
         env:
-          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
-        run: |
-          # Only sync if deploy key is configured
-          if [ -z "$TAP_DEPLOY_KEY" ]; then
-            echo "TAP_DEPLOY_KEY not configured, skipping tap sync"
-            exit 0
-          fi
-          
-          # Setup SSH for tap repo
-          mkdir -p ~/.ssh
-          echo "$TAP_DEPLOY_KEY" > ~/.ssh/tap_deploy_key
-          chmod 600 ~/.ssh/tap_deploy_key
-          
-          # Clone tap repository
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_deploy_key -o StrictHostKeyChecking=no"
-          git clone git@github.com:Mehdi-Hp/homebrew-claude-code-personalities.git tap-repo || {
-            echo "Tap repository not found, skipping sync"
-            exit 0
-          }
-          
-          # Copy formula to tap repo (at root, not in Formula directory)
-          cp Formula/claude-code-personalities.rb tap-repo/claude-code-personalities.rb
-          
-          # Commit and push if changes
-          cd tap-repo
-          if [[ -n $(git status -s) ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add claude-code-personalities.rb
-            git commit -m "chore: sync formula for ${{ steps.version.outputs.tag }} release"
-            git push origin main
-            echo "Tap repository updated successfully"
-          else
-            echo "No changes needed in tap repository"
-          fi
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Post-release summary
+      - name: Output summary
         run: |
-          echo "Release ${{ steps.version.outputs.tag }} completed!"
-          echo ""
-          echo "Release URL: https://github.com/Mehdi-Hp/claude-code-personalities/releases/tag/${{ steps.version.outputs.tag }}"
-          echo ""
-          echo "Users can install with:"
-          echo "  brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities"
+          echo "### ✅ Release ${{ steps.version.outputs.tag }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Updating" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "claude-code-personalities update" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
