@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="1.3.0"
+VERSION="1.3.1"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 BREW_SHARE="$(brew --prefix)/share/claude-code-personalities"
@@ -42,12 +42,19 @@ show_help() {
     echo "Usage: claude-personalities-setup [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --install    Configure Claude Code with personalities"
-    echo "  --uninstall  Remove personalities configuration"
-    echo "  --status     Check installation status"
-    echo "  --help       Show this help message"
+    echo "  --install     Configure Claude Code with personalities"
+    echo "  --uninstall   Remove personalities configuration"
+    echo "  --status      Check installation status"
+    echo "  --no-backup   Skip creating backup files (use if backups fail)"
+    echo "  --help        Show this help message"
     echo ""
-    echo "This utility is typically called by Homebrew during installation."
+    echo "Installation:"
+    echo "  brew install claude-code-personalities"
+    echo "  claude-personalities-setup --install"
+    echo ""
+    echo "Uninstallation:"
+    echo "  claude-personalities-setup --uninstall"
+    echo "  brew uninstall claude-code-personalities"
 }
 
 check_dependencies() {
@@ -67,9 +74,19 @@ backup_existing() {
     local file="$1"
     local timestamp=$(date +%Y%m%d_%H%M%S)
     
+    # Skip backups if --no-backup flag is set
+    if [[ "$NO_BACKUP" == "true" ]]; then
+        return 0
+    fi
+    
     if [[ -f "$file" ]]; then
-        cp "$file" "${file}.backup.${timestamp}"
-        print_info "Backed up $(basename "$file") to $(basename "${file}.backup.${timestamp}")"
+        # Try to create backup, but don't fail if it doesn't work
+        if cp "$file" "${file}.backup.${timestamp}" 2>/dev/null; then
+            print_info "Backed up $(basename "$file") to $(basename "${file}.backup.${timestamp}")"
+        else
+            print_warning "Could not create backup of $(basename "$file") (permission denied)"
+            print_info "Original file will be overwritten"
+        fi
     fi
 }
 
@@ -165,23 +182,53 @@ uninstall_personalities() {
     echo -e "${BOLD}${BLUE}Uninstalling Claude Code Personalities...${NC}"
     echo
     
-    print_info "Removing personality files..."
-    rm -f "$CLAUDE_DIR/statusline.sh"
-    rm -rf "$HOOKS_DIR"
+    # Try to restore from backups first
+    print_info "Looking for backup files..."
     
-    print_info "Settings.json will need manual cleanup"
-    print_warning "Remove personality configuration from ~/.claude/settings.json"
+    # Restore statusline.sh from backup
+    if ls "$CLAUDE_DIR"/statusline.sh.backup.* 1> /dev/null 2>&1; then
+        LATEST_BACKUP=$(ls -t "$CLAUDE_DIR"/statusline.sh.backup.* 2>/dev/null | head -1)
+        if [ -f "$LATEST_BACKUP" ]; then
+            if mv "$LATEST_BACKUP" "$CLAUDE_DIR/statusline.sh" 2>/dev/null; then
+                print_success "Restored original statusline.sh"
+            else
+                print_warning "Could not restore statusline.sh (permission denied)"
+                rm -f "$CLAUDE_DIR/statusline.sh" 2>/dev/null
+            fi
+        fi
+    else
+        rm -f "$CLAUDE_DIR/statusline.sh" 2>/dev/null
+    fi
     
-    # Look for backups
+    # Restore settings.json from backup
+    if ls "$CLAUDE_DIR"/settings.json.backup.* 1> /dev/null 2>&1; then
+        LATEST_BACKUP=$(ls -t "$CLAUDE_DIR"/settings.json.backup.* 2>/dev/null | head -1)
+        if [ -f "$LATEST_BACKUP" ]; then
+            if mv "$LATEST_BACKUP" "$CLAUDE_DIR/settings.json" 2>/dev/null; then
+                print_success "Restored original settings.json"
+            else
+                print_warning "Could not restore settings.json (permission denied)"
+                print_info "You'll need to manually remove personality hooks from settings.json"
+            fi
+        fi
+    else
+        print_warning "No settings.json backup found"
+        print_info "You'll need to manually remove personality hooks from settings.json"
+    fi
+    
+    # Remove personality hooks
+    print_info "Removing personality hooks..."
+    rm -f "$HOOKS_DIR"/personalities_*.sh 2>/dev/null
+    
+    # Clean up any remaining backup files
     if ls "$CLAUDE_DIR"/*.backup.* &> /dev/null 2>&1; then
-        echo
-        print_info "Backup files found:"
-        ls -la "$CLAUDE_DIR"/*.backup.*
-        print_info "You can restore these manually if needed"
+        print_info "Cleaning up backup files..."
+        rm -f "$CLAUDE_DIR"/*.backup.* 2>/dev/null
     fi
     
     echo
     print_success "Claude Code Personalities uninstalled"
+    print_info "Restart Claude Code to complete the removal"
 }
 
 check_status() {
@@ -236,23 +283,52 @@ check_status() {
     fi
 }
 
-# Main
-case "${1:-}" in
-    --install|-i)
+# Parse flags
+NO_BACKUP=false
+ACTION=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --install|-i)
+            ACTION="install"
+            shift
+            ;;
+        --uninstall|-u)
+            ACTION="uninstall"
+            shift
+            ;;
+        --status|-s)
+            ACTION="status"
+            shift
+            ;;
+        --no-backup)
+            NO_BACKUP=true
+            shift
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# Execute action
+case "$ACTION" in
+    install)
         install_personalities
         ;;
-    --uninstall|-u)
+    uninstall)
         uninstall_personalities
         ;;
-    --status|-s)
+    status)
         check_status
         ;;
-    --help|-h|"")
+    "")
         show_help
-        ;;
-    *)
-        print_error "Unknown option: $1"
-        show_help
-        exit 1
         ;;
 esac
