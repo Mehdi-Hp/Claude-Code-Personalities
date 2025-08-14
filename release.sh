@@ -157,7 +157,7 @@ MAX_RETRIES=3
 RETRY_COUNT=0
 SHA256=""
 
-while [[ $RETRY_COUNT -lt $MAX_RETRIES ]] && [[ -z "$SHA256" ]]; then
+while [[ $RETRY_COUNT -lt $MAX_RETRIES ]] && [[ -z "$SHA256" ]]; do
     SHA256=$(curl -sL "https://github.com/Mehdi-Hp/claude-code-personalities/archive/$TAG.tar.gz" | shasum -a 256 | cut -d' ' -f1)
     
     if [[ -z "$SHA256" ]] || [[ "$SHA256" == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]]; then
