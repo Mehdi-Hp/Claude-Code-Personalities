@@ -40,12 +40,7 @@ jobs:
 
           #### Homebrew
           ```bash
-          # Direct install
           brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
-
-          # Or with tap
-          brew tap Mehdi-Hp/claude-code-personalities
-          brew install claude-code-personalities
           ```
 
           ### What's New
