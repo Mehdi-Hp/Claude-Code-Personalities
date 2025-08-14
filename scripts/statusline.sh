@@ -1,7 +1,13 @@
 #!/bin/bash
 
 # Version of Claude Code Personalities
-VERSION="1.0.0"
+VERSION="1.0.3"  # Default fallback - updated by release.sh
+
+# Try to read version from Homebrew installation
+BREW_PREFIX=$(brew --prefix 2>/dev/null)
+if [[ -n "$BREW_PREFIX" ]] && [[ -f "$BREW_PREFIX/share/claude-code-personalities/.version" ]]; then
+    VERSION=$(cat "$BREW_PREFIX/share/claude-code-personalities/.version")
+fi
 
 # Nerd Font icons (UTF-8 byte sequences)
 ICON_FOLDER=$(printf '\xef\x81\xbb')       # folder

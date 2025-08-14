@@ -4,13 +4,16 @@ class ClaudeCodePersonalities < Formula
   url "https://github.com/Mehdi-Hp/claude-code-personalities/archive/v1.0.2.tar.gz"
   sha256 "5aadcd4b6a0932d267b683809648591e3ec8a2172cb2525ad64089ea6b7017a1"  # Will be updated by release script
   license "WTFPL"
-  version "1.0.2"
+  version "1.0.3"
 
   depends_on "jq"
 
   def install
     # Install scripts
     (share/"claude-code-personalities").install "scripts/statusline.sh"
+    
+    # Install version file
+    (share/"claude-code-personalities").install ".version"
     
     # Install hooks
     (share/"claude-code-personalities/hooks").install Dir["hooks/*.sh"]

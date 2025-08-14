@@ -87,6 +87,12 @@ if grep -q 'VERSION="[0-9.]*"' claude-code-personalities; then
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated claude-code-personalities"
 fi
 
+# Update scripts/statusline.sh
+if grep -q 'VERSION="[0-9.]*"' scripts/statusline.sh; then
+    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/statusline.sh
+    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated scripts/statusline.sh"
+fi
+
 # Update Formula version (not the URL yet)
 if grep -q 'version "[0-9.]*"' Formula/claude-code-personalities.rb 2>/dev/null; then
     sed -i '' "s/version \"[0-9.]*\"/version \"$VERSION\"/" Formula/claude-code-personalities.rb
