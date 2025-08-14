@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version of Claude Code Personalities
-VERSION="1.3.4"
+VERSION="1.0.0"
 
 # Nerd Font icons (UTF-8 byte sequences)
 ICON_FOLDER=$(printf '\xef\x81\xbb')       # folder
