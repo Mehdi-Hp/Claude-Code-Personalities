@@ -42,11 +42,12 @@ show_help() {
     echo "Usage: claude-personalities-setup [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --install     Configure Claude Code with personalities"
-    echo "  --uninstall   Remove personalities configuration"
-    echo "  --status      Check installation status"
-    echo "  --no-backup   Skip creating backup files (use if backups fail)"
-    echo "  --help        Show this help message"
+    echo "  --install       Configure Claude Code with personalities"
+    echo "  --uninstall     Remove personalities configuration"
+    echo "  --status        Check installation status"
+    echo "  --check-update  Check for available updates"
+    echo "  --no-backup     Skip creating backup files (use if backups fail)"
+    echo "  --help          Show this help message"
     echo ""
     echo "Installation:"
     echo "  brew install claude-code-personalities"
@@ -231,6 +232,73 @@ uninstall_personalities() {
     print_info "Restart Claude Code to complete the removal"
 }
 
+check_for_updates() {
+    echo -e "${BOLD}${BLUE}Checking for Updates...${NC}"
+    echo
+    
+    print_info "Current version: v$VERSION"
+    
+    # Try to fetch latest version from GitHub
+    print_info "Fetching latest release information..."
+    
+    if ! command -v curl &> /dev/null; then
+        print_error "curl is not installed"
+        exit 1
+    fi
+    
+    if ! command -v jq &> /dev/null; then
+        print_error "jq is not installed. Install with: brew install jq"
+        exit 1
+    fi
+    
+    # Fetch latest release
+    LATEST_RELEASE=$(curl -sL https://api.github.com/repos/Mehdi-Hp/claude-code-personalities/releases/latest 2>/dev/null)
+    
+    if [[ -z "$LATEST_RELEASE" ]]; then
+        print_error "Failed to fetch release information from GitHub"
+        exit 1
+    fi
+    
+    LATEST_VERSION=$(echo "$LATEST_RELEASE" | jq -r '.tag_name' 2>/dev/null)
+    RELEASE_URL=$(echo "$LATEST_RELEASE" | jq -r '.html_url' 2>/dev/null)
+    
+    if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
+        print_error "Could not determine latest version"
+        exit 1
+    fi
+    
+    print_info "Latest version: $LATEST_VERSION"
+    echo
+    
+    # Compare versions (remove 'v' prefix for comparison)
+    CURRENT_CLEAN="${VERSION#v}"
+    LATEST_CLEAN="${LATEST_VERSION#v}"
+    
+    if [[ "$CURRENT_CLEAN" == "$LATEST_CLEAN" ]]; then
+        print_success "You are running the latest version!"
+    else
+        print_warning "Update available: $LATEST_VERSION"
+        echo
+        echo -e "${BOLD}Update Instructions:${NC}"
+        echo
+        
+        # Check if installed via Homebrew
+        if brew list claude-code-personalities &>/dev/null; then
+            echo "  Update via Homebrew:"
+            echo -e "    ${CYAN}brew update${NC}"
+            echo -e "    ${CYAN}brew upgrade claude-code-personalities${NC}"
+        else
+            echo "  Update via installer:"
+            echo -e "    ${CYAN}curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash${NC}"
+        fi
+        
+        echo
+        echo "  View release notes:"
+        echo -e "    ${CYAN}$RELEASE_URL${NC}"
+    fi
+    echo
+}
+
 check_status() {
     echo -e "${BOLD}${BLUE}Claude Code Personalities Status${NC}"
     echo
@@ -301,6 +369,10 @@ while [[ $# -gt 0 ]]; do
             ACTION="status"
             shift
             ;;
+        --check-update)
+            ACTION="check-update"
+            shift
+            ;;
         --no-backup)
             NO_BACKUP=true
             shift
@@ -327,6 +399,9 @@ case "$ACTION" in
         ;;
     status)
         check_status
+        ;;
+    check-update)
+        check_for_updates
         ;;
     "")
         show_help
