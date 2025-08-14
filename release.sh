@@ -62,8 +62,8 @@ if grep -q 'VERSION="[0-9.]*"' claude-personalities-setup; then
 fi
 
 # Update Formula version (not the URL yet)
-if grep -q 'version "[0-9.]*"' Formula/claude-code-personalities.rb 2>/dev/null; then
-    sed -i '' "s/version \"[0-9.]*\"/version \"$VERSION\"/" Formula/claude-code-personalities.rb
+if grep -q 'version "[0-9.]*"' claude-code-personalities.rb 2>/dev/null; then
+    sed -i '' "s/version \"[0-9.]*\"/version \"$VERSION\"/" claude-code-personalities.rb
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated Formula version"
 fi
 
@@ -172,13 +172,13 @@ else
     
     # Step 7: Update Formula with SHA256
     echo -e "${BLUE}$(printf '\xef\x81\x99') Updating Homebrew formula...${NC}"
-    sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/claude-code-personalities.rb
-    sed -i '' "s|archive/v[0-9.]*\.tar\.gz|archive/$TAG.tar.gz|" Formula/claude-code-personalities.rb
+    sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" claude-code-personalities.rb
+    sed -i '' "s|archive/v[0-9.]*\.tar\.gz|archive/$TAG.tar.gz|" claude-code-personalities.rb
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated formula with SHA256"
     
     # Step 8: Commit and push formula update
     echo -e "${BLUE}$(printf '\xef\x82\x93') Pushing formula update...${NC}"
-    git add Formula/claude-code-personalities.rb
+    git add claude-code-personalities.rb
     git commit -m "chore: update formula SHA256 for $TAG release"
     git push origin main
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Pushed formula update"
