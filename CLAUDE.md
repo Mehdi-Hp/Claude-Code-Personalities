@@ -295,8 +295,7 @@ cd claude-code-personalities
 
 ### Homebrew
 ```bash
-brew tap kumamaki/claude-code
-brew install claude-code-personalities
+brew install kumamaki/claude-code-personalities/claude-code-personalities
 claude-personalities-setup --install
 ```
 

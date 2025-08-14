@@ -40,12 +40,7 @@ jobs:
 
           #### Homebrew
           ```bash
-          # Direct install
           brew install kumamaki/claude-code-personalities/claude-code-personalities
-
-          # Or with tap
-          brew tap kumamaki/claude-code-personalities
-          brew install claude-code-personalities
           ```
 
           ### What's New
