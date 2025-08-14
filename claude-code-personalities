@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="1.0.3"
+VERSION="1.0.4"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 BREW_SHARE="$(brew --prefix)/share/claude-code-personalities"
@@ -108,6 +108,9 @@ backup_existing() {
 }
 
 install_personalities() {
+    # Clean up any old cache files from previous versions
+    rm -f /tmp/claude_personalities_update_check.json 2>/dev/null
+    
     echo -e "${BOLD}${BLUE}Claude Code Personalities Setup${NC}"
     echo
     echo "This will install personalities for Claude Code with the following changes:"
@@ -247,6 +250,9 @@ uninstall_personalities() {
     echo -e "${BOLD}${BLUE}Uninstalling Claude Code Personalities...${NC}"
     echo
     
+    # Clean up any old cache files from previous versions
+    rm -f /tmp/claude_personalities_update_check.json 2>/dev/null
+    
     # Try to restore from backups first
     print_info "Looking for backup files..."
     
@@ -299,6 +305,9 @@ uninstall_personalities() {
 check_for_updates() {
     echo -e "${BOLD}${BLUE}Checking for Updates...${NC}"
     echo
+    
+    # Clean up any old cache files from previous versions
+    rm -f /tmp/claude_personalities_update_check.json 2>/dev/null
     
     print_info "Current version: v$VERSION"
     
