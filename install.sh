@@ -6,7 +6,9 @@
 set -e
 
 GITHUB_REPO="Mehdi-Hp/claude-code-personalities"
-BIN_PATH="/usr/local/bin/claude-code-personalities"
+# Install to user's local bin directory (no sudo needed)
+LOCAL_BIN="$HOME/.local/bin"
+BIN_PATH="$LOCAL_BIN/claude-code-personalities"
 TEMP_DIR=$(mktemp -d)
 
 # Colors
@@ -65,19 +67,37 @@ print_info "Latest version: v$LATEST_VERSION"
 # Download and extract
 curl -sL "$TARBALL_URL" | tar xz -C "$TEMP_DIR" --strip-components=1
 
-# Install the command
+# Create local bin directory if it doesn't exist
+if [[ ! -d "$LOCAL_BIN" ]]; then
+    print_info "Creating $LOCAL_BIN directory..."
+    mkdir -p "$LOCAL_BIN"
+fi
+
+# Install the command (no sudo needed!)
 print_info "Installing claude-code-personalities command..."
 
 if [[ -f "$TEMP_DIR/bin/claude-code-personalities" ]]; then
-    sudo cp "$TEMP_DIR/bin/claude-code-personalities" "$BIN_PATH"
+    cp "$TEMP_DIR/bin/claude-code-personalities" "$BIN_PATH"
 else
     # Fallback to old location
-    sudo cp "$TEMP_DIR/claude-code-personalities" "$BIN_PATH"
+    cp "$TEMP_DIR/claude-code-personalities" "$BIN_PATH"
 fi
 
-sudo chmod +x "$BIN_PATH"
+chmod +x "$BIN_PATH"
 
 print_success "Command installed to $BIN_PATH"
+
+# Check if ~/.local/bin is in PATH
+if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
+    print_warning "$LOCAL_BIN is not in your PATH"
+    echo ""
+    echo "Add this to your shell config file (.bashrc, .zshrc, etc.):"
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo ""
+    echo "Then reload your shell or run:"
+    echo "  source ~/.bashrc  # or ~/.zshrc"
+    echo ""
+fi
 
 # Run the actual installation
 echo ""
