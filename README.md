@@ -24,7 +24,7 @@ brew tap Mehdi-Hp/claude-code-personalities
 brew install claude-code-personalities
 
 # Then run setup
-claude-personalities-setup --install
+claude-code-personalities --install
 ```
 
 ## Uninstallation
@@ -33,7 +33,7 @@ To remove personalities and restore original settings:
 
 ```bash
 # Restore original Claude Code settings
-claude-personalities-setup --uninstall
+claude-code-personalities --uninstall
 
 # Remove from Homebrew
 brew uninstall claude-code-personalities

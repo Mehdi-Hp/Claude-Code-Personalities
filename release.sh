@@ -81,10 +81,10 @@ if grep -q 'VERSION="[0-9.]*"' install.sh; then
     echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated install.sh"
 fi
 
-# Update claude-personalities-setup
-if grep -q 'VERSION="[0-9.]*"' claude-personalities-setup; then
-    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" claude-personalities-setup
-    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated claude-personalities-setup"
+# Update claude-code-personalities
+if grep -q 'VERSION="[0-9.]*"' claude-code-personalities; then
+    sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" claude-code-personalities
+    echo -e "  ${GREEN}$(printf '\xef\x80\x8c')${NC} Updated claude-code-personalities"
 fi
 
 # Update Formula version (not the URL yet)

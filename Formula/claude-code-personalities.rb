@@ -15,7 +15,7 @@ class ClaudeCodePersonalities < Formula
     (share/"claude-code-personalities/hooks").install Dir["hooks/*.sh"]
     
     # Install setup utility
-    bin.install "claude-personalities-setup"
+    bin.install "claude-code-personalities"
     
     # Make scripts executable
     chmod 0755, share/"claude-code-personalities/statusline.sh"
@@ -27,10 +27,10 @@ class ClaudeCodePersonalities < Formula
       Claude Code Personalities installed!
 
       To set up personalities, run:
-        claude-personalities-setup --install
+        claude-code-personalities --install
 
       To uninstall and restore original settings:
-        claude-personalities-setup --uninstall
+        claude-code-personalities --uninstall
         brew uninstall claude-code-personalities
 
       Requirements:
@@ -38,7 +38,7 @@ class ClaudeCodePersonalities < Formula
         - Nerd Fonts (optional): brew install --cask font-hack-nerd-font
 
       For help:
-        claude-personalities-setup --help
+        claude-code-personalities --help
     EOS
   end
 
@@ -47,6 +47,6 @@ class ClaudeCodePersonalities < Formula
     assert_match "1.1.0", shell_output("echo '{\"version\":\"1.1.0\"}' | jq -r .version")
     
     # Test that the setup utility exists
-    assert_predicate bin/"claude-personalities-setup", :exist?
+    assert_predicate bin/"claude-code-personalities", :exist?
   end
 end
