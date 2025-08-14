@@ -36,6 +36,22 @@ print_info() {
     echo -e "${CYAN}ℹ${NC} $1"
 }
 
+confirm_action() {
+    local message="$1"
+    echo
+    echo -e "${CYAN}$message${NC}"
+    echo -ne "${GREEN}Continue? (y/N): ${NC}"
+    read -n 1 -r response
+    echo # Add newline after single char input
+    
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0
+    else
+        echo -e "${YELLOW}Operation cancelled${NC}"
+        return 1
+    fi
+}
+
 show_help() {
     echo "Claude Code Personalities v$VERSION"
     echo ""
@@ -92,41 +108,92 @@ backup_existing() {
 }
 
 install_personalities() {
-    echo -e "${BOLD}${BLUE}Installing Claude Code Personalities...${NC}"
+    echo -e "${BOLD}${BLUE}Claude Code Personalities Setup${NC}"
     echo
+    echo "This will install personalities for Claude Code with the following changes:"
+    echo -e "  ${CYAN}•${NC} Install statusline script to ~/.claude/statusline.sh"
+    echo -e "  ${CYAN}•${NC} Install personality hooks to ~/.claude/hooks/"
+    echo -e "  ${CYAN}•${NC} Configure Claude Code settings.json"
+    echo -e "  ${CYAN}•${NC} Create backups of existing files"
+    
+    if ! confirm_action "Do you want to continue with the installation?"; then
+        exit 0
+    fi
     
     # Check dependencies
     check_dependencies
     
-    # Create directories
-    print_info "Creating directories..."
-    mkdir -p "$HOOKS_DIR"
+    # Check what files exist that could be backed up
+    echo -e "${BOLD}Checking existing files...${NC}"
+    files_to_backup=0
+    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && ((files_to_backup++))
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
+    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
     
-    # Backup existing files
-    print_info "Backing up existing files..."
-    backup_existing "$CLAUDE_DIR/statusline.sh"
-    backup_existing "$CLAUDE_DIR/settings.json"
+    if [[ $files_to_backup -gt 0 ]]; then
+        echo -e "${YELLOW}Found existing Claude Code configuration:${NC}"
+        [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  ${CYAN}•${NC} statusline.sh"
+        [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  ${CYAN}•${NC} settings.json" 
+        [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  ${CYAN}•${NC} hooks/"
+        
+        if ! confirm_action "Create backups before proceeding?"; then
+            exit 0
+        fi
+        
+        # Create directories and backup files
+        print_info "Creating directories..."
+        mkdir -p "$HOOKS_DIR"
+        
+        print_info "Creating backups..."
+        backup_existing "$CLAUDE_DIR/statusline.sh"
+        backup_existing "$CLAUDE_DIR/settings.json"
+    else
+        print_info "No existing files found"
+        print_info "Creating directories..."
+        mkdir -p "$HOOKS_DIR"
+    fi
     
-    # Copy statusline
+    # Install statusline
+    if ! confirm_action "Install personality statusline script?"; then
+        exit 0
+    fi
+    
     print_info "Installing statusline..."
     cp "$BREW_SHARE/statusline.sh" "$CLAUDE_DIR/statusline.sh"
     chmod +x "$CLAUDE_DIR/statusline.sh"
+    print_success "Statusline installed"
     
-    # Copy hooks
+    # Install hooks
+    if ! confirm_action "Install personality hooks?"; then
+        exit 0
+    fi
+    
     print_info "Installing hooks..."
     for hook in "$BREW_SHARE/hooks"/*.sh; do
         cp "$hook" "$HOOKS_DIR/"
         chmod +x "$HOOKS_DIR/$(basename "$hook")"
     done
+    print_success "Hooks installed"
     
     # Configure settings.json
-    print_info "Configuring Claude Code settings..."
-    
     if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-        print_warning "Existing settings.json found"
-        print_info "Manual merge may be required"
-        # In a real implementation, we'd use jq to merge properly
+        echo -e "${YELLOW}Existing settings.json found${NC}"
+        echo "The personality configuration needs to be added to your settings."
+        echo "This will replace your current settings.json file."
+        echo "(Your original settings have been backed up)"
+        
+        if ! confirm_action "Update Claude Code settings.json?"; then
+            print_warning "Skipping settings.json configuration"
+            print_info "You'll need to manually add the personality hooks to your settings.json"
+            return
+        fi
+    else
+        if ! confirm_action "Create Claude Code settings.json with personality configuration?"; then
+            exit 0
+        fi
     fi
+    
+    print_info "Configuring Claude Code settings..."
     
     # Create or update settings.json
     cat > "$CLAUDE_DIR/settings.json" << 'EOF'
@@ -174,9 +241,6 @@ EOF
     echo -e "${BOLD}Next Steps:${NC}"
     echo "  1. Restart Claude Code to activate personalities"
     echo "  2. Start coding and watch your personalities change!"
-    echo
-    echo -e "${BOLD}Quick Test:${NC}"
-    echo -e "  ${CYAN}echo '{\"model\":{\"display_name\":\"Opus\"}}' | ~/.claude/statusline.sh${NC}"
 }
 
 uninstall_personalities() {
