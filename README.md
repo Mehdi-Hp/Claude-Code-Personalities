@@ -16,8 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/
 ### Homebrew
 
 ```bash
-brew tap Mehdi-Hp/claude-code
-brew install claude-code-personalities
+brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
 claude-personalities-setup --install
 ```
 

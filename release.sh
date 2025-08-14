@@ -115,12 +115,7 @@ curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/
 
 #### Homebrew
 \`\`\`bash
-# Direct install
 brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities
-
-# Or with tap
-brew tap Mehdi-Hp/claude-code-personalities
-brew install claude-code-personalities
 \`\`\`
 
 ### Documentation
@@ -195,12 +190,8 @@ echo -e "${GREEN}${BOLD}$(printf '\xef\x80\x8c') Release $TAG completed successf
 echo
 echo -e "${BOLD}Users can now install with:${NC}"
 echo
-echo -e "${CYAN}Direct install:${NC}"
+echo -e "${CYAN}Homebrew:${NC}"
 echo "  brew install Mehdi-Hp/claude-code-personalities/claude-code-personalities"
-echo
-echo -e "${CYAN}Or with tap:${NC}"
-echo "  brew tap Mehdi-Hp/claude-code-personalities"
-echo "  brew install claude-code-personalities"
 echo
 echo -e "${CYAN}View release at:${NC}"
 echo "  https://github.com/Mehdi-Hp/claude-code-personalities/releases/tag/$TAG"
