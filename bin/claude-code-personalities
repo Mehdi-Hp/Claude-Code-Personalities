@@ -106,7 +106,7 @@ backup_file() {
 
 download_latest() {
     local temp_dir=$(mktemp -d)
-    print_info "Downloading latest version from GitHub..."
+    print_info "Downloading latest version from GitHub..." >&2
     
     # Get latest release info
     local release_info=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
@@ -114,12 +114,12 @@ download_latest() {
     local tarball_url=$(echo "$release_info" | jq -r '.tarball_url')
     
     if [[ -z "$latest_version" ]] || [[ "$latest_version" == "null" ]]; then
-        print_error "Failed to get latest version from GitHub"
+        print_error "Failed to get latest version from GitHub" >&2
         rm -rf "$temp_dir"
         exit 1
     fi
     
-    print_info "Latest version: v$latest_version"
+    print_info "Latest version: v$latest_version" >&2
     
     # Download and extract
     curl -sL "$tarball_url" | tar xz -C "$temp_dir" --strip-components=1
