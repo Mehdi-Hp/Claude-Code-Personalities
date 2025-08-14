@@ -76,7 +76,7 @@ claude-code-personalities/
 │   └── personalities_session_end.sh          # Source session cleanup hook
 ├── Formula/
 │   └── claude-code-personalities.rb  # Homebrew formula
-└── claude-personalities-setup    # Setup utility for Homebrew
+└── claude-code-personalities      # Setup utility for Homebrew
 ```
 
 ## File Details
@@ -308,7 +308,7 @@ brew tap Mehdi-Hp/claude-code-personalities
 brew install claude-code-personalities
 
 # Then run setup
-claude-personalities-setup --install
+claude-code-personalities --install
 ```
 
 ## Testing

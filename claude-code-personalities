@@ -37,9 +37,9 @@ print_info() {
 }
 
 show_help() {
-    echo "Claude Code Personalities Setup Utility v$VERSION"
+    echo "Claude Code Personalities v$VERSION"
     echo ""
-    echo "Usage: claude-personalities-setup [OPTIONS]"
+    echo "Usage: claude-code-personalities [OPTIONS]"
     echo ""
     echo "Options:"
     echo "  --install       Configure Claude Code with personalities"
@@ -51,10 +51,10 @@ show_help() {
     echo ""
     echo "Installation:"
     echo "  brew install claude-code-personalities"
-    echo "  claude-personalities-setup --install"
+    echo "  claude-code-personalities --install"
     echo ""
     echo "Uninstallation:"
-    echo "  claude-personalities-setup --uninstall"
+    echo "  claude-code-personalities --uninstall"
     echo "  brew uninstall claude-code-personalities"
 }
 
