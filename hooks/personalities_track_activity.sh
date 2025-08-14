@@ -111,12 +111,20 @@ elif [[ "$tool_name" == "Grep" ]]; then
 # File type based
 elif echo "$file" | grep -qiE "readme|\.md$"; then
   personality="φ(．．) Documentation Writer"
-elif echo "$file" | grep -qiE "\.(jsx?|tsx?)$"; then
+# React/Vue/Svelte components
+elif echo "$file" | grep -qiE "\.(jsx|tsx|vue|svelte)$"; then
   personality="(✿◠ᴗ◠) UI Developer"
+# JavaScript/TypeScript files
+elif echo "$file" | grep -qiE "\.(js|ts)$"; then
+  personality="(▀̿Ĺ̯▀̿ ̿) JS Master"
+# CSS and styling files
+elif echo "$file" | grep -qiE "\.(css|scss|sass|less|styl|stylus|postcss)$"; then
+  personality="♥‿♥ Style Artist"
+# HTML and templates
+elif echo "$file" | grep -qiE "\.(html|htm|ejs|handlebars|hbs|pug|jade|twig)$"; then
+  personality="<(￣︶￣)> Markup Wizard"
 elif echo "$file" | grep -qiE "auth|security"; then
   personality="ಠ_ಠ Security Analyst"
-elif echo "$file" | grep -qiE "\.css$|\.scss$|\.sass$"; then
-  personality="♥‿♥ Style Artist"
 elif echo "$file" | grep -qiE "config|\.json$|\.yaml$|\.yml$"; then
   personality="(๑>؂•̀๑) Config Helper"
 # Long sessions
