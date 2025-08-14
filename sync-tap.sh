@@ -31,7 +31,7 @@ if [ ! -d "$TAP_PATH" ]; then
     echo -e "${YELLOW}$(printf '\xef\x81\xb1') Tap repository not found locally${NC}"
     echo -e "${BLUE}Cloning tap repository...${NC}"
     cd ..
-    git clone "git@github.com:Mehdi-Hp/$TAP_REPO.git" || {
+    git clone "git@personal:Mehdi-Hp/$TAP_REPO.git" || {
         echo -e "${RED}$(printf '\xef\x81\x97') Failed to clone tap repository${NC}"
         echo -e "${YELLOW}Have you created the repository on GitHub?${NC}"
         echo -e "${CYAN}Create it at: https://github.com/new${NC}"
