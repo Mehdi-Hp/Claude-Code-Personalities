@@ -16,7 +16,14 @@ curl -fsSL https://raw.githubusercontent.com/kumamaki/claude-code-personalities/
 ### Homebrew
 
 ```bash
+# Option 1: Direct install
 brew install kumamaki/claude-code-personalities/claude-code-personalities
+
+# Option 2: Via tap
+brew tap kumamaki/claude-code-personalities
+brew install claude-code-personalities
+
+# Then run setup
 claude-personalities-setup --install
 ```
 
