@@ -99,20 +99,20 @@ if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     echo ""
 fi
 
-# Run the actual installation
 echo ""
-print_info "Running installation..."
+print_success "Claude Code Personalities CLI tool installed successfully!"
 echo ""
-
-"$BIN_PATH" install
-
+echo -e "${BOLD}${BLUE}Next Steps:${NC}"
 echo ""
-echo -e "${BOLD}${GREEN}Installation complete!${NC}"
+echo "1. Run the interactive installer to configure Claude Code:"
+echo -e "   ${CYAN}claude-code-personalities install${NC}"
 echo ""
-echo "Available commands:"
+echo "2. Or for non-interactive installation with defaults:"
+echo -e "   ${CYAN}claude-code-personalities install --yes${NC}"
+echo ""
+echo -e "${BOLD}Available commands:${NC}"
+echo "  claude-code-personalities install       - Configure Claude Code (interactive)"
 echo "  claude-code-personalities status        - Check installation status"
 echo "  claude-code-personalities check-update  - Check for updates"
 echo "  claude-code-personalities update        - Update to latest version"
 echo "  claude-code-personalities help          - Show all commands"
-echo ""
-echo -e "${CYAN}Restart Claude Code to see the personalities!${NC}"
