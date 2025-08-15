@@ -286,17 +286,46 @@ Icons are defined using UTF-8 byte sequences:
 
 ## Installation Methods
 
-### Quick Install
+### Quick Install (Two-Stage Process)
+
+**Stage 1: Install CLI Tool**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
+```
+
+**Stage 2: Configure Claude Code**
+
+Interactive (with confirmation prompts):
+```bash
+claude-code-personalities install
+```
+
+Non-interactive (safe defaults):
+```bash
+claude-code-personalities install --yes
+# or
+claude-code-personalities install -y
+# or 
+NONINTERACTIVE=1 claude-code-personalities install
 ```
 
 ### Manual Install
 ```bash
 git clone https://github.com/Mehdi-Hp/claude-code-personalities
 cd claude-code-personalities
+
+# Install CLI tool only
 ./install.sh
+
+# Configure Claude Code
+./bin/claude-code-personalities install
 ```
+
+### Installation Modes
+
+- **Interactive Mode (default)**: Prompts for confirmation at each step, allows you to review and approve changes
+- **Non-Interactive Mode**: Uses safe defaults, creates backups automatically, ideal for CI/CD or automated setups
+- **TTY Detection**: Automatically detects when running in non-terminal environments and provides clear instructions
 
 ## Updating
 
