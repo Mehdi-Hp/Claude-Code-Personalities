@@ -578,7 +578,10 @@ do_uninstall() {
     fi
     
     print_success "Claude Code Personalities uninstalled"
-    print_info "Restart Claude Code to complete removal"
+    echo ""
+    print_warning "IMPORTANT: You MUST restart Claude Code now to stop hook errors!"
+    echo "The uninstall removed personality hooks but Claude Code is still trying to call them."
+    echo "Restart Claude Code immediately to complete the removal."
 }
 
 check_for_updates() {
