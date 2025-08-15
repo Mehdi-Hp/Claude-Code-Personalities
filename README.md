@@ -9,9 +9,34 @@ Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠ�
 
 ## Installation
 
+### Quick Install (Interactive)
+
 ```bash
+# Step 1: Install the CLI tool
 curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
+
+# Step 2: Configure Claude Code (interactive prompts)
+claude-code-personalities install
 ```
+
+### Non-Interactive Install
+
+```bash
+# Step 1: Install the CLI tool
+curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
+
+# Step 2: Configure Claude Code (no prompts, safe defaults)
+claude-code-personalities install --yes
+
+# Or use environment variable
+NONINTERACTIVE=1 claude-code-personalities install
+```
+
+### Installation Options
+
+- `--yes` or `-y`: Non-interactive installation with safe defaults
+- `--interactive` or `-i`: Interactive installation (default)
+- `NONINTERACTIVE=1`: Environment variable for non-interactive mode
 
 ## Updating
 
@@ -30,11 +55,17 @@ The statusline will show `[⬆ Update vX.X.X]` when a new version is available.
 ## Commands
 
 ```bash
-claude-code-personalities status        # Check installation status
-claude-code-personalities update        # Update to latest version
-claude-code-personalities check-update  # Check for available updates
-claude-code-personalities uninstall     # Remove personalities
-claude-code-personalities help          # Show help
+# Installation
+claude-code-personalities install             # Interactive configuration (default)
+claude-code-personalities install --yes       # Non-interactive with safe defaults
+claude-code-personalities install -y          # Short flag for non-interactive
+
+# Management
+claude-code-personalities status              # Check installation status
+claude-code-personalities update              # Update to latest version
+claude-code-personalities check-update        # Check for available updates
+claude-code-personalities uninstall           # Remove personalities
+claude-code-personalities help                # Show help with all options
 ```
 
 ## Requirements
