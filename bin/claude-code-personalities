@@ -39,6 +39,22 @@ print_info() {
     echo -e "${CYAN}ℹ${NC} $1"
 }
 
+confirm_action() {
+    local message="$1"
+    echo
+    echo -e "${CYAN}$message${NC}"
+    echo -ne "${GREEN}Continue? (y/N): ${NC}"
+    read -n 1 -r response
+    echo # Add newline after single char input
+    
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0
+    else
+        echo -e "${YELLOW}Operation cancelled${NC}"
+        return 1
+    fi
+}
+
 show_version() {
     if [[ -f "$VERSION_FILE" ]]; then
         local installed_version=$(cat "$VERSION_FILE")
@@ -229,8 +245,17 @@ EOF
 }
 
 do_install() {
-    echo -e "${BOLD}${BLUE}Installing Claude Code Personalities${NC}"
-    echo ""
+    echo -e "${BOLD}${BLUE}Claude Code Personalities Setup${NC}"
+    echo
+    echo "This will install personalities for Claude Code with the following changes:"
+    echo -e "  ${CYAN}•${NC} Install statusline script to ~/.claude/statusline.sh"
+    echo -e "  ${CYAN}•${NC} Install personality hooks to ~/.claude/hooks/"
+    echo -e "  ${CYAN}•${NC} Configure Claude Code settings.json"
+    echo -e "  ${CYAN}•${NC} Create backups of existing files"
+    
+    if ! confirm_action "Do you want to continue with the installation?"; then
+        exit 0
+    fi
     
     check_dependencies
     
@@ -239,8 +264,98 @@ do_install() {
     local temp_dir=$(echo "$result" | head -1)
     local version=$(echo "$result" | tail -1)
     
-    # Install files
-    install_files "$temp_dir" "$version"
+    # Check what files exist that could be backed up
+    echo -e "${BOLD}Checking existing files...${NC}"
+    files_to_backup=0
+    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && ((files_to_backup++))
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
+    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
+    
+    if [[ $files_to_backup -gt 0 ]]; then
+        echo -e "${YELLOW}Found existing Claude Code configuration:${NC}"
+        [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  ${CYAN}•${NC} statusline.sh"
+        [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  ${CYAN}•${NC} settings.json" 
+        [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  ${CYAN}•${NC} hooks/"
+        
+        if ! confirm_action "Create backups before proceeding?"; then
+            rm -rf "$temp_dir"
+            exit 0
+        fi
+        
+        # Create directories and backup files
+        print_info "Creating directories..."
+        mkdir -p "$CLAUDE_DIR"
+        mkdir -p "$HOOKS_DIR"
+        mkdir -p "$INSTALL_DIR"
+        
+        print_info "Creating backups..."
+        [[ -f "$CLAUDE_DIR/statusline.sh" ]] && backup_file "$CLAUDE_DIR/statusline.sh"
+        [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
+    else
+        print_info "No existing files found"
+        print_info "Creating directories..."
+        mkdir -p "$CLAUDE_DIR"
+        mkdir -p "$HOOKS_DIR"
+        mkdir -p "$INSTALL_DIR"
+    fi
+    
+    # Install statusline
+    if ! confirm_action "Install personality statusline script?"; then
+        rm -rf "$temp_dir"
+        exit 0
+    fi
+    
+    print_info "Installing statusline..."
+    cp "$temp_dir/scripts/statusline.sh" "$CLAUDE_DIR/statusline.sh"
+    chmod +x "$CLAUDE_DIR/statusline.sh"
+    print_success "Statusline installed"
+    
+    # Install hooks
+    if ! confirm_action "Install personality hooks?"; then
+        rm -rf "$temp_dir"
+        exit 0
+    fi
+    
+    print_info "Installing hooks..."
+    for hook in "$temp_dir/hooks"/*.sh; do
+        cp "$hook" "$HOOKS_DIR/"
+        chmod +x "$HOOKS_DIR/$(basename "$hook")"
+    done
+    print_success "Hooks installed"
+    
+    # Store installation files for future updates
+    cp -r "$temp_dir/scripts" "$INSTALL_DIR/"
+    cp -r "$temp_dir/hooks" "$INSTALL_DIR/"
+    
+    # Write version file
+    echo "$version" > "$VERSION_FILE"
+    
+    # Configure settings.json
+    if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+        echo -e "${YELLOW}Existing settings.json found${NC}"
+        echo "The personality configuration needs to be added to your settings."
+        echo "This will replace your current settings.json file."
+        echo "(Your original settings have been backed up)"
+        
+        if ! confirm_action "Update Claude Code settings.json?"; then
+            print_warning "Skipping settings.json configuration"
+            print_info "You'll need to manually add the personality hooks to your settings.json"
+            rm -rf "$temp_dir"
+            return
+        fi
+    else
+        if ! confirm_action "Create Claude Code settings.json with personality configuration?"; then
+            rm -rf "$temp_dir"
+            exit 0
+        fi
+    fi
+    
+    print_info "Configuring Claude Code settings..."
+    
+    # Update or create settings.json
+    update_settings
+    
+    print_success "Settings configured"
     
     # Cleanup
     rm -rf "$temp_dir"
@@ -262,9 +377,12 @@ do_install() {
         fi
     fi
     
-    echo ""
+    echo
     print_success "Claude Code Personalities v$version installed successfully!"
-    print_info "Restart Claude Code to see the changes"
+    echo
+    echo -e "${BOLD}Next Steps:${NC}"
+    echo "  1. Restart Claude Code to activate personalities"
+    echo "  2. Start coding and watch your personalities change!"
 }
 
 do_update() {
