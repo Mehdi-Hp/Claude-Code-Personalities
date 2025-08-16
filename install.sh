@@ -19,6 +19,8 @@ ICON_ROCKET=$(printf '\xef\x84\xb5')
 ICON_CHECK=$(printf '\xef\x80\x8c')
 ICON_DOWNLOAD=$(printf '\xef\x80\x99')
 ICON_TERMINAL=$(printf '\xef\x84\xa0')
+ICON_ERROR=$(printf '\xef\x81\x97')
+ICON_WARNING=$(printf '\xef\x81\xb1')
 
 # Colors
 RED='\033[0;31m'
@@ -38,7 +40,7 @@ print_success() {
 }
 
 print_error() {
-    echo -e "  ${RED}✗${NC} $1"
+    echo -e "  ${RED}${ICON_ERROR}${NC} $1"
 }
 
 print_info() {
@@ -46,7 +48,7 @@ print_info() {
 }
 
 print_warning() {
-    echo -e "  ${YELLOW}⚠${NC} $1"
+    echo -e "  ${YELLOW}${ICON_WARNING}${NC} $1"
 }
 
 # Clean up on exit

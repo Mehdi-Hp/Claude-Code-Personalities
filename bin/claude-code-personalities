@@ -13,6 +13,18 @@ VERSION_FILE="$CLAUDE_DIR/.personalities_version"
 INSTALL_DIR="$CLAUDE_DIR/personalities"
 BIN_PATH="$HOME/.local/bin/claude-code-personalities"
 
+# Nerd Font Icons
+ICON_CHECK=$(printf '\xef\x80\x8c')         # check
+ICON_ROCKET=$(printf '\xef\x84\xb5')        # rocket
+ICON_STAR=$(printf '\xef\x80\x85')          # star
+ICON_BULLET=$(printf '\xef\x80\xa2')        # circle
+ICON_GEAR=$(printf '\xef\x80\x93')          # gear
+ICON_TERMINAL=$(printf '\xef\x84\xa0')      # terminal
+ICON_CODE=$(printf '\xef\x84\xa1')          # code
+ICON_WARNING=$(printf '\xef\x81\xb1')       # warning
+ICON_ERROR=$(printf '\xef\x81\x97')         # error
+ICON_INFO=$(printf '\xef\x81\xa9')          # info
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,30 +32,64 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
 # Helper functions
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${GREEN}${ICON_CHECK}${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    echo -e "${YELLOW}${ICON_WARNING}${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${RED}${ICON_ERROR}${NC} $1"
 }
 
 print_info() {
-    echo -e "${CYAN}ℹ${NC} $1"
+    echo -e "${CYAN}${ICON_INFO}${NC} $1"
+}
+
+print_step() {
+    local step="$1"
+    local total="$2"
+    local message="$3"
+    echo
+    echo -e "${BOLD}${BLUE}Step $step/$total:${NC} $message"
+    echo -e "${DIM}$(printf '%.0s─' $(seq 1 50))${NC}"
+}
+
+show_progress() {
+    local current="$1"
+    local total="$2"
+    local width=30
+    local filled=$((current * width / total))
+    local empty=$((width - filled))
+    
+    printf "\r  ${CYAN}Progress: [${NC}"
+    printf "%0.s█" $(seq 1 $filled)
+    printf "%0.s░" $(seq 1 $empty)
+    printf "${CYAN}] ${current}/${total}${NC}"
+    
+    if [[ $current -eq $total ]]; then
+        echo " ${ICON_CHECK}"
+    fi
 }
 
 confirm_action() {
     local message="$1"
+    local default="${2:-Y}"  # Default to Y if not specified
+    
     echo
     echo -e "${CYAN}$message${NC}"
-    echo -ne "${GREEN}Continue? (Y/n): ${NC}"
+    
+    if [[ "$default" == "Y" ]]; then
+        echo -ne "  ${GREEN}[Y]es${NC} / ${DIM}[q]uit${NC} (Enter = Yes): "
+    else
+        echo -ne "  ${DIM}[Y]es${NC} / ${GREEN}[q]uit${NC} (Enter = Quit): "
+    fi
     
     # Read from /dev/tty (terminal) to work when script is piped through bash
     # Fall back to stdin if /dev/tty is not available
@@ -54,13 +100,25 @@ confirm_action() {
     fi
     echo # Add newline after single char input
     
-    # Default to yes on Enter (empty response) or explicit yes
-    if [[ -z "$response" ]] || [[ "$response" =~ ^[Yy]$ ]]; then
-        return 0
-    else
-        echo -e "${YELLOW}Operation cancelled${NC}"
-        return 1
-    fi
+    # Handle responses
+    case "$response" in
+        ""|"Y"|"y")
+            if [[ "$default" == "Y" ]]; then
+                return 0
+            else
+                echo -e "${YELLOW}Installation cancelled${NC}"
+                return 1
+            fi
+            ;;
+        "Q"|"q")
+            echo -e "${YELLOW}Installation cancelled${NC}"
+            return 1
+            ;;
+        *)
+            echo -e "${RED}Invalid choice. Please press Y or q.${NC}"
+            confirm_action "$message" "$default"
+            ;;
+    esac
 }
 
 show_version() {
@@ -292,7 +350,7 @@ do_install() {
     
     # Check if we have a TTY for interactive mode
     if [[ "$interactive" == "true" ]] && ! [ -t 0 ]; then
-        echo -e "${YELLOW}⚠ No terminal detected for interactive mode${NC}"
+        echo -e "${YELLOW}${ICON_WARNING} No terminal detected for interactive mode${NC}"
         echo ""
         echo "For interactive installation, run from a terminal:"
         echo -e "  ${CYAN}claude-code-personalities install${NC}"
@@ -313,129 +371,109 @@ do_install() {
 }
 
 run_interactive_install() {
-    echo -e "${BOLD}${BLUE}Claude Code Personalities Setup${NC}"
+    echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────╮${NC}"
+    echo -e "${BOLD}${BLUE}│           Claude Code Personalities             │${NC}"
+    echo -e "${BOLD}${BLUE}│               Installation Setup                │${NC}"
+    echo -e "${BOLD}${BLUE}╰─────────────────────────────────────────────────╯${NC}"
     echo
-    echo "This will install personalities for Claude Code with the following changes:"
-    echo -e "  ${CYAN}•${NC} Install statusline script to ~/.claude/claude-code-personalities-statusline.sh"
-    echo -e "  ${CYAN}•${NC} Install personality hooks to ~/.claude/hooks/"
-    echo -e "  ${CYAN}•${NC} Configure Claude Code settings.json"
-    echo -e "  ${CYAN}•${NC} Create backups of existing files"
+    echo -e "This will enhance Claude Code with dynamic personalities that change"
+    echo -e "based on what Claude is doing - from debugging to git management!"
+    echo
+    echo -e "${BOLD}What will be installed:${NC}"
+    echo -e "  ${GREEN}${ICON_BULLET}${NC} Personality statusline script"
+    echo -e "  ${GREEN}${ICON_BULLET}${NC} Activity tracking hooks"
+    echo -e "  ${GREEN}${ICON_BULLET}${NC} Claude Code configuration"
+    echo -e "  ${GREEN}${ICON_BULLET}${NC} Automatic backups of existing files"
+    echo
     
-    if ! confirm_action "Do you want to continue with the installation?"; then
-        exit 0
-    fi
-    
+    print_step 1 4 "Checking dependencies and downloading latest version"
     check_dependencies
+    show_progress 1 4
     
     # Download latest version
     local result=$(download_latest)
     local temp_dir=$(echo "$result" | head -1)
     local version=$(echo "$result" | tail -1)
+    show_progress 2 4
+    
+    print_step 2 4 "Preparing installation"
     
     # Check what files exist that could be backed up
-    echo -e "${BOLD}Checking existing files...${NC}"
     local files_to_backup=0
     [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && ((files_to_backup++))
     [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
     [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
     
     if [[ $files_to_backup -gt 0 ]]; then
-        echo -e "${YELLOW}Found existing Claude Code configuration:${NC}"
-        [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && echo -e "  ${CYAN}•${NC} claude-code-personalities-statusline.sh"
-        [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  ${CYAN}•${NC} settings.json" 
-        [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  ${CYAN}•${NC} hooks/"
-        
-        if ! confirm_action "Create backups before proceeding?"; then
-            rm -rf "$temp_dir"
-            exit 0
-        fi
-        
-        # Create directories and backup files
-        print_info "Creating directories..."
-        mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
-        
-        print_info "Creating backups..."
-        [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-        [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
+        echo -e "${YELLOW}Found existing configuration - will create backups${NC}"
     else
-        print_info "No existing files found"
-        print_info "Creating directories..."
-        mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
+        echo -e "${GREEN}Clean installation - no existing files found${NC}"
     fi
+    
+    # Create directories and backup files
+    mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
+    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+    [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
+    
+    print_step 3 4 "Installing personality components"
     
     # Install statusline
-    if ! confirm_action "Install personality statusline script?"; then
-        rm -rf "$temp_dir"
-        exit 0
-    fi
-    
-    print_info "Installing statusline..."
     cp "$temp_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    print_success "Statusline installed"
+    print_success "Personality statusline installed"
     
     # Install hooks
-    if ! confirm_action "Install personality hooks?"; then
-        rm -rf "$temp_dir"
-        exit 0
-    fi
-    
-    print_info "Installing hooks..."
     for hook in "$temp_dir/hooks"/*.sh; do
         cp "$hook" "$HOOKS_DIR/"
         chmod +x "$HOOKS_DIR/$(basename "$hook")"
     done
-    print_success "Hooks installed"
+    print_success "Activity tracking hooks installed"
     
     # Store installation files for future updates
     cp -r "$temp_dir/scripts" "$INSTALL_DIR/"
     cp -r "$temp_dir/hooks" "$INSTALL_DIR/"
-    
-    # Write version file
     echo "$version" > "$VERSION_FILE"
+    show_progress 3 4
+    
+    print_step 4 4 "Configuring Claude Code"
     
     # Configure settings.json
     if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-        echo -e "${YELLOW}Existing settings.json found${NC}"
-        echo "The personality configuration needs to be added to your settings."
-        echo "This will replace your current settings.json file."
-        echo "(Your original settings have been backed up)"
-        
-        if ! confirm_action "Update Claude Code settings.json?"; then
-            print_warning "Skipping settings.json configuration"
-            print_info "You'll need to manually add the personality hooks to your settings.json"
-            rm -rf "$temp_dir"
-            return
-        fi
+        echo -e "${CYAN}Updating existing Claude Code configuration...${NC}"
+        echo -e "${DIM}(Your original settings have been backed up)${NC}"
     else
-        if ! confirm_action "Create Claude Code settings.json with personality configuration?"; then
-            rm -rf "$temp_dir"
-            exit 0
-        fi
+        echo -e "${CYAN}Creating Claude Code configuration...${NC}"
     fi
     
-    print_info "Configuring Claude Code settings..."
     update_settings
-    print_success "Settings configured"
+    print_success "Claude Code configured for personalities"
+    show_progress 4 4
     
     # Cleanup
     rm -rf "$temp_dir"
     
     echo
-    print_success "Claude Code Personalities v$version installed successfully!"
+    echo -e "${BOLD}${GREEN}╭─────────────────────────────────────────────────╮${NC}"
+    echo -e "${BOLD}${GREEN}│              ＼(＾▽＾)／ Success!                │${NC}"
+    echo -e "${BOLD}${GREEN}│        Claude Code Personalities v$version        │${NC}"
+    echo -e "${BOLD}${GREEN}│             Installed Successfully              │${NC}"
+    echo -e "${BOLD}${GREEN}╰─────────────────────────────────────────────────╯${NC}"
     echo
-    echo -e "${BOLD}Next Steps:${NC}"
-    echo "  1. Restart Claude Code to activate personalities"
-    echo "  2. Start coding and watch your personalities change!"
+    echo -e "${BOLD}${ICON_ROCKET} What's Next:${NC}"
+    echo -e "  ${CYAN}1.${NC} Restart Claude Code to activate personalities"
+    echo -e "  ${CYAN}2.${NC} Start coding and watch Claude's mood change!"
+    echo -e "  ${CYAN}3.${NC} Enjoy 30+ different personalities based on your activity"
+    echo
+    echo -e "${DIM}Run 'claude-code-personalities status' to check installation${NC}"
 }
 
 run_noninteractive_install() {
     echo -e "${BOLD}${BLUE}Claude Code Personalities Setup (Non-Interactive)${NC}"
     echo
     echo "Installing with safe defaults..."
-    echo -e "  ${CYAN}•${NC} Will create backups of existing files"
-    echo -e "  ${CYAN}•${NC} Will install statusline script and hooks"
-    echo -e "  ${CYAN}•${NC} Will configure Claude Code settings.json"
+    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will create backups of existing files"
+    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will install statusline script and hooks"
+    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will configure Claude Code settings.json"
     echo
     
     check_dependencies
@@ -577,7 +615,7 @@ do_uninstall() {
     fi
     
     print_success "Claude Code Personalities uninstalled"
-    echo -e "  ${CYAN}$(printf '\\xef\\x80\\xa2')${NC} Restart Claude Code to complete removal"
+    echo -e "  ${CYAN}${ICON_BULLET}${NC} Restart Claude Code to complete removal"
 }
 
 check_for_updates() {
@@ -646,7 +684,7 @@ show_status() {
     if [[ -d "$HOOKS_DIR" ]] && ls "$HOOKS_DIR"/personalities_*.sh &>/dev/null 2>&1; then
         print_success "Hooks installed:"
         for hook in "$HOOKS_DIR"/personalities_*.sh; do
-            echo "    • $(basename "$hook")"
+            echo "    ${ICON_BULLET} $(basename "$hook")"
         done
     else
         print_error "Hooks not found"
