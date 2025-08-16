@@ -57,7 +57,7 @@ clear
 echo
 echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ║     ${NC}${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}                 ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
@@ -66,25 +66,11 @@ echo -e "   ${ITALIC}on what it's doing - from debugging to git management!${NC}
 echo
 echo
 
-# Two-stage installation overview
-echo -e "  ${BOLD}╭─────────────────────────────────────────────────────────────╮${NC}"
-echo -e "  ${BOLD}│              ${MAGENTA}Two-Stage Installation Process${NC}                 ${BOLD}│${NC}"
-echo -e "  ${BOLD}├─────────────────────────────────────────────────────────────┤${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}Stage 1:${NC} Install CLI tool ${DIM}(this script)${NC}                   ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}•${NC} Download latest release from GitHub                   ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}•${NC} Install to ~/.local/bin/claude-code-personalities     ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}                                                             ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${GREEN}Stage 2:${NC} Configure Claude Code ${DIM}(manual step)${NC}              ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}•${NC} Run: claude-code-personalities install               ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}•${NC} Interactive setup with confirmation prompts          ${BOLD}│${NC}"
-echo -e "  ${BOLD}╰─────────────────────────────────────────────────────────────╯${NC}"
-echo
-echo
 
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
 echo -e "  $divider"
-echo -e "  ${BOLD}${BLUE}Stage 1:${NC} ${BOLD}Installing CLI Tool${NC}"
+echo -e "  ${BOLD}${BLUE}Installing${NC} ${BOLD}CLI Tool${NC}"
 echo -e "  $divider"
 echo
 
@@ -159,22 +145,14 @@ fi
 # Success message with next steps
 echo
 echo -e "  $divider"
-echo -e "  ${BOLD}${GREEN}Stage 1 Complete!${NC} ${ICON_CHECK}"
+echo -e "  ${BOLD}${GREEN}Claude Code Personalities Installed${NC} ${ICON_CHECK}"
 echo -e "  $divider"
 echo
 echo
 
-echo -e "  ${BOLD}╭─────────────────────────────────────────────────────────────╮${NC}"
-echo -e "  ${BOLD}│                     ${GREEN}Next Steps${NC}                            ${BOLD}│${NC}"
-echo -e "  ${BOLD}├─────────────────────────────────────────────────────────────┤${NC}"
-echo -e "  ${BOLD}│${NC}                                                             ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${CYAN}${ICON_TERMINAL}${NC} ${BOLD}Interactive Setup:${NC}                                   ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}claude-code-personalities install${NC}                   ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}                                                             ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}  ${CYAN}${ICON_GEAR}${NC} ${BOLD}Non-Interactive Setup:${NC}                               ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}    ${CYAN}claude-code-personalities install --yes${NC}             ${BOLD}│${NC}"
-echo -e "  ${BOLD}│${NC}                                                             ${BOLD}│${NC}"
-echo -e "  ${BOLD}╰─────────────────────────────────────────────────────────────╯${NC}"
+echo -e "  ${BOLD}${GREEN}Next Steps${NC}"
+echo
+echo -e "    ${CYAN}claude-code-personalities install${NC}"
 echo
 echo
 
