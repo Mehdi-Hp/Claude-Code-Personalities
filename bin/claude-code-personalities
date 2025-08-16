@@ -177,13 +177,13 @@ install_files() {
     mkdir -p "$INSTALL_DIR"
     
     # Backup existing files
-    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && backup_file "$CLAUDE_DIR/statusline.sh"
+    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
     
     # Copy statusline
-    cp "$source_dir/scripts/statusline.sh" "$CLAUDE_DIR/statusline.sh"
-    chmod +x "$CLAUDE_DIR/statusline.sh"
-    print_success "Installed statusline.sh"
+    cp "$source_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+    chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+    print_success "Installed claude-code-personalities-statusline.sh"
     
     # Copy hooks
     for hook in "$source_dir/hooks"/*.sh; do
@@ -215,7 +215,7 @@ update_settings() {
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh",
+    "command": "~/.claude/claude-code-personalities-statusline.sh",
     "padding": 0
   },
   "hooks": {
@@ -255,7 +255,7 @@ EOF
         if command -v jq &> /dev/null; then
             jq '.statusLine = {
                 "type": "command",
-                "command": "~/.claude/statusline.sh",
+                "command": "~/.claude/claude-code-personalities-statusline.sh",
                 "padding": 0
             }' "$settings_file" > "$temp_file" && mv "$temp_file" "$settings_file"
             print_success "Updated settings.json"
@@ -318,7 +318,7 @@ run_interactive_install() {
     echo -e "${BOLD}${BLUE}Claude Code Personalities Setup${NC}"
     echo
     echo "This will install personalities for Claude Code with the following changes:"
-    echo -e "  ${CYAN}•${NC} Install statusline script to ~/.claude/statusline.sh"
+    echo -e "  ${CYAN}•${NC} Install statusline script to ~/.claude/claude-code-personalities-statusline.sh"
     echo -e "  ${CYAN}•${NC} Install personality hooks to ~/.claude/hooks/"
     echo -e "  ${CYAN}•${NC} Configure Claude Code settings.json"
     echo -e "  ${CYAN}•${NC} Create backups of existing files"
@@ -337,13 +337,13 @@ run_interactive_install() {
     # Check what files exist that could be backed up
     echo -e "${BOLD}Checking existing files...${NC}"
     local files_to_backup=0
-    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && ((files_to_backup++))
+    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && ((files_to_backup++))
     [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
     [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
     
     if [[ $files_to_backup -gt 0 ]]; then
         echo -e "${YELLOW}Found existing Claude Code configuration:${NC}"
-        [[ -f "$CLAUDE_DIR/statusline.sh" ]] && echo -e "  ${CYAN}•${NC} statusline.sh"
+        [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && echo -e "  ${CYAN}•${NC} claude-code-personalities-statusline.sh"
         [[ -f "$CLAUDE_DIR/settings.json" ]] && echo -e "  ${CYAN}•${NC} settings.json" 
         [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && echo -e "  ${CYAN}•${NC} hooks/"
         
@@ -357,7 +357,7 @@ run_interactive_install() {
         mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
         
         print_info "Creating backups..."
-        [[ -f "$CLAUDE_DIR/statusline.sh" ]] && backup_file "$CLAUDE_DIR/statusline.sh"
+        [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
         [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
     else
         print_info "No existing files found"
@@ -372,8 +372,8 @@ run_interactive_install() {
     fi
     
     print_info "Installing statusline..."
-    cp "$temp_dir/scripts/statusline.sh" "$CLAUDE_DIR/statusline.sh"
-    chmod +x "$CLAUDE_DIR/statusline.sh"
+    cp "$temp_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+    chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     print_success "Statusline installed"
     
     # Install hooks
@@ -453,13 +453,13 @@ run_noninteractive_install() {
     
     # Always create backups in non-interactive mode
     print_info "Creating backups of existing files..."
-    [[ -f "$CLAUDE_DIR/statusline.sh" ]] && backup_file "$CLAUDE_DIR/statusline.sh"
+    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
     
     # Install statusline
     print_info "Installing statusline..."
-    cp "$temp_dir/scripts/statusline.sh" "$CLAUDE_DIR/statusline.sh"
-    chmod +x "$CLAUDE_DIR/statusline.sh"
+    cp "$temp_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+    chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     print_success "Statusline installed"
     
     # Install hooks
@@ -553,9 +553,9 @@ do_uninstall() {
     echo ""
     
     # Remove statusline
-    if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
-        rm "$CLAUDE_DIR/statusline.sh"
-        print_success "Removed statusline.sh"
+    if [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]]; then
+        rm "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
+        print_success "Removed claude-code-personalities-statusline.sh"
     fi
     
     # Remove hooks
@@ -638,7 +638,7 @@ show_status() {
     fi
     
     # Check statusline
-    if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
+    if [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]]; then
         print_success "Statusline installed"
     else
         print_error "Statusline not found"
@@ -656,7 +656,7 @@ show_status() {
     
     # Check settings
     if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-        if grep -q "statusline.sh" "$CLAUDE_DIR/settings.json" 2>/dev/null; then
+        if grep -q "claude-code-personalities-statusline.sh" "$CLAUDE_DIR/settings.json" 2>/dev/null; then
             print_success "Settings configured"
         else
             print_warning "Settings found but personalities not configured"
@@ -668,9 +668,9 @@ show_status() {
     # Test statusline
     echo ""
     print_info "Testing statusline..."
-    if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
+    if [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]]; then
         echo -n "  Output: "
-        echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | "$CLAUDE_DIR/statusline.sh"
+        echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
         echo ""
     fi
 }

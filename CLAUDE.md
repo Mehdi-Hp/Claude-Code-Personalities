@@ -25,14 +25,14 @@ Claude Code Personalities is a personality system that gives Claude Code a dynam
 
 ```mermaid
 graph LR
-    A[Claude Code] -->|Sends JSON| B[statusline.sh]
+    A[Claude Code] -->|Sends JSON| B[claude-code-personalities-statusline.sh]
     A -->|Tool Events| C[Hooks]
     C -->|Updates State| D[/tmp/claude_activity_*.json]
     D -->|Reads State| B
     B -->|Displays| E[Terminal Statusline]
 ```
 
-1. **Claude Code** calls `statusline.sh` with JSON input containing session and workspace info
+1. **Claude Code** calls `claude-code-personalities-statusline.sh` with JSON input containing session and workspace info
 2. **Hooks** intercept tool usage (PreToolUse/PostToolUse) and track Claude's activities
 3. **Activity tracking** determines appropriate personality based on context
 4. **State files** in `/tmp` maintain personality and activity across the session
@@ -44,7 +44,7 @@ graph LR
 
 ```
 ~/.claude/
-├── statusline.sh                 # Main statusline script
+├── claude-code-personalities-statusline.sh                 # Main statusline script
 ├── settings.json                 # Claude Code configuration
 └── hooks/
     ├── personalities_track_activity.sh        # Activity monitoring & personality assignment
@@ -71,7 +71,7 @@ claude-code-personalities/
 ├── bin/
 │   └── claude-code-personalities  # Main command-line utility
 ├── scripts/
-│   └── statusline.sh            # Source statusline script
+│   └── claude-code-personalities-statusline.sh            # Source statusline script
 ├── hooks/
 │   ├── personalities_track_activity.sh       # Source activity hook
 │   ├── personalities_reset_errors.sh         # Source error reset hook
@@ -81,9 +81,9 @@ claude-code-personalities/
 
 ## File Details
 
-### `statusline.sh`
+### `claude-code-personalities-statusline.sh`
 
-**Location**: `~/.claude/statusline.sh`  
+**Location**: `~/.claude/claude-code-personalities-statusline.sh`  
 **Purpose**: Main statusline display script  
 **Called by**: Claude Code on every statusline update  
 
@@ -177,7 +177,7 @@ consecutive > 10  →  ┌༼◉ل͟◉༽┐ Hyperfocused Coder
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh",
+    "command": "~/.claude/claude-code-personalities-statusline.sh",
     "padding": 0
   },
   "hooks": {
@@ -341,7 +341,7 @@ claude-code-personalities update
 
 ### Test Statusline
 ```bash
-echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | ~/.claude/statusline.sh
+echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | ~/.claude/claude-code-personalities-statusline.sh
 ```
 
 ### Test Hooks
@@ -356,7 +356,7 @@ cat /tmp/claude_activity_test.json
 ### Debug Mode
 ```bash
 # Add debug output to statusline
-echo "$input" > /tmp/claude_debug.json  # Add to statusline.sh
+echo "$input" > /tmp/claude_debug.json  # Add to claude-code-personalities-statusline.sh
 
 # Check what Claude Code sends
 cat /tmp/claude_debug.json
@@ -388,7 +388,7 @@ cat /tmp/claude_debug.json
 ### Backups
 All installations create timestamped backups:
 ```bash
-~/.claude/statusline.sh.backup.20240112_143022
+~/.claude/claude-code-personalities-statusline.sh.backup.20240112_143022
 ~/.claude/settings.json.backup.20240112_143022
 ```
 

@@ -106,13 +106,13 @@ fi
 echo ""
 echo -e "${BLUE}${ICON_PACKAGE} Updating version files...${NC}"
 echo "$VERSION" > .version
-sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/statusline.sh
+sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/claude-code-personalities-statusline.sh
 sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" bin/claude-code-personalities
 echo -e "  ${GREEN}${ICON_CHECK}${NC} Updated version to $VERSION"
 
 # Step 6: Commit version changes
 echo -e "${BLUE}${ICON_GIT} Committing version changes...${NC}"
-git add .version scripts/statusline.sh bin/claude-code-personalities
+git add .version scripts/claude-code-personalities-statusline.sh bin/claude-code-personalities
 git commit -m "chore: bump version to $VERSION"
 echo -e "  ${GREEN}${ICON_CHECK}${NC} Committed version changes"
 
