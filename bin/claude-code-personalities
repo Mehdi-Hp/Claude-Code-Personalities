@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="0.0.3"
+VERSION="0.0.4"
 GITHUB_REPO="Mehdi-Hp/claude-code-personalities"
 CLAUDE_DIR="$HOME/.claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
