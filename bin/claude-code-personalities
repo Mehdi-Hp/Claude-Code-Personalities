@@ -133,24 +133,16 @@ show_version() {
 show_help() {
     show_version
     echo ""
-    echo "Usage: claude-code-personalities [COMMAND] [OPTIONS]"
+    echo "Usage: claude-code-personalities [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  install [--yes|-y] [--interactive|-i]"
-    echo "                      Install Claude Code Personalities"
+    echo "  install             Install Claude Code Personalities"
     echo "  update              Update to the latest version"
     echo "  uninstall           Remove Claude Code Personalities" 
     echo "  status              Check installation status"
     echo "  check-update        Check for available updates"
     echo "  version             Show version information"
     echo "  help                Show this help message"
-    echo ""
-    echo "Installation Options:"
-    echo "  --yes, -y           Non-interactive installation with safe defaults"
-    echo "  --interactive, -i   Interactive installation (default)"
-    echo ""
-    echo "Environment Variables:"
-    echo "  NONINTERACTIVE=1    Enable non-interactive mode"
     echo ""
     echo "Installation:"
     echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash"
@@ -322,55 +314,18 @@ EOF
 }
 
 do_install() {
-    local interactive=true
-    
-    # Parse arguments for flags
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --yes|-y)
-                interactive=false
-                shift
-                ;;
-            --interactive|-i)
-                interactive=true
-                shift
-                ;;
-            *)
-                print_error "Unknown flag: $1"
-                echo "Usage: claude-code-personalities install [--yes|-y] [--interactive|-i]"
-                exit 1
-                ;;
-        esac
-    done
-    
-    # Check environment variable
-    if [[ "$NONINTERACTIVE" == "1" ]]; then
-        interactive=false
-    fi
-    
-    # Check if we have a TTY for interactive mode
-    if [[ "$interactive" == "true" ]] && ! [ -t 0 ]; then
-        echo -e "${YELLOW}${ICON_WARNING} No terminal detected for interactive mode${NC}"
-        echo ""
-        echo "For interactive installation, run from a terminal:"
-        echo -e "  ${CYAN}claude-code-personalities install${NC}"
-        echo ""
-        echo "For non-interactive installation with safe defaults:"
-        echo -e "  ${CYAN}claude-code-personalities install --yes${NC}"
-        echo ""
-        echo "Or set environment variable:"
-        echo -e "  ${CYAN}NONINTERACTIVE=1 claude-code-personalities install${NC}"
+    # Check for any unknown arguments
+    if [[ $# -gt 0 ]]; then
+        print_error "Unknown argument: $1"
+        echo "Usage: claude-code-personalities install"
         exit 1
     fi
     
-    if [[ "$interactive" == "true" ]]; then
-        run_interactive_install
-    else
-        run_noninteractive_install
-    fi
+    run_install
 }
 
-run_interactive_install() {
+run_install() {
+    # Display welcome banner
     echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────╮${NC}"
     echo -e "${BOLD}${BLUE}│           Claude Code Personalities             │${NC}"
     echo -e "${BOLD}${BLUE}│               Installation Setup                │${NC}"
@@ -386,58 +341,61 @@ run_interactive_install() {
     echo -e "  ${GREEN}${ICON_BULLET}${NC} Automatic backups of existing files"
     echo
     
+    # Single confirmation prompt
+    if ! confirm_action "Continue with installation?"; then
+        exit 0
+    fi
+    
+    # Step 1: Check dependencies and download
     print_step 1 4 "Checking dependencies and downloading latest version"
     check_dependencies
     show_progress 1 4
     
-    # Download latest version
     local result=$(download_latest)
     local temp_dir=$(echo "$result" | head -1)
     local version=$(echo "$result" | tail -1)
     show_progress 2 4
     
+    # Step 2: Prepare installation
     print_step 2 4 "Preparing installation"
     
-    # Check what files exist that could be backed up
     local files_to_backup=0
     [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && ((files_to_backup++))
     [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
     [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
     
     if [[ $files_to_backup -gt 0 ]]; then
-        echo -e "${YELLOW}Found existing configuration - will create backups${NC}"
+        echo -e "${YELLOW}Found existing configuration - creating backups${NC}"
     else
         echo -e "${GREEN}Clean installation - no existing files found${NC}"
     fi
     
-    # Create directories and backup files
     mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
     [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
+    show_progress 3 4
     
+    # Step 3: Install components
     print_step 3 4 "Installing personality components"
     
-    # Install statusline
     cp "$temp_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     print_success "Personality statusline installed"
     
-    # Install hooks
     for hook in "$temp_dir/hooks"/*.sh; do
         cp "$hook" "$HOOKS_DIR/"
         chmod +x "$HOOKS_DIR/$(basename "$hook")"
     done
     print_success "Activity tracking hooks installed"
     
-    # Store installation files for future updates
     cp -r "$temp_dir/scripts" "$INSTALL_DIR/"
     cp -r "$temp_dir/hooks" "$INSTALL_DIR/"
     echo "$version" > "$VERSION_FILE"
-    show_progress 3 4
+    show_progress 4 4
     
+    # Step 4: Configure Claude Code
     print_step 4 4 "Configuring Claude Code"
     
-    # Configure settings.json
     if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
         echo -e "${CYAN}Updating existing Claude Code configuration...${NC}"
         echo -e "${DIM}(Your original settings have been backed up)${NC}"
@@ -452,6 +410,7 @@ run_interactive_install() {
     # Cleanup
     rm -rf "$temp_dir"
     
+    # Success celebration
     echo
     echo -e "${BOLD}${GREEN}╭─────────────────────────────────────────────────╮${NC}"
     echo -e "${BOLD}${GREEN}│              ＼(＾▽＾)／ Success!                │${NC}"
@@ -467,69 +426,6 @@ run_interactive_install() {
     echo -e "${DIM}Run 'claude-code-personalities status' to check installation${NC}"
 }
 
-run_noninteractive_install() {
-    echo -e "${BOLD}${BLUE}Claude Code Personalities Setup (Non-Interactive)${NC}"
-    echo
-    echo "Installing with safe defaults..."
-    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will create backups of existing files"
-    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will install statusline script and hooks"
-    echo -e "  ${CYAN}${ICON_BULLET}${NC} Will configure Claude Code settings.json"
-    echo
-    
-    check_dependencies
-    
-    # Download latest version
-    local result=$(download_latest)
-    local temp_dir=$(echo "$result" | head -1)
-    local version=$(echo "$result" | tail -1)
-    
-    # Create directories
-    print_info "Creating directories..."
-    mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
-    
-    # Always create backups in non-interactive mode
-    print_info "Creating backups of existing files..."
-    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
-    
-    # Install statusline
-    print_info "Installing statusline..."
-    cp "$temp_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    chmod +x "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    print_success "Statusline installed"
-    
-    # Install hooks
-    print_info "Installing hooks..."
-    for hook in "$temp_dir/hooks"/*.sh; do
-        cp "$hook" "$HOOKS_DIR/"
-        chmod +x "$HOOKS_DIR/$(basename "$hook")"
-    done
-    print_success "Hooks installed"
-    
-    # Store installation files for future updates
-    cp -r "$temp_dir/scripts" "$INSTALL_DIR/"
-    cp -r "$temp_dir/hooks" "$INSTALL_DIR/"
-    
-    # Write version file
-    echo "$version" > "$VERSION_FILE"
-    
-    # Configure settings.json (always update in non-interactive mode)
-    print_info "Configuring Claude Code settings..."
-    update_settings
-    print_success "Settings configured"
-    
-    # Cleanup
-    rm -rf "$temp_dir"
-    
-    echo
-    print_success "Claude Code Personalities v$version installed successfully!"
-    echo
-    echo -e "${BOLD}Next Steps:${NC}"
-    echo "  1. Restart Claude Code to activate personalities"
-    echo "  2. Start coding and watch your personalities change!"
-    echo
-    print_info "Backups were created for any existing files"
-}
 
 do_update() {
     echo -e "${BOLD}${BLUE}Updating Claude Code Personalities${NC}"
@@ -714,7 +610,6 @@ show_status() {
 # Main command handler
 case "${1:-help}" in
     install)
-        # Parse install flags
         shift  # Remove 'install' from arguments
         do_install "$@"
         ;;
