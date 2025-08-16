@@ -43,7 +43,7 @@ confirm_action() {
     local message="$1"
     echo
     echo -e "${CYAN}$message${NC}"
-    echo -ne "${GREEN}Continue? (y/N): ${NC}"
+    echo -ne "${GREEN}Continue? (Y/n): ${NC}"
     
     # Read from /dev/tty (terminal) to work when script is piped through bash
     # Fall back to stdin if /dev/tty is not available
@@ -54,7 +54,8 @@ confirm_action() {
     fi
     echo # Add newline after single char input
     
-    if [[ "$response" =~ ^[Yy]$ ]]; then
+    # Default to yes on Enter (empty response) or explicit yes
+    if [[ -z "$response" ]] || [[ "$response" =~ ^[Yy]$ ]]; then
         return 0
     else
         echo -e "${YELLOW}Operation cancelled${NC}"
