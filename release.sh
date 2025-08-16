@@ -93,11 +93,14 @@ TAG="v$VERSION"
 
 echo ""
 echo -e "New version: ${GREEN}$VERSION${NC}"
-echo -n "Continue with release? (y/N): "
+echo -n "Continue with release? (Y/n): "
 read -n 1 CONFIRM
 echo ""
 
-if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+if [[ -z "$CONFIRM" ]] || [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+    # Continue with release
+    :
+else
     echo "Release cancelled"
     exit 0
 fi
