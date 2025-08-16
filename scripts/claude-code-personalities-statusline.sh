@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version of Claude Code Personalities
-VERSION="0.0.4"  # Default fallback
+VERSION="0.0.5"  # Default fallback
 
 # Try to read version from installation
 VERSION_FILE="$HOME/.claude/.personalities_version"
