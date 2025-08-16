@@ -36,6 +36,48 @@ DIM='\033[2m'
 NC='\033[0m'
 
 # Helper functions
+draw_box() {
+    local color="${1:-${BLUE}}"
+    local width="${2:-49}"
+    shift 2
+    local lines=("$@")
+    
+    # Top border
+    echo -e "${BOLD}${color}╭$(printf '%.0s─' $(seq 1 $width))╮${NC}"
+    
+    # Content lines
+    for line in "${lines[@]}"; do
+        if [[ -z "$line" ]]; then
+            # Empty line
+            printf "${BOLD}${color}│${NC}"
+            printf "%*s" $width ""
+            echo -e "${BOLD}${color}│${NC}"
+        else
+            # Calculate visual width (approximate for common kaomojis)
+            local visual_length=${#line}
+            
+            # Adjust for known wide characters
+            if [[ "$line" =~ ＼\(＾▽＾\)／ ]]; then
+                visual_length=11  # Empirical width
+            elif [[ "$line" =~ ૮\ ․\ ․\ ྀིა ]]; then
+                visual_length=7   # Empirical width
+            fi
+            
+            local padding=$(( (width - visual_length) / 2 ))
+            local right_padding=$(( width - visual_length - padding ))
+            
+            printf "${BOLD}${color}│${NC}"
+            printf "%*s" $padding ""
+            echo -ne "$line"
+            printf "%*s" $right_padding ""
+            echo -e "${BOLD}${color}│${NC}"
+        fi
+    done
+    
+    # Bottom border
+    echo -e "${BOLD}${color}╰$(printf '%.0s─' $(seq 1 $width))╯${NC}"
+}
+
 print_success() {
     echo -e "${GREEN}${ICON_CHECK}${NC} $1"
 }
@@ -57,25 +99,9 @@ print_step() {
     local total="$2"
     local message="$3"
     echo
+    echo
     echo -e "${BOLD}${BLUE}Step $step/$total:${NC} $message"
     echo -e "${DIM}$(printf '%.0s─' $(seq 1 50))${NC}"
-}
-
-show_progress() {
-    local current="$1"
-    local total="$2"
-    local width=30
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-    
-    printf "\r  ${CYAN}Progress: [${NC}"
-    printf "%0.s█" $(seq 1 $filled)
-    printf "%0.s░" $(seq 1 $empty)
-    printf "${CYAN}] ${current}/${total}${NC}"
-    
-    if [[ $current -eq $total ]]; then
-        echo " ${ICON_CHECK}"
-    fi
 }
 
 confirm_action() {
@@ -86,9 +112,9 @@ confirm_action() {
     echo -e "${CYAN}$message${NC}"
     
     if [[ "$default" == "Y" ]]; then
-        echo -ne "  ${GREEN}[Y]es${NC} / ${DIM}[q]uit${NC} (Enter = Yes): "
+        echo -ne "  ${GREEN}[Y]es${NC} / ${DIM}[q]uit${NC}: "
     else
-        echo -ne "  ${DIM}[Y]es${NC} / ${GREEN}[q]uit${NC} (Enter = Quit): "
+        echo -ne "  ${DIM}[Y]es${NC} / ${GREEN}[q]uit${NC}: "
     fi
     
     # Read from /dev/tty (terminal) to work when script is piped through bash
@@ -325,14 +351,14 @@ do_install() {
 }
 
 run_install() {
+    # Clear terminal for clean installation experience
+    clear
+    
     # Display welcome banner
-    echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────╮${NC}"
-    echo -e "${BOLD}${BLUE}│           Claude Code Personalities             │${NC}"
-    echo -e "${BOLD}${BLUE}│               Installation Setup                │${NC}"
-    echo -e "${BOLD}${BLUE}╰─────────────────────────────────────────────────╯${NC}"
+    draw_box "${BLUE}" 49 "" "૮ ․ ․ ྀིა" "" "Claude Code Personalities" ""
     echo
-    echo -e "This will enhance Claude Code with dynamic personalities that change"
-    echo -e "based on what Claude is doing - from debugging to git management!"
+    echo -e "${ITALIC}This will enhance Claude Code with dynamic personalities that change"
+    echo -e "based on what Claude is doing - from debugging to git management!${NC}"
     echo
     echo -e "${BOLD}What will be installed:${NC}"
     echo -e "  ${GREEN}${ICON_BULLET}${NC} Personality statusline script"
@@ -349,12 +375,10 @@ run_install() {
     # Step 1: Check dependencies and download
     print_step 1 4 "Checking dependencies and downloading latest version"
     check_dependencies
-    show_progress 1 4
     
     local result=$(download_latest)
     local temp_dir=$(echo "$result" | head -1)
     local version=$(echo "$result" | tail -1)
-    show_progress 2 4
     
     # Step 2: Prepare installation
     print_step 2 4 "Preparing installation"
@@ -373,7 +397,6 @@ run_install() {
     mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
     [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
     [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
-    show_progress 3 4
     
     # Step 3: Install components
     print_step 3 4 "Installing personality components"
@@ -391,7 +414,6 @@ run_install() {
     cp -r "$temp_dir/scripts" "$INSTALL_DIR/"
     cp -r "$temp_dir/hooks" "$INSTALL_DIR/"
     echo "$version" > "$VERSION_FILE"
-    show_progress 4 4
     
     # Step 4: Configure Claude Code
     print_step 4 4 "Configuring Claude Code"
@@ -405,18 +427,13 @@ run_install() {
     
     update_settings
     print_success "Claude Code configured for personalities"
-    show_progress 4 4
     
     # Cleanup
     rm -rf "$temp_dir"
     
     # Success celebration
     echo
-    echo -e "${BOLD}${GREEN}╭─────────────────────────────────────────────────╮${NC}"
-    echo -e "${BOLD}${GREEN}│              ＼(＾▽＾)／ Success!                │${NC}"
-    echo -e "${BOLD}${GREEN}│        Claude Code Personalities v$version        │${NC}"
-    echo -e "${BOLD}${GREEN}│             Installed Successfully              │${NC}"
-    echo -e "${BOLD}${GREEN}╰─────────────────────────────────────────────────╯${NC}"
+    draw_box "${GREEN}" 49 "" "＼(＾▽＾)／" "" "Success!" "Claude Code Personalities v$version" "Installed Successfully" ""
     echo
     echo -e "${BOLD}${ICON_ROCKET} What's Next:${NC}"
     echo -e "  ${CYAN}1.${NC} Restart Claude Code to activate personalities"
