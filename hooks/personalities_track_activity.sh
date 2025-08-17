@@ -65,14 +65,27 @@ case "$tool_name" in
     fi
     ;;
   "Bash") 
-    activity="Executing"
+    # Check for specific command types
     if [[ -n "$cmd" ]]; then
-      # Just show the command name, not the full command
+      # Extract first command for display
       current_job=$(echo "$cmd" | cut -d' ' -f1 | cut -d'/' -f1)
+      
+      # Determine activity based on command
+      if echo "$cmd" | grep -qiE "^(npm|yarn|pnpm|pip|cargo|gem|brew|apt|yum|composer) (install|add)"; then
+        activity="Installing"
+      elif echo "$cmd" | grep -qiE "^(npm|yarn|pnpm|cargo|pip|gem) (run|build|compile)|^(make |build |compile |webpack|vite|rollup|tsc |babel|gradle)"; then
+        activity="Building"
+      elif echo "$cmd" | grep -qiE "test|spec"; then
+        activity="Testing"
+      else
+        activity="Executing"
+      fi
+    else
+      activity="Executing"
     fi
     ;;
   "Read") 
-    activity="Exploring"
+    activity="Reading"
     if [[ -n "$file" ]]; then
       current_job=$(trim_filename "$file")
     fi
@@ -85,7 +98,7 @@ case "$tool_name" in
     fi
     ;;
   *) 
-    activity="Thinking"
+    activity="Idle"
     current_job=""
     ;;
 esac
