@@ -206,14 +206,6 @@ check_dependencies() {
     fi
 }
 
-backup_file() {
-    local file="$1"
-    if [[ -f "$file" ]]; then
-        local timestamp=$(date +%Y%m%d_%H%M%S)
-        cp "$file" "${file}.backup.${timestamp}"
-        print_info "Backed up $(basename "$file")"
-    fi
-}
 
 download_latest() {
     local temp_dir=$(mktemp -d)
@@ -250,9 +242,6 @@ install_files() {
     mkdir -p "$HOOKS_DIR"
     mkdir -p "$INSTALL_DIR"
     
-    # Backup existing files
-    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
     
     # Copy statusline
     cp "$source_dir/scripts/claude-code-personalities-statusline.sh" "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
@@ -325,14 +314,45 @@ update_settings() {
 EOF
         print_success "Created settings.json"
     else
-        # Update existing settings using jq
+        # Merge personality configuration with existing settings using jq
         if command -v jq &> /dev/null; then
-            jq '.statusLine = {
-                "type": "command",
-                "command": "~/.claude/claude-code-personalities-statusline.sh",
-                "padding": 0
-            }' "$settings_file" > "$temp_file" && mv "$temp_file" "$settings_file"
-            print_success "Updated settings.json"
+            # Update statusLine and merge personality hooks with existing hooks
+            jq --tab '
+                .statusLine = {
+                    "type": "command",
+                    "command": "~/.claude/claude-code-personalities-statusline.sh",
+                    "padding": 0
+                } |
+                .hooks = (.hooks // {}) |
+                .hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{
+                    "matcher": "*",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "~/.claude/hooks/personalities_track_activity.sh"
+                    }]
+                }] | unique_by(.hooks[0].command)) |
+                .hooks.PostToolUse = ((.hooks.PostToolUse // []) + [{
+                    "matcher": "*",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "~/.claude/hooks/personalities_track_activity.sh"
+                    }]
+                }] | unique_by(.hooks[0].command)) |
+                .hooks.UserPromptSubmit = ((.hooks.UserPromptSubmit // []) + [{
+                    "hooks": [{
+                        "type": "command",
+                        "command": "~/.claude/hooks/personalities_reset_errors.sh"
+                    }]
+                }] | unique_by(.hooks[0].command)) |
+                .hooks.Stop = ((.hooks.Stop // []) + [{
+                    "matcher": "",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "~/.claude/hooks/personalities_session_end.sh"
+                    }]
+                }] | unique_by(.hooks[0].command))
+            ' "$settings_file" > "$temp_file" && mv "$temp_file" "$settings_file"
+            print_success "Updated settings.json with personality configuration"
         else
             print_warning "Could not update settings.json (jq not found)"
         fi
@@ -363,8 +383,7 @@ run_install() {
     echo -e "${BOLD}What will be installed:${NC}"
     echo -e "  ${GREEN}${ICON_BULLET}${NC} Personality statusline script"
     echo -e "  ${GREEN}${ICON_BULLET}${NC} Activity tracking hooks"
-    echo -e "  ${GREEN}${ICON_BULLET}${NC} Claude Code configuration"
-    echo -e "  ${GREEN}${ICON_BULLET}${NC} Automatic backups of existing files"
+    echo -e "  ${GREEN}${ICON_BULLET}${NC} Claude Code configuration (preserves existing settings)"
     echo
     
     # Single confirmation prompt
@@ -383,20 +402,14 @@ run_install() {
     # Step 2: Prepare installation
     print_step 2 4 "Preparing installation"
     
-    local files_to_backup=0
-    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && ((files_to_backup++))
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && ((files_to_backup++))
-    [[ -d "$HOOKS_DIR" ]] && [[ "$(ls -A $HOOKS_DIR 2>/dev/null)" ]] && ((files_to_backup++))
-    
-    if [[ $files_to_backup -gt 0 ]]; then
-        echo -e "${YELLOW}Found existing configuration - creating backups${NC}"
+    # Check for existing configuration
+    if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
+        echo -e "${CYAN}Found existing Claude Code configuration - will merge personalities${NC}"
     else
-        echo -e "${GREEN}Clean installation - no existing files found${NC}"
+        echo -e "${GREEN}Fresh installation - creating new configuration${NC}"
     fi
     
     mkdir -p "$CLAUDE_DIR" "$HOOKS_DIR" "$INSTALL_DIR"
-    [[ -f "$CLAUDE_DIR/claude-code-personalities-statusline.sh" ]] && backup_file "$CLAUDE_DIR/claude-code-personalities-statusline.sh"
-    [[ -f "$CLAUDE_DIR/settings.json" ]] && backup_file "$CLAUDE_DIR/settings.json"
     
     # Step 3: Install components
     print_step 3 4 "Installing personality components"
@@ -419,8 +432,7 @@ run_install() {
     print_step 4 4 "Configuring Claude Code"
     
     if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-        echo -e "${CYAN}Updating existing Claude Code configuration...${NC}"
-        echo -e "${DIM}(Your original settings have been backed up)${NC}"
+        echo -e "${CYAN}Merging personality configuration with existing settings...${NC}"
     else
         echo -e "${CYAN}Creating Claude Code configuration...${NC}"
     fi
