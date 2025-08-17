@@ -184,7 +184,7 @@ else
         personality="(╬ ಠ益ಠ) Task Assassin"
       # Network operations
       elif echo "$cmd" | grep -qiE "^(curl |wget |ping |ssh |scp |rsync |netstat|nc |telnet|ftp )"; then
-        personality="(⌐▀̯▀) Network Ninja"
+        personality="(╭ರ_ಠ) Network Sentinel"
       # System monitoring
       elif echo "$cmd" | grep -qiE "^(df |du |free|uname|whoami|which |hostname|uptime|lscpu)"; then
         personality="(◉_◉) System Detective"
