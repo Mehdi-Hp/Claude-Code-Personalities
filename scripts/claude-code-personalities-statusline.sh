@@ -9,32 +9,31 @@ if [[ -f "$VERSION_FILE" ]]; then
     VERSION=$(cat "$VERSION_FILE")
 fi
 
-# Nerd Font icons (UTF-8 byte sequences)
-ICON_FOLDER=$(printf '\xef\x81\xbb')       # folder
-ICON_CODE=$(printf '\xef\x84\xa1')         # code
-ICON_GIT=$(printf '\xef\x84\xa6')          # git branch
-ICON_BUG=$(printf '\xef\x86\x88')          # bug
-ICON_SEARCH=$(printf '\xef\x80\x82')       # search
-ICON_EDIT=$(printf '\xef\x81\x84')         # edit
-ICON_RUN=$(printf '\xef\x83\xa7')          # lightning
-ICON_CLEAN=$(printf '\xef\x87\xb8')        # trash
-ICON_EYE=$(printf '\xef\x81\xae')          # eye
-ICON_THINK=$(printf '\xef\x83\xab')        # lightbulb
-ICON_ROCKET=$(printf '\xef\x84\xb5')       # rocket
-ICON_SLEEP=$(printf '\xef\x86\x86')        # moon
+# Nerd Font icons (UTF-8 byte sequences) 
+# Activity icons
+ICON_EDITING=$(printf '\xef\x81\x84')      # pencil
+ICON_WRITING=$(printf '\xef\x85\x95')      # file-text
+ICON_EXECUTING=$(printf '\xef\x83\xa7')    # lightning
+ICON_READING=$(printf '\xef\x81\xae')      # eye
+ICON_SEARCHING=$(printf '\xef\x80\x82')    # search
+ICON_DEBUGGING=$(printf '\xef\x86\x88')    # bug
+ICON_TESTING=$(printf '\xef\x92\x9b')      # flask
+ICON_REVIEWING=$(printf '\xef\x81\xae')    # eye
+ICON_THINKING=$(printf '\xef\x83\xab')     # lightbulb
+ICON_BUILDING=$(printf '\xef\x83\xa9')     # hammer
+ICON_INSTALLING=$(printf '\xef\x92\x86')   # package
+ICON_IDLE=$(printf '\xef\x88\xb6')         # zzz
+ICON_WORKING=$(printf '\xef\x84\xb5')      # rocket
+
+# Status icons
 ICON_WARNING=$(printf '\xef\x81\xb1')      # warning
 ICON_ERROR=$(printf '\xef\x81\x97')        # error
 ICON_FIRE=$(printf '\xef\x81\xad')         # fire
-ICON_TARGET=$(printf '\xef\x85\x80')       # target
-ICON_CHART=$(printf '\xef\x88\x81')        # chart
-ICON_TERMINAL=$(printf '\xef\x84\xa0')     # terminal
-ICON_GEAR=$(printf '\xef\x80\x93')         # gear
 ICON_UPDATE=$(printf '\xef\x80\xa2')       # arrow up (update available)
 
 # Read input
 input=$(cat)
 session_id=$(echo "$input" | jq -r '.session_id // "unknown"' 2>/dev/null || echo "unknown")
-current_dir=$(echo "$input" | jq -r '.workspace.current_dir // ""' 2>/dev/null || echo "")
 model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null || echo "Claude")
 
 # State file
@@ -42,36 +41,77 @@ STATE_FILE="/tmp/claude_activity_${session_id}.json"
 
 # Default values
 personality="( ˘ ³˘) Booting Up"
-activity="Starting"
+activity="idle"
 current_job=""
-activity_icon="$ICON_ROCKET"
-activity_text="Starting"
+activity_icon="$ICON_IDLE"
+activity_text="idle"
 error_count=0
 
 # Read state if exists
 if [[ -f "$STATE_FILE" ]]; then
   personality=$(jq -r '.personality // "( ˘ ³˘) Booting Up"' "$STATE_FILE" 2>/dev/null)
-  activity=$(jq -r '.activity // "Starting"' "$STATE_FILE" 2>/dev/null)
+  activity=$(jq -r '.activity // "idle"' "$STATE_FILE" 2>/dev/null)
   current_job=$(jq -r '.current_job // ""' "$STATE_FILE" 2>/dev/null)
   error_count=$(jq -r '.error_count // 0' "$STATE_FILE" 2>/dev/null)
   consecutive=$(jq -r '.consecutive_actions // 0' "$STATE_FILE" 2>/dev/null)
 
-  # Set activity icon and text (use activity directly as it's already capitalized)
-  activity_text="$activity"
-  case "${activity,,}" in  # Convert to lowercase for matching only
+  # Set activity icon and text based on activity type
+  activity_lower=$(echo "$activity" | tr '[:upper:]' '[:lower:]')
+  activity_text="$activity_lower"
+  
+  case "$activity_lower" in
     editing)
-      activity_icon="$ICON_EDIT"
-      (( consecutive > 5 )) && activity_icon="$ICON_FIRE" && activity_text="Intense"
+      activity_icon="$ICON_EDITING"
+      (( consecutive > 5 )) && activity_icon="$ICON_FIRE" && activity_text="intense editing"
       ;;
-    writing) activity_icon="$ICON_EDIT"; activity_text="Creating" ;;
-    executing) activity_icon="$ICON_RUN"; activity_text="Running" ;;
-    exploring) activity_icon="$ICON_SEARCH" ;;
-    searching) activity_icon="$ICON_SEARCH" ;;
-    debugging) activity_icon="$ICON_BUG" ;;
-    testing) activity_icon="$ICON_RUN" ;;
-    reviewing) activity_icon="$ICON_EYE" ;;
-    thinking) activity_icon="$ICON_THINK" ;;
-    *) activity_icon="$ICON_ROCKET"; activity_text="Working" ;;
+    writing)
+      activity_icon="$ICON_WRITING"
+      activity_text="writing"
+      ;;
+    executing)
+      activity_icon="$ICON_EXECUTING" 
+      activity_text="executing"
+      ;;
+    reading)
+      activity_icon="$ICON_READING"
+      activity_text="reading"
+      ;;
+    searching)
+      activity_icon="$ICON_SEARCHING"
+      activity_text="searching"
+      ;;
+    debugging)
+      activity_icon="$ICON_DEBUGGING"
+      activity_text="debugging"
+      ;;
+    testing)
+      activity_icon="$ICON_TESTING"
+      activity_text="testing"
+      ;;
+    reviewing)
+      activity_icon="$ICON_REVIEWING"
+      activity_text="reviewing"
+      ;;
+    thinking)
+      activity_icon="$ICON_THINKING"
+      activity_text="thinking"
+      ;;
+    building)
+      activity_icon="$ICON_BUILDING"
+      activity_text="building"
+      ;;
+    installing)
+      activity_icon="$ICON_INSTALLING"
+      activity_text="installing"
+      ;;
+    idle)
+      activity_icon="$ICON_IDLE"
+      activity_text="idle"
+      ;;
+    *)
+      activity_icon="$ICON_WORKING"
+      activity_text="working"
+      ;;
   esac
 fi
 
@@ -100,16 +140,12 @@ if [[ ! -f "$UPDATE_CHECK_FILE" ]]; then
   fi
 fi
 
-# Directory name
-dir_name=$(basename "${current_dir:-~}")
-
-# Build status line
+# Build status line: [personality] [activity] [job/file] [model] [update]
 printf "\033[1m%s\033[0m" "$personality"
-printf " \033[90m•\033[0m %s %s" "$ICON_FOLDER" "$dir_name"
 
-# Display activity with optional job/task details
+# Display activity with optional job/task details  
 if [[ -n "$current_job" ]]; then
-  printf " \033[90m•\033[0m %s %s on \033[93m%s\033[0m" "$activity_icon" "$activity_text" "$current_job"
+  printf " \033[90m•\033[0m %s %s \033[93m%s\033[0m" "$activity_icon" "$activity_text" "$current_job"
 else
   printf " \033[90m•\033[0m %s %s" "$activity_icon" "$activity_text"
 fi
