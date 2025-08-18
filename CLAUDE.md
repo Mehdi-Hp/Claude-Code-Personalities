@@ -11,10 +11,13 @@
 
 Claude Code Personalities is a personality system that gives Claude Code a dynamic, context-aware statusline with text-face emoticons that change based on Claude's current activity. Instead of a static prompt, you get a fun, informative statusline that shows Claude's "mood" and what it's currently working on.
 
+**🦀 Rust Implementation**: The project has been rewritten in Rust for lightning-fast performance, better error handling, and zero external dependencies (no more jq requirement!).
+
 ### Features
 
 - **30+ Text-Face Personalities**: From `ʕ•ᴥ•ʔ Code Wizard` to `(┛ಠДಠ)┛彡┻━┻ Frustrated Developer`
 - **Context-Aware**: Personalities change based on files being edited, commands run, and errors encountered
+- **Interactive Configuration**: Use `config` command to customize what appears in statusline
 - **Activity Tracking**: Monitors Claude's tool usage (Edit, Bash, Grep, etc.) via hooks
 - **Error State Management**: Claude gets progressively more frustrated with errors
 - **Nerd Font Icons**: Visual indicators for folders, activities, and status
@@ -62,6 +65,29 @@ graph LR
 
 ### Repository Structure (for development)
 
+#### Rust Implementation (Recommended)
+```
+claude-code-personalities/
+├── claude-code-personalities-rust/
+│   ├── src/
+│   │   ├── main.rs              # CLI entry point
+│   │   ├── cli/mod.rs           # Command implementations (install, config, etc.)
+│   │   ├── statusline/mod.rs    # Statusline generation logic
+│   │   ├── hooks/mod.rs         # Hook handling (pre-tool, post-tool, etc.)
+│   │   ├── state/mod.rs         # Session state management
+│   │   ├── config/             # Configuration management
+│   │   │   ├── mod.rs
+│   │   │   └── preferences.rs   # User preferences (config command)
+│   │   └── types.rs             # Common types and enums
+│   ├── Cargo.toml               # Rust dependencies
+│   └── target/release/
+│       └── claude-code-personalities  # Compiled binary
+└── ~/.claude/
+    ├── personalities_config.json  # User configuration file
+    └── settings.json              # Claude Code configuration
+```
+
+#### Legacy Bash Implementation
 ```
 claude-code-personalities/
 ├── CLAUDE.md                    # This file
