@@ -32,22 +32,33 @@ pub async fn run_hook(hook_type: &str) -> Result<()> {
 }
 
 async fn handle_tool_hook() -> Result<()> {
+    use anyhow::Context;
+    
     // Read JSON from stdin
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
+    io::stdin().read_to_string(&mut input)
+        .with_context(|| "Failed to read hook input from stdin")?;
     
-    let hook_input: HookInput = serde_json::from_str(&input)?;
+    if input.trim().is_empty() {
+        return Err(anyhow::anyhow!("No input received for hook"))
+            .with_context(|| "Hook should receive JSON input from Claude Code via stdin");
+    }
+    
+    let hook_input: HookInput = serde_json::from_str(&input)
+        .with_context(|| "Failed to parse hook input JSON")?;
     
     let session_id = hook_input.session_id.unwrap_or_else(|| "unknown".to_string());
     let tool_name = hook_input.tool_name.unwrap_or_else(|| "".to_string());
     
     // Load current state
-    let mut state = SessionState::load(&session_id).await?;
+    let mut state = SessionState::load(&session_id).await
+        .with_context(|| format!("Failed to load session state for hook processing (session: {})", session_id))?;
     
     // Check for errors
     if let Some(response) = &hook_input.tool_response {
         if response.error.is_some() {
-            state.increment_errors().await?;
+            state.increment_errors().await
+                .with_context(|| format!("Failed to increment error count for session {}", session_id))?;
         }
     }
     
@@ -61,36 +72,48 @@ async fn handle_tool_hook() -> Result<()> {
     let personality = determine_personality(&state, &tool_name, file_path.as_deref(), command.as_deref());
     
     // Update state
-    state.update_activity(activity, current_job, personality).await?;
+    state.update_activity(activity, current_job, personality).await
+        .with_context(|| format!("Failed to update activity state for session {}", session_id))?;
     
     Ok(())
 }
 
 async fn handle_prompt_submit() -> Result<()> {
+    use anyhow::Context;
+    
     // Read JSON from stdin to get session_id
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
+    io::stdin().read_to_string(&mut input)
+        .with_context(|| "Failed to read prompt submit hook input from stdin")?;
     
-    let hook_input: HookInput = serde_json::from_str(&input)?;
+    let hook_input: HookInput = serde_json::from_str(&input)
+        .with_context(|| "Failed to parse prompt submit hook input JSON")?;
     let session_id = hook_input.session_id.unwrap_or_else(|| "unknown".to_string());
     
     // Reset error count
-    let mut state = SessionState::load(&session_id).await?;
-    state.reset_errors().await?;
+    let mut state = SessionState::load(&session_id).await
+        .with_context(|| format!("Failed to load session state for error reset (session: {})", session_id))?;
+    state.reset_errors().await
+        .with_context(|| format!("Failed to reset error count for session {}", session_id))?;
     
     Ok(())
 }
 
 async fn handle_session_end() -> Result<()> {
+    use anyhow::Context;
+    
     // Read JSON from stdin to get session_id
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
+    io::stdin().read_to_string(&mut input)
+        .with_context(|| "Failed to read session end hook input from stdin")?;
     
-    let hook_input: HookInput = serde_json::from_str(&input)?;
+    let hook_input: HookInput = serde_json::from_str(&input)
+        .with_context(|| "Failed to parse session end hook input JSON")?;
     let session_id = hook_input.session_id.unwrap_or_else(|| "unknown".to_string());
     
     // Cleanup session files
-    SessionState::cleanup(&session_id).await?;
+    SessionState::cleanup(&session_id).await
+        .with_context(|| format!("Failed to cleanup session files for session {}", session_id))?;
     
     Ok(())
 }

@@ -49,10 +49,13 @@ pub async fn uninstall() -> Result<()> {
 }
 
 pub async fn status() -> Result<()> {
+    use anyhow::Context;
+    
     println!("{}", "Claude Code Personalities Status".bold().blue());
     println!();
     
-    let claude_dir = get_claude_dir()?;
+    let claude_dir = get_claude_dir()
+        .with_context(|| "Failed to determine Claude directory path")?;
     let settings_file = claude_dir.join("settings.json");
     
     // Check if Claude directory exists
@@ -67,7 +70,8 @@ pub async fn status() -> Result<()> {
         println!("{} Settings file found", ICON_CHECK.green());
         
         // Check if configured for personalities
-        let content = fs::read_to_string(&settings_file).await?;
+        let content = fs::read_to_string(&settings_file).await
+            .with_context(|| format!("Failed to read Claude settings from {}", settings_file.display()))?;
         if content.contains("claude-code-personalities") {
             println!("{} Personalities configured in settings", ICON_CHECK.green());
         } else {
@@ -85,14 +89,17 @@ pub async fn status() -> Result<()> {
     use crate::statusline::*;
     use crate::state::SessionState;
     
-    let claude_input: ClaudeInput = serde_json::from_str(test_input)?;
+    let claude_input: ClaudeInput = serde_json::from_str(test_input)
+        .with_context(|| "Failed to parse test statusline input")?;
     let session_id = claude_input.session_id.unwrap_or_else(|| "test".to_string());
     let model_name = claude_input.model
         .and_then(|m| m.display_name)
         .unwrap_or_else(|| "Claude".to_string());
     
-    let state = SessionState::load(&session_id).await?;
-    let prefs = PersonalityPreferences::load_or_default().await?;
+    let state = SessionState::load(&session_id).await
+        .with_context(|| format!("Failed to load test session state for session {}", session_id))?;
+    let prefs = PersonalityPreferences::load_or_default().await
+        .with_context(|| "Failed to load preferences for status test")?;
     let statusline = build_statusline(&state, &model_name, &prefs);
     println!("  Output: {}", statusline);
     
@@ -111,11 +118,14 @@ pub async fn check_update() -> Result<()> {
 }
 
 pub async fn configure() -> Result<()> {
+    use anyhow::Context;
+    
     println!("{}", "Configure Claude Code Personalities".bold().blue());
     println!("Select which elements to show in the statusline:\n");
     
     // Load current preferences or defaults
-    let mut prefs = PersonalityPreferences::load_or_default().await?;
+    let mut prefs = PersonalityPreferences::load_or_default().await
+        .with_context(|| "Failed to load current personality preferences")?;
     
     // Get all options with their current states
     let options = prefs.get_options();
@@ -131,16 +141,21 @@ pub async fn configure() -> Result<()> {
     // Show interactive multi-select prompt
     let selected = MultiSelect::new("Features to enable:", option_names.clone())
         .with_default(&default_selections)
-        .prompt()?;
+        .prompt()
+        .with_context(|| "Failed to get user preferences selection. Interactive prompt was cancelled or failed.")?;
     
     // Update preferences based on selections
     prefs.update_from_selections(&selected);
     
     // Save updated preferences
-    prefs.save().await?;
+    prefs.save().await
+        .with_context(|| "Failed to save updated personality preferences")?;
     
     println!("\n{} Configuration saved successfully!", ICON_CHECK.green());
-    println!("Location: {}", PersonalityPreferences::get_preferences_path()?.display());
+    
+    let prefs_path = PersonalityPreferences::get_preferences_path()
+        .with_context(|| "Failed to get preferences file path for display")?;
+    println!("Location: {}", prefs_path.display());
     
     // Show what was enabled/disabled
     println!("\nEnabled features:");
@@ -187,6 +202,10 @@ pub fn help() -> Result<()> {
 }
 
 fn get_claude_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
+    use anyhow::Context;
+    
+    let home = dirs::home_dir()
+        .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))
+        .with_context(|| "Unable to locate home directory. Ensure the HOME environment variable is set.")?;
     Ok(home.join(".claude"))
 }

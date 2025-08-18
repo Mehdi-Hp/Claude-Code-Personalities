@@ -11,9 +11,11 @@ ERROR_FILE="/tmp/claude_errors_${session_id}.count"
 if [[ -f "$STATE_FILE" ]]; then
   prev_activity=$(jq -r '.activity // "idle"' "$STATE_FILE")
   consecutive=$(jq -r '.consecutive_actions // 0' "$STATE_FILE")
+  prev_personality=$(jq -r '.personality // ""' "$STATE_FILE")
 else
   prev_activity="idle"
   consecutive=0
+  prev_personality=""
 fi
 
 errors=$(cat "$ERROR_FILE" 2>/dev/null || echo 0)
@@ -105,7 +107,12 @@ esac
 
 [[ "$activity" == "$prev_activity" ]] && ((consecutive++)) || consecutive=1
 
-personality="(◕‿◕) Claude Assistant"
+# Set default personality - preserve existing one during session, or use Booting Up for new sessions
+if [[ -n "$prev_personality" ]]; then
+  personality="$prev_personality"
+else
+  personality="( ˘ ³˘) Booting Up"
+fi
 
 # Frustration states based on error count
 if (( errors >= 5 )); then
