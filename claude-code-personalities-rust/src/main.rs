@@ -19,8 +19,8 @@ async fn main() {
         if let Some(personality_err) = e.downcast_ref::<error::PersonalityError>() {
             eprintln!("{}", personality_err);
         } else {
-            // Fallback for other anyhow errors
-            eprintln!("❌ {}: {}", "Error".red().bold(), e);
+            // Fallback for other anyhow errors - using Nerd Font error icon
+            eprintln!("\u{f057} {}: {}", "Error".red().bold(), e);
         }
         std::process::exit(1);
     }

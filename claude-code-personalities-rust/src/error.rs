@@ -154,10 +154,14 @@ impl PersonalityError {
 
 impl fmt::Display for PersonalityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Nerd Font icons using UTF-8 byte sequences
+        const ERROR_ICON: &str = "\u{f057}";  // 
+        const LIGHTBULB_ICON: &str = "\u{f0eb}"; // 
+        
         match self {
             PersonalityError::Configuration { message, suggestion } => {
                 writeln!(f, "{} {}: {}", 
-                    "❌".red(),
+                    ERROR_ICON.red(),
                     "Configuration Error".red().bold(), 
                     message
                 )?;
@@ -170,14 +174,14 @@ impl fmt::Display for PersonalityError {
             PersonalityError::IO { operation, path, source, suggestion } => {
                 if let Some(path) = path {
                     writeln!(f, "{} {}: Failed to {} {}", 
-                        "❌".red(),
+                        ERROR_ICON.red(),
                         "File Error".red().bold(), 
                         operation,
                         path.blue()
                     )?;
                 } else {
                     writeln!(f, "{} {}: Failed to {}", 
-                        "❌".red(),
+                        ERROR_ICON.red(),
                         "File Error".red().bold(), 
                         operation
                     )?;
@@ -191,7 +195,7 @@ impl fmt::Display for PersonalityError {
             
             PersonalityError::Parsing { context, input_preview, source, suggestion } => {
                 writeln!(f, "{} {}: {}", 
-                    "❌".red(),
+                    ERROR_ICON.red(),
                     "Invalid Input".red().bold(), 
                     context
                 )?;
@@ -210,7 +214,7 @@ impl fmt::Display for PersonalityError {
             
             PersonalityError::State { session_id, operation, suggestion } => {
                 writeln!(f, "{} {}: Failed to {} for session {}", 
-                    "❌".red(),
+                    ERROR_ICON.red(),
                     "State Error".red().bold(), 
                     operation,
                     session_id.blue()
@@ -219,13 +223,13 @@ impl fmt::Display for PersonalityError {
                 if let Some(suggestion) = suggestion {
                     writeln!(f, "\n{}", suggestion.yellow())?;
                 } else {
-                    writeln!(f, "\n{} Try removing /tmp/claude_activity_*.json files", "💡".yellow())?;
+                    writeln!(f, "\n{} Try removing /tmp/claude_activity_*.json files", LIGHTBULB_ICON.yellow())?;
                 }
             }
             
             PersonalityError::System { message, suggestion } => {
                 writeln!(f, "{} {}: {}", 
-                    "❌".red(),
+                    ERROR_ICON.red(),
                     "System Error".red().bold(), 
                     message
                 )?;
@@ -237,7 +241,7 @@ impl fmt::Display for PersonalityError {
             
             PersonalityError::Prompt { message, suggestion } => {
                 writeln!(f, "{} {}: {}", 
-                    "❌".red(),
+                    ERROR_ICON.red(),
                     "Prompt Error".red().bold(), 
                     message
                 )?;
