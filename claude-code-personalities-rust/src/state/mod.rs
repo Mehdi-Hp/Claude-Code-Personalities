@@ -30,11 +30,15 @@ impl Default for SessionState {
 
 impl SessionState {
     pub async fn load(session_id: &str) -> Result<Self> {
+        use anyhow::Context;
+        
         let path = Self::get_state_path(session_id);
         
         if path.exists() {
-            let content = fs::read_to_string(&path).await?;
-            let state: SessionState = serde_json::from_str(&content)?;
+            let content = fs::read_to_string(&path).await
+                .with_context(|| format!("Failed to read session state from {}", path.display()))?;
+            let state: SessionState = serde_json::from_str(&content)
+                .with_context(|| format!("Invalid session state format for session {}", session_id))?;
             Ok(state)
         } else {
             let mut state = Self::default();
@@ -44,9 +48,13 @@ impl SessionState {
     }
     
     pub async fn save(&self) -> Result<()> {
+        use anyhow::Context;
+        
         let path = Self::get_state_path(&self.session_id);
-        let content = serde_json::to_string_pretty(self)?;
-        fs::write(&path, content).await?;
+        let content = serde_json::to_string_pretty(self)
+            .with_context(|| format!("Failed to serialize session state for session {}", self.session_id))?;
+        fs::write(&path, content).await
+            .with_context(|| format!("Failed to save session state to {}", path.display()))?;
         Ok(())
     }
     
@@ -56,6 +64,8 @@ impl SessionState {
         current_job: Option<String>,
         personality: String,
     ) -> Result<()> {
+        use anyhow::Context;
+        
         // Update consecutive actions
         if self.activity == activity {
             self.consecutive_actions += 1;
@@ -68,16 +78,23 @@ impl SessionState {
         self.personality = personality;
         
         self.save().await
+            .with_context(|| format!("Failed to save updated activity for session {}", self.session_id))
     }
     
     pub async fn increment_errors(&mut self) -> Result<()> {
+        use anyhow::Context;
+        
         self.error_count += 1;
         self.save().await
+            .with_context(|| format!("Failed to save incremented error count for session {}", self.session_id))
     }
     
     pub async fn reset_errors(&mut self) -> Result<()> {
+        use anyhow::Context;
+        
         self.error_count = 0;
         self.save().await
+            .with_context(|| format!("Failed to save reset error count for session {}", self.session_id))
     }
     
     pub async fn cleanup(session_id: &str) -> Result<()> {

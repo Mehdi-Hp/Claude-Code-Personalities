@@ -1,5 +1,6 @@
 use clap::{Arg, Command};
 use anyhow::Result;
+use colored::*;
 
 mod cli;
 mod statusline;
@@ -7,11 +8,25 @@ mod hooks;
 mod state;
 mod config;
 mod types;
+mod error;
 
 // Module imports handled per-function
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(e) = run().await {
+        // Check if it's our custom error type that already has nice formatting
+        if let Some(personality_err) = e.downcast_ref::<error::PersonalityError>() {
+            eprintln!("{}", personality_err);
+        } else {
+            // Fallback for other anyhow errors
+            eprintln!("❌ {}: {}", "Error".red().bold(), e);
+        }
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     let matches = Command::new("claude-code-personalities")
         .version("0.1.0")
         .about("Dynamic text-face personalities for Claude Code's statusline")
