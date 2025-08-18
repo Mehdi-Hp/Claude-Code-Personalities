@@ -5,6 +5,8 @@
 Give your Claude Code assistant a dynamic, context-aware statusline with 30+ text-face emoticons that change based on Claude's current activity.  
 Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠДಠ)┛彡┻━┻ Frustrated Developer` when encountering errors!
 
+**🦀 Now powered by Rust** - Lightning fast performance with interactive configuration!
+
 ![Claude Code Personalities Screenshot](screenshot.png)
 
 ## Installation
@@ -60,6 +62,9 @@ claude-code-personalities install             # Interactive configuration (defau
 claude-code-personalities install --yes       # Non-interactive with safe defaults
 claude-code-personalities install -y          # Short flag for non-interactive
 
+# Configuration
+claude-code-personalities config              # Interactive configuration menu
+
 # Management
 claude-code-personalities status              # Check installation status
 claude-code-personalities update              # Update to latest version
@@ -71,8 +76,45 @@ claude-code-personalities help                # Show help with all options
 ## Requirements
 
 - Claude Code v1.0.60+
-- jq (`brew install jq`)
 - Nerd Fonts for icons (`brew install --cask font-hack-nerd-font`)
+
+### For Rust Version (Recommended)
+- **No additional dependencies** - Self-contained binary!
+
+### For Legacy Bash Version  
+- jq (`brew install jq`)
+
+## Configuration
+
+Customize what appears in your statusline using the interactive configuration:
+
+```bash
+claude-code-personalities config
+```
+
+This opens a multi-select menu where you can toggle:
+- 🎭 **Show Personality** - Text-face emoticons (ʕ•ᴥ•ʔ, (╯°□°)╯, etc.)
+- ⚡ **Show Activity** - Current activity (editing, coding, debugging, etc.)
+- 📝 **Show Current Job/File** - Current file being worked on
+- 📁 **Show Current Directory** - Working directory path
+- 🤖 **Show Model Indicator** - Claude model (Opus, Sonnet, Haiku)
+- 🚨 **Show Error Indicators** - Warning/error icons based on error count
+- 🎨 **Use Icons** - Nerd Font icons for visual appeal
+- 🌈 **Use Colors** - ANSI color formatting
+
+Settings are saved to `~/.claude/personalities_config.json` and take effect immediately.
+
+## Building from Source
+
+For developers who want to build the Rust version:
+
+```bash
+git clone https://github.com/Mehdi-Hp/claude-code-personalities
+cd claude-code-personalities/claude-code-personalities-rust
+cargo build --release
+
+# Binary will be at target/release/claude-code-personalities
+```
 
 ## Documentation
 
