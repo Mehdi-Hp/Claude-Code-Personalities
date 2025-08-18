@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
@@ -33,7 +33,9 @@ impl Default for PersonalityPreferences {
 impl PersonalityPreferences {
     /// Get the path to the preferences file
     pub fn get_preferences_path() -> Result<PathBuf> {
-        let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
+        let home = dirs::home_dir()
+            .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))
+            .with_context(|| "Unable to locate home directory. Ensure the HOME environment variable is set.")?;
         Ok(home.join(".claude").join("personalities_config.json"))
     }
     
@@ -42,8 +44,10 @@ impl PersonalityPreferences {
         let path = Self::get_preferences_path()?;
         
         if path.exists() {
-            let content = fs::read_to_string(&path).await?;
-            let prefs: PersonalityPreferences = serde_json::from_str(&content)?;
+            let content = fs::read_to_string(&path).await
+                .with_context(|| format!("Failed to read personality preferences from {}", path.display()))?;
+            let prefs: PersonalityPreferences = serde_json::from_str(&content)
+                .with_context(|| "Invalid JSON format in personality preferences file")?;
             Ok(prefs)
         } else {
             Ok(Self::default())
@@ -56,11 +60,14 @@ impl PersonalityPreferences {
         
         // Create .claude directory if it doesn't exist
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).await?;
+            fs::create_dir_all(parent).await
+                .with_context(|| format!("Failed to create directory {}", parent.display()))?;
         }
         
-        let content = serde_json::to_string_pretty(self)?;
-        fs::write(&path, content).await?;
+        let content = serde_json::to_string_pretty(self)
+            .with_context(|| "Failed to serialize personality preferences to JSON")?;
+        fs::write(&path, content).await
+            .with_context(|| format!("Failed to write personality preferences to {}", path.display()))?;
         Ok(())
     }
     

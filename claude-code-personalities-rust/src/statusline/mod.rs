@@ -33,11 +33,27 @@ pub struct WorkspaceInfo {
 }
 
 pub async fn run_statusline() -> Result<()> {
+    use anyhow::Context;
+    
     // Read JSON from stdin
     let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
+    io::stdin().read_to_string(&mut input)
+        .with_context(|| "Failed to read input from stdin")?;
     
-    let claude_input: ClaudeInput = serde_json::from_str(&input)?;
+    if input.trim().is_empty() {
+        return Err(anyhow::anyhow!("No input received from Claude Code"))
+            .with_context(|| "Claude Code should pass JSON input via stdin. Check that statusline is configured correctly.");
+    }
+    
+    let claude_input: ClaudeInput = serde_json::from_str(&input)
+        .with_context(|| {
+            let preview = if input.len() > 100 {
+                format!("{}...", &input[..100])
+            } else {
+                input.clone()
+            };
+            format!("Failed to parse JSON input from Claude Code. Received: {}", preview)
+        })?;
     
     let session_id = claude_input.session_id.unwrap_or_else(|| "unknown".to_string());
     let model_name = claude_input.model
@@ -45,8 +61,10 @@ pub async fn run_statusline() -> Result<()> {
         .unwrap_or_else(|| "Claude".to_string());
     
     // Load session state and preferences
-    let state = SessionState::load(&session_id).await?;
-    let prefs = PersonalityPreferences::load_or_default().await?;
+    let state = SessionState::load(&session_id).await
+        .with_context(|| format!("Failed to load session state for session '{}'", session_id))?;
+    let prefs = PersonalityPreferences::load_or_default().await
+        .with_context(|| "Failed to load personality preferences")?;
     
     // Build statusline
     let statusline = build_statusline(&state, &model_name, &prefs);

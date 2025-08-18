@@ -4,3 +4,4 @@ pub mod hooks;
 pub mod state;
 pub mod config;
 pub mod types;
+pub mod error;

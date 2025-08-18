@@ -39,7 +39,7 @@ model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null
 # State file
 STATE_FILE="/tmp/claude_activity_${session_id}.json"
 
-# Default values
+# Default values for new sessions
 personality="( ˘ ³˘) Booting Up"
 activity="idle"
 current_job=""
@@ -47,7 +47,7 @@ activity_icon="$ICON_IDLE"
 activity_text="idle"
 error_count=0
 
-# Read state if exists
+# Read state if exists - preserve personality in active sessions
 if [[ -f "$STATE_FILE" ]]; then
   personality=$(jq -r '.personality // "( ˘ ³˘) Booting Up"' "$STATE_FILE" 2>/dev/null)
   activity=$(jq -r '.activity // "idle"' "$STATE_FILE" 2>/dev/null)
