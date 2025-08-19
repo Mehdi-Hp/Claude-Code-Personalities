@@ -11,8 +11,18 @@ pub struct SessionState {
     pub activity: Activity,
     pub current_job: Option<String>,
     pub personality: String,
+    pub previous_personality: Option<String>,
     pub consecutive_actions: u32,
     pub error_count: u32,
+    #[serde(skip)]
+    pub animation_state: AnimationState,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnimationState {
+    pub is_animating: bool,
+    pub animation_type: Option<String>,
+    pub should_transition: bool,
 }
 
 impl Default for SessionState {
@@ -22,8 +32,20 @@ impl Default for SessionState {
             activity: Activity::Idle,
             current_job: None,
             personality: "( ˘ ³˘) Booting Up".to_string(),
+            previous_personality: None,
             consecutive_actions: 0,
             error_count: 0,
+            animation_state: AnimationState::default(),
+        }
+    }
+}
+
+impl Default for AnimationState {
+    fn default() -> Self {
+        Self {
+            is_animating: false,
+            animation_type: None,
+            should_transition: false,
         }
     }
 }
@@ -73,6 +95,12 @@ impl SessionState {
             self.consecutive_actions = 1;
         }
         
+        // Check for personality change to trigger transition
+        if self.personality != personality {
+            self.previous_personality = Some(self.personality.clone());
+            self.animation_state.should_transition = true;
+        }
+        
         self.activity = activity;
         self.current_job = current_job;
         self.personality = personality;
@@ -95,6 +123,31 @@ impl SessionState {
         self.error_count = 0;
         self.save().await
             .with_context(|| format!("Failed to save reset error count for session {}", self.session_id))
+    }
+    
+    /// Check if personality transition is needed
+    pub fn should_show_transition(&self) -> bool {
+        self.animation_state.should_transition && self.previous_personality.is_some()
+    }
+    
+    /// Get personality transition info
+    pub fn get_transition_info(&self) -> Option<(String, String)> {
+        if let Some(prev) = &self.previous_personality {
+            Some((prev.clone(), self.personality.clone()))
+        } else {
+            None
+        }
+    }
+    
+    /// Mark transition as consumed
+    pub fn consume_transition(&mut self) {
+        self.animation_state.should_transition = false;
+    }
+    
+    /// Set animation state
+    pub fn set_animation_state(&mut self, is_animating: bool, animation_type: Option<String>) {
+        self.animation_state.is_animating = is_animating;
+        self.animation_state.animation_type = animation_type;
     }
     
     pub async fn cleanup(session_id: &str) -> Result<()> {
@@ -134,9 +187,12 @@ mod tests {
         assert_eq!(state.session_id, "unknown");
         assert_eq!(state.activity, Activity::Idle);
         assert_eq!(state.personality, "( ˘ ³˘) Booting Up");
+        assert!(state.previous_personality.is_none());
         assert_eq!(state.consecutive_actions, 0);
         assert_eq!(state.error_count, 0);
         assert!(state.current_job.is_none());
+        assert!(!state.animation_state.is_animating);
+        assert!(!state.animation_state.should_transition);
     }
 
     #[tokio::test]
@@ -162,8 +218,10 @@ mod tests {
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
             personality: "Code Wizard".to_string(),
+            previous_personality: None,
             consecutive_actions: 5,
             error_count: 2,
+            animation_state: AnimationState::default(),
         };
         
         state.save().await.unwrap();
@@ -350,5 +408,68 @@ mod tests {
         if state_path.exists() {
             fs::remove_file(&state_path).await.unwrap();
         }
+    }
+    
+    #[tokio::test]
+    async fn test_personality_transition_tracking() {
+        let session_id = create_test_session_id();
+        let mut state = SessionState::load(&session_id).await.unwrap();
+        
+        // Initial state should not have transition
+        assert!(!state.should_show_transition());
+        assert!(state.get_transition_info().is_none());
+        
+        // Update with same personality - no transition
+        state.update_activity(
+            Activity::Editing,
+            Some("test.js".to_string()),
+            state.personality.clone(),
+        ).await.unwrap();
+        assert!(!state.should_show_transition());
+        
+        // Update with different personality - should trigger transition
+        let new_personality = "ʕ•ᴥ•ʔ Code Wizard".to_string();
+        state.update_activity(
+            Activity::Coding,
+            Some("main.rs".to_string()),
+            new_personality.clone(),
+        ).await.unwrap();
+        
+        assert!(state.should_show_transition());
+        let transition_info = state.get_transition_info();
+        assert!(transition_info.is_some());
+        let (from, to) = transition_info.unwrap();
+        assert_eq!(from, "( ˘ ³˘) Booting Up");
+        assert_eq!(to, new_personality);
+        
+        // Consume transition
+        state.consume_transition();
+        assert!(!state.should_show_transition());
+        
+        // Cleanup
+        SessionState::cleanup(&session_id).await.unwrap();
+    }
+    
+    #[tokio::test]
+    async fn test_animation_state_management() {
+        let session_id = create_test_session_id();
+        let mut state = SessionState::load(&session_id).await.unwrap();
+        
+        // Initial animation state
+        assert!(!state.animation_state.is_animating);
+        assert!(state.animation_state.animation_type.is_none());
+        
+        // Set animation state
+        state.set_animation_state(true, Some("transition".to_string()));
+        assert!(state.animation_state.is_animating);
+        assert_eq!(state.animation_state.animation_type, Some("transition".to_string()));
+        
+        // Clear animation state
+        state.set_animation_state(false, None);
+        assert!(!state.animation_state.is_animating);
+        assert!(state.animation_state.animation_type.is_none());
+        
+        // Cleanup
+        SessionState::cleanup(&session_id).await.unwrap();
     }
 }

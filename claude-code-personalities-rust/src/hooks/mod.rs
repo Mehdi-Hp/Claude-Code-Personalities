@@ -71,7 +71,7 @@ async fn handle_tool_hook() -> Result<()> {
     // Determine personality
     let personality = determine_personality(&state, &tool_name, file_path.as_deref(), command.as_deref());
     
-    // Update state
+    // Update state - this will automatically detect personality changes and set transition flags
     state.update_activity(activity, current_job, personality).await
         .with_context(|| format!("Failed to update activity state for session {}", session_id))?;
     
