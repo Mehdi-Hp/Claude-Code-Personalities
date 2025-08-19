@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
+use crate::animation::AnimationSpeed;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersonalityPreferences {
     pub show_personality: bool,
@@ -13,6 +15,11 @@ pub struct PersonalityPreferences {
     pub show_error_indicators: bool,
     pub use_icons: bool,
     pub use_colors: bool,
+    // Animation settings
+    pub enable_animations: bool,
+    pub animation_speed: AnimationSpeed,
+    pub enable_transitions: bool,
+    pub enable_activity_animations: bool,
 }
 
 impl Default for PersonalityPreferences {
@@ -26,6 +33,11 @@ impl Default for PersonalityPreferences {
             show_error_indicators: true,
             use_icons: true,
             use_colors: true,
+            // Animation defaults - enabled by default as requested
+            enable_animations: true,
+            animation_speed: AnimationSpeed::Normal,
+            enable_transitions: true,
+            enable_activity_animations: true,
         }
     }
 }
@@ -82,6 +94,9 @@ impl PersonalityPreferences {
             ("Show Error Indicators", self.show_error_indicators),
             ("Use Icons", self.use_icons),
             ("Use Colors", self.use_colors),
+            ("Enable Animations", self.enable_animations),
+            ("Enable Transitions", self.enable_transitions),
+            ("Enable Activity Animations", self.enable_activity_animations),
         ]
     }
     
@@ -96,6 +111,9 @@ impl PersonalityPreferences {
         self.show_error_indicators = false;
         self.use_icons = false;
         self.use_colors = false;
+        self.enable_animations = false;
+        self.enable_transitions = false;
+        self.enable_activity_animations = false;
         
         // Set selected ones to true
         for selection in selections {
@@ -108,6 +126,9 @@ impl PersonalityPreferences {
                 "Show Error Indicators" => self.show_error_indicators = true,
                 "Use Icons" => self.use_icons = true,
                 "Use Colors" => self.use_colors = true,
+                "Enable Animations" => self.enable_animations = true,
+                "Enable Transitions" => self.enable_transitions = true,
+                "Enable Activity Animations" => self.enable_activity_animations = true,
                 _ => {} // Ignore unknown options
             }
         }

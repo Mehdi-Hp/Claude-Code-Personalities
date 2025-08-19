@@ -1,18 +1,16 @@
 #!/bin/bash
 
-# Release script for Claude Code Personalities
-# This script automates the release process
+# Release script for Claude Code Personalities - Rust Edition
+# Uses Makefile for building and GitHub Actions for deployment
 
 set -e
 
-# Icons (same ones used in the personality system)
+# Icons
 ICON_ROCKET=$(printf '\xef\x84\xb5')
 ICON_CHECK=$(printf '\xef\x80\x8c')
 ICON_STAR=$(printf '\xef\x80\x85')
-ICON_PACKAGE=$(printf '\xef\x86\x87')
 ICON_GIT=$(printf '\xef\x84\xa6')
 ICON_TAG=$(printf '\xef\x81\x92')
-ICON_UPLOAD=$(printf '\xef\x82\x93')
 ICON_WARNING=$(printf '\xef\x81\xb1')
 
 # Colors
@@ -27,8 +25,10 @@ NC='\033[0m'
 echo -e "${BOLD}${CYAN}${ICON_ROCKET} Claude Code Personalities Release Script${NC}"
 echo ""
 
-# Step 1: Check if on main branch
-echo -e "${BLUE}${ICON_GIT} Checking branch...${NC}"
+# Step 1: Pre-flight checks
+echo -e "${BLUE}${ICON_GIT} Pre-flight checks...${NC}"
+
+# Check if on main branch
 CURRENT_BRANCH=$(git branch --show-current)
 if [[ "$CURRENT_BRANCH" != "main" ]]; then
     echo -e "${RED}Error: Not on main branch (currently on $CURRENT_BRANCH)${NC}"
@@ -37,8 +37,7 @@ if [[ "$CURRENT_BRANCH" != "main" ]]; then
 fi
 echo -e "  ${GREEN}${ICON_CHECK}${NC} On main branch"
 
-# Step 2: Check for uncommitted changes
-echo -e "${BLUE}${ICON_GIT} Checking for uncommitted changes...${NC}"
+# Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
     echo -e "${RED}Error: You have uncommitted changes${NC}"
     echo "Please commit or stash your changes first"
@@ -46,12 +45,23 @@ if ! git diff-index --quiet HEAD --; then
 fi
 echo -e "  ${GREEN}${ICON_CHECK}${NC} Working directory clean"
 
-# Step 3: Pull latest changes
+# Check dependencies
+if ! command -v just &> /dev/null; then
+    echo -e "${RED}Error: just is required${NC}"
+    exit 1
+fi
+
+if ! just check-deps; then
+    echo -e "${RED}Error: Missing dependencies${NC}"
+    exit 1
+fi
+
+# Pull latest changes
 echo -e "${BLUE}${ICON_GIT} Pulling latest changes...${NC}"
 git pull origin main
 echo -e "  ${GREEN}${ICON_CHECK}${NC} Up to date with origin"
 
-# Step 4: Determine version
+# Step 2: Version management
 echo ""
 echo -e "${BLUE}${ICON_TAG} Version Management${NC}"
 CURRENT_VERSION=$(cat .version 2>/dev/null || echo "0.0.0")
@@ -105,84 +115,35 @@ else
     exit 0
 fi
 
-# Step 5: Update version files
+# Step 3: Run tests
 echo ""
-echo -e "${BLUE}${ICON_PACKAGE} Updating version files...${NC}"
-echo "$VERSION" > .version
-sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" scripts/claude-code-personalities-statusline.sh
-sed -i '' "s/VERSION=\"[0-9.]*\"/VERSION=\"$VERSION\"/" bin/claude-code-personalities
-echo -e "  ${GREEN}${ICON_CHECK}${NC} Updated version to $VERSION"
+echo -e "${BLUE}${ICON_CHECK} Running tests and lints...${NC}"
+just check
+echo -e "  ${GREEN}${ICON_CHECK}${NC} All checks passed"
 
-# Step 6: Commit version changes
-echo -e "${BLUE}${ICON_GIT} Committing version changes...${NC}"
-git add .version scripts/claude-code-personalities-statusline.sh bin/claude-code-personalities
-git commit -m "chore: bump version to $VERSION"
-echo -e "  ${GREEN}${ICON_CHECK}${NC} Committed version changes"
-
-# Step 7: Create and push tag
-echo -e "${BLUE}${ICON_TAG} Creating tag $TAG...${NC}"
-git tag -a "$TAG" -m "Release $TAG"
-echo -e "  ${GREEN}${ICON_CHECK}${NC} Tag created"
-
-echo -e "${BLUE}${ICON_UPLOAD} Pushing changes and tag...${NC}"
-git push origin main
-git push origin "$TAG"
-echo -e "  ${GREEN}${ICON_CHECK}${NC} Pushed to GitHub"
-
-# Step 8: Create release notes
+# Step 4: Build all binaries
 echo ""
-echo -e "${BLUE}${ICON_PACKAGE} Creating GitHub release...${NC}"
+echo -e "${BLUE}${ICON_ROCKET} Building binaries for all platforms...${NC}"
+just build-all
+echo -e "  ${GREEN}${ICON_CHECK}${NC} All binaries built"
 
-# Get commits since last tag
-LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-if [[ -n "$LAST_TAG" ]]; then
-    COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges)
-else
-    COMMITS=$(git log --pretty=format:"- %s" --no-merges -10)
-fi
+# Show built binaries
+echo ""
+echo -e "${BOLD}Built binaries:${NC}"
+ls -la build/
 
-RELEASE_NOTES="## Changes
+# Step 5: Update version and create release
+echo ""
+echo -e "${BLUE}${ICON_TAG} Creating release...${NC}"
 
-$COMMITS
-
-## Installation
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
-\`\`\`
-
-## Updating
-
-\`\`\`bash
-claude-code-personalities update
-\`\`\`
-"
-
-# Check if gh CLI is available
-if command -v gh &> /dev/null; then
-    echo "$RELEASE_NOTES" | gh release create "$TAG" \
-        --title "Release $TAG" \
-        --notes-file - \
-        --latest
-    echo -e "  ${GREEN}${ICON_CHECK}${NC} GitHub release created"
-else
-    echo -e "${YELLOW}${ICON_WARNING}  GitHub CLI (gh) not found. Install with: brew install gh${NC}"
-    echo ""
-    echo "Please create the release manually at:"
-    echo "https://github.com/Mehdi-Hp/claude-code-personalities/releases/new"
-    echo ""
-    echo "Tag: $TAG"
-    echo ""
-    echo "Release notes:"
-    echo "$RELEASE_NOTES"
-fi
+# Use justfile to handle version bumping and tagging
+just release "$VERSION"
 
 echo ""
 echo -e "${BOLD}${GREEN}${ICON_STAR} Release $TAG complete!${NC}"
 echo ""
-echo -e "${CYAN}Installation:${NC}"
-echo "  curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash"
+echo -e "${CYAN}GitHub Actions will build and publish the release automatically.${NC}"
 echo ""
-echo -e "${CYAN}Update:${NC}"
-echo "  claude-code-personalities update"
+echo -e "${CYAN}Installation (once published):${NC}"
+echo "  curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash"
 echo ""

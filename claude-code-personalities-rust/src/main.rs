@@ -9,6 +9,7 @@ mod state;
 mod config;
 mod types;
 mod error;
+mod animation;
 
 // Module imports handled per-function
 
