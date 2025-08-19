@@ -3,85 +3,44 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
-
-permissions:
-  contents: write
+      - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
-  release:
+  build:
+    name: Build and Release
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gcc-aarch64-linux-gnu
+          cargo install cross --git https://github.com/cross-rs/cross
+          cargo install just
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
         with:
-          fetch-depth: 0
-      
-      - name: Get version from tag
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-      - name: Generate Release Notes
-        run: |
-          cat > release-notes.md << 'EOF'
-          ## Claude Code Personalities ${{ steps.version.outputs.version }}
-          
-          ### Installation
-          
-          ```bash
-          curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
-          ```
-          
-          ### Updating
-          
-          ```bash
-          claude-code-personalities update
-          ```
-          
-          ### What's New
-          See [CLAUDE.md](https://github.com/Mehdi-Hp/claude-code-personalities/blob/main/CLAUDE.md) for complete documentation.
-          
-          ### Features
-          - 30+ dynamic personalities that change based on Claude's activity
-          - Context-aware statusline with activity tracking
-          - Automatic update checking and self-updating
-          - Session persistence
-          - Error state management
-          
-          ### Commands
-          
-          ```bash
-          claude-code-personalities status        # Check installation status
-          claude-code-personalities update        # Update to latest version
-          claude-code-personalities check-update  # Check for available updates
-          claude-code-personalities uninstall     # Remove personalities
-          claude-code-personalities help          # Show help
-          ```
-          EOF
-      
-      - name: Create GitHub Release
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-${{ hashFiles('claude-code-personalities-rust/Cargo.lock') }}
+
+      - name: Build all binaries
+        run: just build-all
+
+      - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            release-notes.md
-          body_path: release-notes.md
+          files: build/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Output summary
-        run: |
-          echo "### ✅ Release ${{ steps.version.outputs.tag }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Updating" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "claude-code-personalities update" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
