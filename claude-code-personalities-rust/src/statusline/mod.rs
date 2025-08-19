@@ -1,5 +1,6 @@
 pub mod personality;
 pub mod icons;
+pub mod animated;
 
 use anyhow::Result;
 use serde::Deserialize;
@@ -10,6 +11,7 @@ use crate::state::SessionState;
 use crate::types::Activity;
 use crate::config::PersonalityPreferences;
 use icons::*;
+use animated::AnimatedStatuslineRenderer;
 
 #[derive(Debug, Deserialize)]
 pub struct ClaudeInput {
@@ -61,14 +63,33 @@ pub async fn run_statusline() -> Result<()> {
         .unwrap_or_else(|| "Claude".to_string());
     
     // Load session state and preferences
-    let state = SessionState::load(&session_id).await
+    let mut state = SessionState::load(&session_id).await
         .with_context(|| format!("Failed to load session state for session '{}'", session_id))?;
     let prefs = PersonalityPreferences::load_or_default().await
         .with_context(|| "Failed to load personality preferences")?;
     
-    // Build statusline
-    let statusline = build_statusline(&state, &model_name, &prefs);
+    // Check if animations are needed and enabled
+    let needs_animation = should_use_animation(&state, &prefs);
+    
+    let statusline = if needs_animation {
+        // Use animated renderer
+        let mut animator = AnimatedStatuslineRenderer::new(prefs.clone());
+        animator.render_animated_statusline(&mut state, &model_name, &prefs).await
+            .unwrap_or_else(|_| {
+                // Fallback to static if animation fails
+                build_statusline(&state, &model_name, &prefs)
+            })
+    } else {
+        // Use static renderer
+        build_statusline(&state, &model_name, &prefs)
+    };
+    
     println!("{}", statusline);
+    
+    // Save state if it was modified
+    if state.animation_state.should_transition {
+        state.save().await.ok(); // Don't fail if save fails
+    }
     
     Ok(())
 }
@@ -219,6 +240,32 @@ fn get_model_color(model_name: &str) -> &'static str {
     } else {
         "white"
     }
+}
+
+/// Determine if animation should be used based on state and preferences
+fn should_use_animation(state: &SessionState, prefs: &PersonalityPreferences) -> bool {
+    // Animations must be enabled in preferences
+    if !prefs.enable_animations {
+        return false;
+    }
+    
+    // Use animation if:
+    // 1. There's a pending personality transition
+    if state.should_show_transition() && prefs.enable_transitions {
+        return true;
+    }
+    
+    // 2. Activity animations are enabled and we have an active activity
+    if prefs.enable_activity_animations && state.activity != Activity::Idle {
+        return true;
+    }
+    
+    // 3. High error count should show error animations
+    if state.error_count >= 3 {
+        return true;
+    }
+    
+    false
 }
 
 #[cfg(test)]

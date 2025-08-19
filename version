@@ -1,9 +1,0 @@
-#!/bin/bash
-# Display current version of Claude Code Personalities
-
-if [ -f .version ]; then
-    cat .version
-else
-    echo "Version file not found"
-    exit 1
-fi

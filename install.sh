@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Claude Code Personalities - Stage 1: CLI Tool Installer
-# Stage 1: curl -fsSL [url] | bash (installs CLI tool only)
-# Stage 2: claude-code-personalities install (configures Claude Code)
+# Claude Code Personalities - Installation Script (Rust Edition)
+# Downloads and installs the Rust binary for the current platform
 
 set -e
 
@@ -11,14 +10,11 @@ LOCAL_BIN="$HOME/.local/bin"
 BIN_PATH="$LOCAL_BIN/claude-code-personalities"
 TEMP_DIR=$(mktemp -d)
 
-# Nerd Font icons
-ICON_FOLDER=$(printf '\xef\x81\xbb')
-ICON_CODE=$(printf '\xef\x84\xa1')
-ICON_GEAR=$(printf '\xef\x80\x93')
+# Icons
 ICON_ROCKET=$(printf '\xef\x84\xb5')
 ICON_CHECK=$(printf '\xef\x80\x8c')
 ICON_DOWNLOAD=$(printf '\xef\x80\x99')
-ICON_TERMINAL=$(printf '\xef\x84\xa0')
+ICON_GEAR=$(printf '\xef\x80\x93')
 ICON_ERROR=$(printf '\xef\x81\x97')
 ICON_WARNING=$(printf '\xef\x81\xb1')
 
@@ -54,27 +50,69 @@ print_warning() {
 # Clean up on exit
 trap "rm -rf $TEMP_DIR" EXIT
 
+# Detect platform
+detect_platform() {
+    local os=$(uname -s)
+    local arch=$(uname -m)
+    
+    case "$os" in
+        Darwin)
+            case "$arch" in
+                x86_64) echo "x86_64-apple-darwin" ;;
+                arm64) echo "aarch64-apple-darwin" ;;
+                *) echo "unsupported" ;;
+            esac
+            ;;
+        Linux)
+            case "$arch" in
+                x86_64) echo "x86_64-linux" ;;
+                aarch64) echo "aarch64-linux" ;;
+                arm64) echo "aarch64-linux" ;;
+                *) echo "unsupported" ;;
+            esac
+            ;;
+        *)
+            echo "unsupported"
+            ;;
+    esac
+}
+
 # Header
 clear
 echo
 echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}( ꩜ ᯅ ꩜;)⁭⁭ ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}( ꩜ ᯅ ꩜;) ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║                       ${NC}${ITALIC}Rust Edition${NC}                        ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "   ${ICON_ROCKET} ${ITALIC}Give Claude Code dynamic personalities that change based${NC}"
-echo -e "   ${ITALIC}on what it's doing - from debugging to git management!${NC}"
+echo -e "   ${ICON_ROCKET} ${ITALIC}High-performance dynamic personalities for Claude Code${NC}"
+echo -e "   ${ITALIC}with animated transitions and real-time activity tracking${NC}"
 echo
 echo
-
 
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
 echo -e "  $divider"
-echo -e "  ${BOLD}${BLUE}Installing${NC} ${BOLD}CLI Tool${NC}"
+echo -e "  ${BOLD}${BLUE}Installing${NC} ${BOLD}Rust Binary${NC}"
 echo -e "  $divider"
 echo
+
+# Detect platform
+print_info "Detecting platform..."
+PLATFORM=$(detect_platform)
+
+if [[ "$PLATFORM" == "unsupported" ]]; then
+    print_error "Unsupported platform: $(uname -s) $(uname -m)"
+    echo
+    echo "Supported platforms:"
+    echo "  - macOS (Intel/Apple Silicon)"
+    echo "  - Linux (x86_64/ARM64)"
+    exit 1
+fi
+
+print_success "Detected platform: $PLATFORM"
 
 # Check dependencies
 print_info "Checking dependencies..."
@@ -98,7 +136,6 @@ print_info "Downloading latest version..."
 
 RELEASE_INFO=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 LATEST_VERSION=$(echo "$RELEASE_INFO" | jq -r '.tag_name' | sed 's/^v//')
-TARBALL_URL=$(echo "$RELEASE_INFO" | jq -r '.tarball_url')
 
 if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
     print_error "Failed to get latest version from GitHub"
@@ -106,11 +143,30 @@ if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
 fi
 
 echo -e "    ${CYAN}Latest version: ${BOLD}v$LATEST_VERSION${NC}"
-echo
 
-# Download and extract
-print_info "Extracting release files..."
-curl -sL "$TARBALL_URL" | tar xz -C "$TEMP_DIR" --strip-components=1
+# Construct binary name and download URL
+BINARY_NAME="claude-code-personalities-${PLATFORM}"
+DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$LATEST_VERSION/$BINARY_NAME"
+
+print_info "Downloading binary..."
+if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DIR/claude-code-personalities"; then
+    print_error "Failed to download binary from GitHub releases"
+    echo
+    echo "Expected URL: $DOWNLOAD_URL"
+    echo "This might indicate:"
+    echo "  - The release is still building"
+    echo "  - Your platform is not yet supported"
+    echo "  - Network connectivity issues"
+    exit 1
+fi
+
+print_success "Binary downloaded"
+
+# Verify downloaded binary
+if [[ ! -f "$TEMP_DIR/claude-code-personalities" ]] || [[ ! -s "$TEMP_DIR/claude-code-personalities" ]]; then
+    print_error "Downloaded binary is missing or empty"
+    exit 1
+fi
 
 # Create local bin directory if needed
 if [[ ! -d "$LOCAL_BIN" ]]; then
@@ -118,18 +174,22 @@ if [[ ! -d "$LOCAL_BIN" ]]; then
     mkdir -p "$LOCAL_BIN"
 fi
 
-# Install the CLI tool
-print_info "Installing CLI tool..."
-
-if [[ -f "$TEMP_DIR/bin/claude-code-personalities" ]]; then
-    cp "$TEMP_DIR/bin/claude-code-personalities" "$BIN_PATH"
-else
-    print_error "CLI tool not found in release"
-    exit 1
-fi
-
+# Install the binary
+print_info "Installing binary..."
+cp "$TEMP_DIR/claude-code-personalities" "$BIN_PATH"
 chmod +x "$BIN_PATH"
-print_success "CLI tool installed to $BIN_PATH"
+
+print_success "Binary installed to $BIN_PATH"
+
+# Verify installation
+print_info "Verifying installation..."
+if ! "$BIN_PATH" --version &> /dev/null; then
+    print_warning "Binary installed but version check failed"
+    echo "This might indicate a platform compatibility issue"
+else
+    VERSION_OUTPUT=$("$BIN_PATH" --version 2>/dev/null || echo "unknown")
+    print_success "Installation verified: $VERSION_OUTPUT"
+fi
 
 # Check PATH
 echo
@@ -161,5 +221,5 @@ echo
 echo -e "  ${BOLD}Available Commands:${NC}"
 echo -e "    ${CYAN}claude-code-personalities install${NC}       - Configure Claude Code"
 echo -e "    ${CYAN}claude-code-personalities status${NC}        - Check installation status"  
-echo -e "    ${CYAN}claude-code-personalities help${NC}          - Show all commands"
+echo -e "    ${CYAN}claude-code-personalities --help${NC}        - Show all commands"
 echo
