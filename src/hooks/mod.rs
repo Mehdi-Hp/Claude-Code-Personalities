@@ -19,18 +19,35 @@ pub struct ToolResponse {
     pub error: Option<serde_json::Value>,
 }
 
+/// Run a hook handler based on the hook type.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - An unknown hook type is provided
+/// - The specific hook handler fails to execute
+/// - Any underlying hook processing fails
 pub async fn run_hook(hook_type: &str) -> Result<()> {
     match hook_type {
         "pre-tool" | "post-tool" => handle_tool_hook().await,
         "prompt-submit" => handle_prompt_submit().await,
         "session-end" => handle_session_end().await,
         _ => {
-            eprintln!("Unknown hook type: {}", hook_type);
+            eprintln!("Unknown hook type: {hook_type}");
             std::process::exit(1);
         }
     }
 }
 
+/// Handle pre-tool and post-tool hooks by updating session state and personality.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - No input is received from Claude Code via stdin
+/// - The input JSON is malformed or cannot be parsed
+/// - Session state cannot be loaded or saved
+/// - Error counting operations fail
 async fn handle_tool_hook() -> Result<()> {
     use anyhow::Context;
     
@@ -48,17 +65,17 @@ async fn handle_tool_hook() -> Result<()> {
         .with_context(|| "Failed to parse hook input JSON")?;
     
     let session_id = hook_input.session_id.unwrap_or_else(|| "unknown".to_string());
-    let tool_name = hook_input.tool_name.unwrap_or_else(|| "".to_string());
+    let tool_name = hook_input.tool_name.unwrap_or_default();
     
     // Load current state
     let mut state = SessionState::load(&session_id).await
-        .with_context(|| format!("Failed to load session state for hook processing (session: {})", session_id))?;
+        .with_context(|| format!("Failed to load session state for hook processing (session: {session_id})"))?;
     
     // Check for errors
     if let Some(response) = &hook_input.tool_response {
         if response.error.is_some() {
             state.increment_errors().await
-                .with_context(|| format!("Failed to increment error count for session {}", session_id))?;
+                .with_context(|| format!("Failed to increment error count for session {session_id}"))?;
         }
     }
     
@@ -73,11 +90,20 @@ async fn handle_tool_hook() -> Result<()> {
     
     // Update state - this will automatically detect personality changes and set transition flags
     state.update_activity(activity, current_job, personality).await
-        .with_context(|| format!("Failed to update activity state for session {}", session_id))?;
+        .with_context(|| format!("Failed to update activity state for session {session_id}"))?;
     
     Ok(())
 }
 
+/// Handle user prompt submit events by resetting the error count.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - No input is received from Claude Code via stdin
+/// - The input JSON is malformed or cannot be parsed
+/// - Session state cannot be loaded or saved
+/// - Error reset operations fail
 async fn handle_prompt_submit() -> Result<()> {
     use anyhow::Context;
     
@@ -92,13 +118,21 @@ async fn handle_prompt_submit() -> Result<()> {
     
     // Reset error count
     let mut state = SessionState::load(&session_id).await
-        .with_context(|| format!("Failed to load session state for error reset (session: {})", session_id))?;
+        .with_context(|| format!("Failed to load session state for error reset (session: {session_id})"))?;
     state.reset_errors().await
-        .with_context(|| format!("Failed to reset error count for session {}", session_id))?;
+        .with_context(|| format!("Failed to reset error count for session {session_id}"))?;
     
     Ok(())
 }
 
+/// Handle session end events by cleaning up temporary session files.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - No input is received from Claude Code via stdin
+/// - The input JSON is malformed or cannot be parsed
+/// - Session file cleanup operations fail
 async fn handle_session_end() -> Result<()> {
     use anyhow::Context;
     
@@ -113,7 +147,7 @@ async fn handle_session_end() -> Result<()> {
     
     // Cleanup session files
     SessionState::cleanup(&session_id).await
-        .with_context(|| format!("Failed to cleanup session files for session {}", session_id))?;
+        .with_context(|| format!("Failed to cleanup session files for session {session_id}"))?;
     
     Ok(())
 }
@@ -122,15 +156,15 @@ fn extract_tool_params(tool_input: &Option<serde_json::Value>) -> (Option<String
     if let Some(input) = tool_input {
         let file_path = input.get("file_path")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
         
         let command = input.get("command")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
         
         let pattern = input.get("pattern")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
         
         (file_path, command, pattern)
     } else {
@@ -258,6 +292,7 @@ fn is_config_file(path: &str) -> bool {
     let lowercase_path = path.to_lowercase();
     
     // Check filename patterns
+    // TODO: Populate every common config file like nuxt.config.ts, vitest.config.ts, etc...
     if lowercase_path.contains("config") 
         || lowercase_path.contains("settings")
         || lowercase_path.contains(".env")
@@ -280,6 +315,7 @@ fn is_code_file(path: &str) -> bool {
     let lowercase_path = path.to_lowercase();
     
     // Programming language extensions
+    // TODO: Populate more common file types
     lowercase_path.ends_with(".rs")
         || lowercase_path.ends_with(".js") 
         || lowercase_path.ends_with(".ts")

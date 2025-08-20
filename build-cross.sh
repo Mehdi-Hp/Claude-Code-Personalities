@@ -10,7 +10,6 @@ rm -rf build
 mkdir -p build
 
 # Get version
-cd claude-code-personalities-rust
 VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "claude-code-personalities") | .version')
 echo "Version: $VERSION"
 
@@ -61,15 +60,14 @@ for target in "${TARGETS[@]}"; do
     
     # Copy to build dir with proper naming
     platform_name=$(echo $target | sed 's/unknown-//g' | sed 's/gnu//g' | sed 's/-$//')
-    cp target/$target/release/claude-code-personalities ../build/claude-code-personalities-$platform_name
-    chmod +x ../build/claude-code-personalities-$platform_name
+    cp target/$target/release/claude-code-personalities build/claude-code-personalities-$platform_name
+    chmod +x build/claude-code-personalities-$platform_name
     
     # Show file size
-    size=$(du -h ../build/claude-code-personalities-$platform_name | cut -f1)
+    size=$(du -h build/claude-code-personalities-$platform_name | cut -f1)
     echo "✅ $platform_name ($size)"
 done
 
-cd ..
 echo ""
 echo "✅ All binaries built in build/"
 ls -la build/
