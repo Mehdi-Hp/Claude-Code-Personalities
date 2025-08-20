@@ -121,12 +121,17 @@ impl ClaudeSettings {
     
     /// Configure Claude Code hooks for personality tracking.
     ///
+    /// This method merges personality hooks with existing hooks, preserving
+    /// any previously configured hooks while adding the necessary personality
+    /// tracking hooks.
+    ///
     /// # Errors
     ///
     /// This function will return an error if:
     /// - The binary path cannot be converted to a valid string
     /// - The binary path contains invalid UTF-8 characters
     /// - JSON serialization of hook configuration fails
+    /// - Existing hooks structure is malformed and cannot be parsed
     pub fn configure_hooks(&mut self, binary_path: &Path) -> Result<()> {
         let binary_str = binary_path.to_str().ok_or_else(|| anyhow!("Invalid binary path"))?;
         
@@ -144,42 +149,87 @@ impl ClaudeSettings {
             "args": ["--hook", "activity"]
         });
         
-        // Configure PreToolUse hook
-        let pre_tool_hook = serde_json::json!([{
+        // Configure PreToolUse hook - merge with existing
+        let pre_tool_personality_hook = serde_json::json!({
             "matcher": "*",
             "hooks": [activity_hook.clone()]
-        }]);
-        hooks_obj.insert("PreToolUse".to_string(), pre_tool_hook);
+        });
+        self.merge_hook_array(&mut hooks_obj, "PreToolUse", pre_tool_personality_hook)?;
         
-        // Configure PostToolUse hook
-        let post_tool_hook = serde_json::json!([{
+        // Configure PostToolUse hook - merge with existing
+        let post_tool_personality_hook = serde_json::json!({
             "matcher": "*",
             "hooks": [activity_hook]
-        }]);
-        hooks_obj.insert("PostToolUse".to_string(), post_tool_hook);
+        });
+        self.merge_hook_array(&mut hooks_obj, "PostToolUse", post_tool_personality_hook)?;
         
-        // User prompt submit hook for error reset
-        let prompt_submit_hook = serde_json::json!([{
+        // User prompt submit hook for error reset - merge with existing
+        let prompt_submit_personality_hook = serde_json::json!({
             "hooks": [{
                 "type": "command",
                 "command": binary_str,
                 "args": ["--hook", "prompt-submit"]
             }]
-        }]);
-        hooks_obj.insert("UserPromptSubmit".to_string(), prompt_submit_hook);
+        });
+        self.merge_hook_array(&mut hooks_obj, "UserPromptSubmit", prompt_submit_personality_hook)?;
         
-        // Session end hook for cleanup
-        let session_end_hook = serde_json::json!([{
+        // Session end hook for cleanup - merge with existing
+        let session_end_personality_hook = serde_json::json!({
             "matcher": "",
             "hooks": [{
                 "type": "command",
                 "command": binary_str,
                 "args": ["--hook", "session-end"]
             }]
-        }]);
-        hooks_obj.insert("Stop".to_string(), session_end_hook);
+        });
+        self.merge_hook_array(&mut hooks_obj, "Stop", session_end_personality_hook)?;
         
         self.content["hooks"] = Value::Object(hooks_obj);
+        Ok(())
+    }
+    
+    /// Merge a personality hook into an existing hook array, preserving existing hooks.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The existing hook type exists but is not a valid array structure
+    /// - JSON serialization fails during the merge process
+    fn merge_hook_array(
+        &self,
+        hooks_obj: &mut Map<String, Value>,
+        hook_type: &str,
+        personality_hook: Value,
+    ) -> Result<()> {
+        let existing_hooks = hooks_obj.get(hook_type);
+        
+        match existing_hooks {
+            Some(Value::Array(existing_array)) => {
+                // Clone existing hooks and add our hook
+                let mut merged_hooks = existing_array.clone();
+                
+                // First remove any existing personality hooks to avoid duplicates
+                merged_hooks.retain(|hook| {
+                    !hook_contains_personality_command(hook)
+                });
+                
+                // Add our personality hook
+                merged_hooks.push(personality_hook);
+                hooks_obj.insert(hook_type.to_string(), Value::Array(merged_hooks));
+            }
+            Some(_) => {
+                // Existing value is not an array - this is malformed, but we'll replace it
+                return Err(anyhow!(
+                    "Existing hooks configuration for {} is malformed (not an array)", 
+                    hook_type
+                ));
+            }
+            None => {
+                // No existing hooks for this type - create new array
+                hooks_obj.insert(hook_type.to_string(), Value::Array(vec![personality_hook]));
+            }
+        }
+        
         Ok(())
     }
     
@@ -422,6 +472,171 @@ mod tests {
         assert!(settings.content["hooks"]["PostToolUse"].is_array());
         assert!(settings.content["hooks"]["UserPromptSubmit"].is_array());
         assert!(settings.content["hooks"]["Stop"].is_array());
+    }
+    
+    #[tokio::test]
+    async fn test_configure_hooks_preserves_existing() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+        let binary_path = PathBuf::from("/path/to/claude-code-personalities");
+        
+        // Start with existing hooks configuration
+        let existing_config = serde_json::json!({
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "*.py",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "pylint"
+                    }]
+                }],
+                "PostToolUse": [{
+                    "matcher": "build*",
+                    "hooks": [{
+                        "type": "command", 
+                        "command": "notify-send"
+                    }]
+                }],
+                "UserPromptSubmit": [{
+                    "hooks": [{
+                        "type": "command",
+                        "command": "custom-logger"
+                    }]
+                }]
+            }
+        });
+        
+        let mut settings = ClaudeSettings {
+            settings_path,
+            content: existing_config,
+        };
+        
+        // Configure personality hooks
+        settings.configure_hooks(&binary_path).unwrap();
+        
+        // Verify existing hooks are preserved
+        let pre_tool_hooks = settings.content["hooks"]["PreToolUse"].as_array().unwrap();
+        let post_tool_hooks = settings.content["hooks"]["PostToolUse"].as_array().unwrap(); 
+        let prompt_submit_hooks = settings.content["hooks"]["UserPromptSubmit"].as_array().unwrap();
+        let stop_hooks = settings.content["hooks"]["Stop"].as_array().unwrap();
+        
+        // Should have 2 hooks each for PreToolUse and PostToolUse (existing + personality)
+        assert_eq!(pre_tool_hooks.len(), 2);
+        assert_eq!(post_tool_hooks.len(), 2);
+        assert_eq!(prompt_submit_hooks.len(), 2);
+        assert_eq!(stop_hooks.len(), 1); // Only personality hook
+        
+        // Check that existing pylint hook is preserved
+        let has_pylint = pre_tool_hooks.iter().any(|hook| {
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.py") &&
+            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("pylint"))
+            })
+        });
+        assert!(has_pylint, "Existing pylint hook should be preserved");
+        
+        // Check that existing notify-send hook is preserved
+        let has_notify = post_tool_hooks.iter().any(|hook| {
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("build*") &&
+            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("notify-send"))
+            })
+        });
+        assert!(has_notify, "Existing notify-send hook should be preserved");
+        
+        // Check that personality hooks are added
+        let has_personality_pre = pre_tool_hooks.iter().any(|hook| {
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*") &&
+            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+                hooks.iter().any(|h| 
+                    h.get("command").and_then(|c| c.as_str()) == Some("/path/to/claude-code-personalities") &&
+                    h.get("args").and_then(|a| a.as_array()).map_or(false, |args| 
+                        args.get(0).and_then(|arg| arg.as_str()) == Some("--hook") &&
+                        args.get(1).and_then(|arg| arg.as_str()) == Some("activity")
+                    )
+                )
+            })
+        });
+        assert!(has_personality_pre, "Personality PreToolUse hook should be added");
+    }
+    
+    #[tokio::test] 
+    async fn test_configure_hooks_removes_duplicate_personality_hooks() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+        let binary_path = PathBuf::from("/path/to/claude-code-personalities");
+        
+        // Start with existing personality hooks (duplicate scenario)
+        let existing_config = serde_json::json!({
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "*",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "/path/to/claude-code-personalities",
+                        "args": ["--hook", "activity"]
+                    }]
+                }, {
+                    "matcher": "*.js",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "eslint"
+                    }]
+                }]
+            }
+        });
+        
+        let mut settings = ClaudeSettings {
+            settings_path,
+            content: existing_config,
+        };
+        
+        // Configure personality hooks again (should remove duplicates)
+        settings.configure_hooks(&binary_path).unwrap();
+        
+        let pre_tool_hooks = settings.content["hooks"]["PreToolUse"].as_array().unwrap();
+        
+        // Should have 2 hooks: eslint + new personality (old personality removed)
+        assert_eq!(pre_tool_hooks.len(), 2);
+        
+        // Count personality hooks - should be exactly 1
+        let personality_hook_count = pre_tool_hooks.iter().filter(|hook| {
+            hook_contains_personality_command(hook)
+        }).count();
+        assert_eq!(personality_hook_count, 1, "Should have exactly 1 personality hook after deduplication");
+        
+        // Verify eslint hook is preserved
+        let has_eslint = pre_tool_hooks.iter().any(|hook| {
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.js") &&
+            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("eslint"))
+            })
+        });
+        assert!(has_eslint, "Existing eslint hook should be preserved");
+    }
+    
+    #[tokio::test]
+    async fn test_configure_hooks_handles_malformed_hooks() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+        let binary_path = PathBuf::from("/path/to/binary");
+        
+        // Start with malformed hooks (not an array)
+        let malformed_config = serde_json::json!({
+            "hooks": {
+                "PreToolUse": "not-an-array"
+            }
+        });
+        
+        let mut settings = ClaudeSettings {
+            settings_path,
+            content: malformed_config,
+        };
+        
+        // Should return an error for malformed hooks
+        let result = settings.configure_hooks(&binary_path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("malformed"));
     }
 
     #[tokio::test]
