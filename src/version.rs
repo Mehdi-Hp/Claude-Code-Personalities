@@ -89,6 +89,34 @@ impl VersionManager {
         }
     }
     
+    /// Check if an update is available, always fetching fresh data from GitHub (bypasses cache).
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - Current version cannot be parsed as valid semver
+    /// - Latest release information cannot be fetched from GitHub
+    /// - GitHub API returns invalid response data
+    /// - Network connectivity issues prevent API access
+    pub async fn check_for_update_force(&self) -> Result<Option<GitHubRelease>> {
+        // Fetch fresh data directly from GitHub, bypassing cache
+        let latest_release = self.fetch_latest_release().await?;
+        let latest_version = self.parse_version_from_tag(&latest_release.tag_name)?;
+        let current_version = Self::current_version()?;
+        
+        // Cache the fresh result for future non-force requests
+        if let Err(e) = self.cache_version_info(&latest_release).await {
+            // Don't fail the entire operation if caching fails
+            eprintln!("Warning: Failed to cache version info: {e}");
+        }
+        
+        if latest_version > current_version {
+            Ok(Some(latest_release))
+        } else {
+            Ok(None)
+        }
+    }
+    
     /// Get the latest release information from GitHub
     pub async fn get_latest_release(&self) -> Result<GitHubRelease> {
         // Try to load from cache first
