@@ -14,16 +14,10 @@ pub struct SessionState {
     pub previous_personality: Option<String>,
     pub consecutive_actions: u32,
     pub error_count: u32,
-    #[serde(skip)]
-    pub animation_state: AnimationState,
+    #[serde(default)]
+    pub recent_activities: Vec<Activity>,
 }
 
-#[derive(Debug, Clone)]
-pub struct AnimationState {
-    pub is_animating: bool,
-    pub animation_type: Option<String>,
-    pub should_transition: bool,
-}
 
 impl Default for SessionState {
     fn default() -> Self {
@@ -35,22 +29,21 @@ impl Default for SessionState {
             previous_personality: None,
             consecutive_actions: 0,
             error_count: 0,
-            animation_state: AnimationState::default(),
+            recent_activities: Vec::new(),
         }
     }
 }
 
-impl Default for AnimationState {
-    fn default() -> Self {
-        Self {
-            is_animating: false,
-            animation_type: None,
-            should_transition: false,
-        }
-    }
-}
 
 impl SessionState {
+    /// Load session state from disk or create default state.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The state file cannot be read due to permissions or I/O errors
+    /// - The state file contains invalid JSON that cannot be parsed
+    /// - File system operations fail during read
     pub async fn load(session_id: &str) -> Result<Self> {
         use anyhow::Context;
         
@@ -60,15 +53,24 @@ impl SessionState {
             let content = fs::read_to_string(&path).await
                 .with_context(|| format!("Failed to read session state from {}", path.display()))?;
             let state: SessionState = serde_json::from_str(&content)
-                .with_context(|| format!("Invalid session state format for session {}", session_id))?;
+                .with_context(|| format!("Invalid session state format for session {session_id}"))?;
             Ok(state)
         } else {
-            let mut state = Self::default();
-            state.session_id = session_id.to_string();
-            Ok(state)
+            Ok(Self {
+                session_id: session_id.to_string(),
+                ..Default::default()
+            })
         }
     }
     
+    /// Save the current session state to disk.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - JSON serialization fails
+    /// - The state file cannot be written due to permissions or I/O errors
+    /// - File system operations fail during write
     pub async fn save(&self) -> Result<()> {
         use anyhow::Context;
         
@@ -80,6 +82,14 @@ impl SessionState {
         Ok(())
     }
     
+    /// Update the current activity and personality, then save to disk.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The session state cannot be saved to disk after updating
+    /// - File system operations fail during save
+    /// - JSON serialization fails
     pub async fn update_activity(
         &mut self,
         activity: Activity,
@@ -95,10 +105,9 @@ impl SessionState {
             self.consecutive_actions = 1;
         }
         
-        // Check for personality change to trigger transition
+        // Check for personality change
         if self.personality != personality {
             self.previous_personality = Some(self.personality.clone());
-            self.animation_state.should_transition = true;
         }
         
         self.activity = activity;
@@ -109,6 +118,14 @@ impl SessionState {
             .with_context(|| format!("Failed to save updated activity for session {}", self.session_id))
     }
     
+    /// Increment the error count and save to disk.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The session state cannot be saved to disk after incrementing
+    /// - File system operations fail during save
+    /// - JSON serialization fails
     pub async fn increment_errors(&mut self) -> Result<()> {
         use anyhow::Context;
         
@@ -117,6 +134,14 @@ impl SessionState {
             .with_context(|| format!("Failed to save incremented error count for session {}", self.session_id))
     }
     
+    /// Reset the error count to zero and save to disk.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The session state cannot be saved to disk after resetting
+    /// - File system operations fail during save
+    /// - JSON serialization fails
     pub async fn reset_errors(&mut self) -> Result<()> {
         use anyhow::Context;
         
@@ -125,31 +150,27 @@ impl SessionState {
             .with_context(|| format!("Failed to save reset error count for session {}", self.session_id))
     }
     
-    /// Check if personality transition is needed
-    pub fn should_show_transition(&self) -> bool {
-        self.animation_state.should_transition && self.previous_personality.is_some()
-    }
     
-    /// Get personality transition info
-    pub fn get_transition_info(&self) -> Option<(String, String)> {
-        if let Some(prev) = &self.previous_personality {
-            Some((prev.clone(), self.personality.clone()))
-        } else {
-            None
+    /// Add a new activity to the recent activities list (keeping last 5)
+    #[allow(dead_code)]
+    pub fn add_recent_activity(&mut self, activity: Activity) {
+        self.recent_activities.push(activity);
+        if self.recent_activities.len() > 5 {
+            self.recent_activities.remove(0);
         }
     }
     
-    /// Mark transition as consumed
-    pub fn consume_transition(&mut self) {
-        self.animation_state.should_transition = false;
-    }
     
-    /// Set animation state
-    pub fn set_animation_state(&mut self, is_animating: bool, animation_type: Option<String>) {
-        self.animation_state.is_animating = is_animating;
-        self.animation_state.animation_type = animation_type;
-    }
     
+    /// Clean up session state files for the given session ID.
+    ///
+    /// This function removes both the state file and error count file.
+    /// Missing files are ignored and will not cause an error.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - This function currently does not return errors as file removal failures are ignored
     pub async fn cleanup(session_id: &str) -> Result<()> {
         let state_path = Self::get_state_path(session_id);
         let error_path = Self::get_error_path(session_id);
@@ -162,11 +183,11 @@ impl SessionState {
     }
     
     pub fn get_state_path(session_id: &str) -> PathBuf {
-        PathBuf::from(format!("/tmp/claude_activity_{}.json", session_id))
+        PathBuf::from(format!("/tmp/claude_code_personalities_activity_{session_id}.json"))
     }
     
     fn get_error_path(session_id: &str) -> PathBuf {
-        PathBuf::from(format!("/tmp/claude_errors_{}.count", session_id))
+        PathBuf::from(format!("/tmp/claude_code_personalities_errors_{session_id}.count"))
     }
 }
 
@@ -191,8 +212,6 @@ mod tests {
         assert_eq!(state.consecutive_actions, 0);
         assert_eq!(state.error_count, 0);
         assert!(state.current_job.is_none());
-        assert!(!state.animation_state.is_animating);
-        assert!(!state.animation_state.should_transition);
     }
 
     #[tokio::test]
@@ -221,7 +240,7 @@ mod tests {
             previous_personality: None,
             consecutive_actions: 5,
             error_count: 2,
-            animation_state: AnimationState::default(),
+            recent_activities: Vec::new(),
         };
         
         state.save().await.unwrap();
@@ -368,9 +387,9 @@ mod tests {
                 
                 let mut state = SessionState::load(&session_id).await.unwrap();
                 state.update_activity(
-                    Activity::from_str(&format!("activity_{}", i)),
-                    Some(format!("file_{}.js", i)),
-                    format!("Personality {}", i),
+                    Activity::parse_activity(&format!("activity_{i}")),
+                    Some(format!("file_{i}.js")),
+                    format!("Personality {i}"),
                 ).await.unwrap();
                 state.increment_errors().await.unwrap();
             })
@@ -410,66 +429,4 @@ mod tests {
         }
     }
     
-    #[tokio::test]
-    async fn test_personality_transition_tracking() {
-        let session_id = create_test_session_id();
-        let mut state = SessionState::load(&session_id).await.unwrap();
-        
-        // Initial state should not have transition
-        assert!(!state.should_show_transition());
-        assert!(state.get_transition_info().is_none());
-        
-        // Update with same personality - no transition
-        state.update_activity(
-            Activity::Editing,
-            Some("test.js".to_string()),
-            state.personality.clone(),
-        ).await.unwrap();
-        assert!(!state.should_show_transition());
-        
-        // Update with different personality - should trigger transition
-        let new_personality = "ʕ•ᴥ•ʔ Code Wizard".to_string();
-        state.update_activity(
-            Activity::Coding,
-            Some("main.rs".to_string()),
-            new_personality.clone(),
-        ).await.unwrap();
-        
-        assert!(state.should_show_transition());
-        let transition_info = state.get_transition_info();
-        assert!(transition_info.is_some());
-        let (from, to) = transition_info.unwrap();
-        assert_eq!(from, "( ˘ ³˘) Booting Up");
-        assert_eq!(to, new_personality);
-        
-        // Consume transition
-        state.consume_transition();
-        assert!(!state.should_show_transition());
-        
-        // Cleanup
-        SessionState::cleanup(&session_id).await.unwrap();
-    }
-    
-    #[tokio::test]
-    async fn test_animation_state_management() {
-        let session_id = create_test_session_id();
-        let mut state = SessionState::load(&session_id).await.unwrap();
-        
-        // Initial animation state
-        assert!(!state.animation_state.is_animating);
-        assert!(state.animation_state.animation_type.is_none());
-        
-        // Set animation state
-        state.set_animation_state(true, Some("transition".to_string()));
-        assert!(state.animation_state.is_animating);
-        assert_eq!(state.animation_state.animation_type, Some("transition".to_string()));
-        
-        // Clear animation state
-        state.set_animation_state(false, None);
-        assert!(!state.animation_state.is_animating);
-        assert!(state.animation_state.animation_type.is_none());
-        
-        // Cleanup
-        SessionState::cleanup(&session_id).await.unwrap();
-    }
 }

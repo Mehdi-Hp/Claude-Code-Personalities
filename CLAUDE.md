@@ -30,7 +30,7 @@ Claude Code Personalities is a personality system that gives Claude Code a dynam
 graph LR
     A[Claude Code] -->|Sends JSON| B[claude-code-personalities-statusline.sh]
     A -->|Tool Events| C[Hooks]
-    C -->|Updates State| D[/tmp/claude_activity_*.json]
+    C -->|Updates State| D[/tmp/claude_code_personalities_activity_*.json]
     D -->|Reads State| B
     B -->|Displays| E[Terminal Statusline]
 ```
@@ -60,7 +60,7 @@ graph LR
 ```
 /tmp/
 ├── claude_activity_${session_id}.json    # Current personality & activity state
-└── claude_errors_${session_id}.count     # Error counter for frustration tracking
+└── claude_code_personalities_errors_${session_id}.count     # Error counter for frustration tracking
 ```
 
 ### Repository Structure (for development)
@@ -85,24 +85,6 @@ claude-code-personalities/
 └── ~/.claude/
     ├── personalities_config.json  # User configuration file
     └── settings.json              # Claude Code configuration
-```
-
-#### Legacy Bash Implementation
-```
-claude-code-personalities/
-├── CLAUDE.md                    # This file
-├── README.md                     # User-facing documentation
-├── LICENSE                       # MIT License
-├── install.sh                    # Quick installer script
-├── bin/
-│   └── claude-code-personalities  # Main command-line utility
-├── scripts/
-│   └── claude-code-personalities-statusline.sh            # Source statusline script
-├── hooks/
-│   ├── personalities_track_activity.sh       # Source activity hook
-│   ├── personalities_reset_errors.sh         # Source error reset hook
-│   └── personalities_session_end.sh          # Source session cleanup hook
-└── .version                      # Version file
 ```
 
 ## File Details
@@ -238,57 +220,6 @@ consecutive > 10  →  ┌༼◉ل͟◉༽┐ Hyperfocused Coder
 }
 ```
 
-## Complete Personality List
-
-### Debugging & Testing
-- `( ͡° ͜ʖ ͡°)` **Mischievous Debugger** - When debugging or using console.log
-- `(つ◉益◉)つ` **Bug Hunter** - When using grep or searching for issues
-- `(¬_¬)` **Test Engineer** - When running tests or working with test files
-- `(╯°□°)╯` **Test Fixer** - When tests are failing
-
-### Code Review & Quality
-- `¯\_(ツ)_/¯` **Casual Code Reviewer** - During code review
-- `(ㆆ_ㆆ)` **Quality Auditor** - When analyzing code quality
-- `ಠ_ಠ` **Security Analyst** - Working with auth/security files
-
-### Development & Refactoring
-- `ʕ•ᴥ•ʔ` **Code Wizard / UI Developer** - General coding or React/Vue files
-- `(• ε •)` **Gentle Refactorer** - When refactoring code
-- `(ง'̀-'́)ง` **Dead Code Remover** - When deleting files
-
-### Documentation & Communication
-- `(͡• ͜໒ ͡• )` **Documentation Writer** - Working with README/docs
-- `♥‿♥` **Config Helper** - Editing config files
-- `┌༼◉ل͟◉༽┐` **Grammar Checker** - Intensive text editing
-
-### Operations & Management
-- `┗(▀̿Ĺ̯▀̿ ̿)┓` **Git Manager** - Git operations
-- `( ͡ _ ͡°)ﾉ⚲` **Deployment Guard** - Deploy/Docker commands
-- `⚆_⚆` **Database Expert** - Database operations
-- `( ͡ _ ͡°)ノ⚡` **DevOps Engineer** - General bash operations
-
-### Performance & Optimization
-- `'(ᗒᗣᗕ)՞` **Performance Optimizer** - Performance tuning
-- `★⌒ヽ( ͡° ε ͡°)` **Performance Tuner** - After optimization
-- `˙ ͜ʟ˙` **Memory Manager** - Memory profiling
-
-### Error & Frustration States
-- `(┛ಠДಠ)┛彡┻━┻` **Frustrated Developer** - 3+ errors
-- `(╯°□°)╯︵ ┻━┻` **Table Flipper** - 5+ errors
-- `【╯°□°】╯︵ ┻━┻` **Code Berserker** - 20+ consecutive edits
-
-### Special States
-- `【≽ܫ≼】` **Research King** - Reading/searching files
-- `┌༼◉ل͟◉༽┐` **Hyperfocused Coder** - 10+ consecutive actions
-- `⋋| ◉ ͟ʖ ◉ |⋌` **Search Maestro** - Extended searching
-- `( ˘ ³˘)` **Booting Up** - Initial startup
-
-### Time-Based
-- `( ˶˘ ³˘)☕` **Morning Engineer** - 6 AM - 12 PM
-- `(つ°ヮ°)つ` **Afternoon Thinker** - 12 PM - 5 PM
-- `(￣ω￣;)` **Evening Explorer** - 5 PM - 10 PM
-- `˙ ͜ʟ˙` **Night Coder** - 10 PM - 6 AM
-
 ## Nerd Font Icons Reference
 
 Icons are defined using UTF-8 byte sequences:
@@ -310,42 +241,6 @@ Icons are defined using UTF-8 byte sequences:
 | ⚙️    | `\xef\x80\x93` | U+F013  | Gear            |
 | 💻    | `\xef\x84\xa0` | U+F120  | Terminal        |
 
-## Installation Methods
-
-### Quick Install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
-claude-code-personalities install
-```
-
-### Manual Install
-```bash
-git clone https://github.com/Mehdi-Hp/claude-code-personalities
-cd claude-code-personalities
-
-# Install CLI tool only
-./install.sh
-
-# Configure Claude Code
-./bin/claude-code-personalities install
-```
-
-### Installation Modes
-
-- **Interactive Mode (default)**: Prompts for confirmation at each step, allows you to review and approve changes
-- **Non-Interactive Mode**: Uses safe defaults, creates backups automatically, ideal for CI/CD or automated setups
-- **TTY Detection**: Automatically detects when running in non-terminal environments and provides clear instructions
-
-## Updating
-
-```bash
-# Check for updates
-claude-code-personalities check-update
-
-# Update to latest version
-claude-code-personalities update
-```
 
 ## Testing
 
@@ -360,7 +255,7 @@ echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"}}' | ~
 echo '{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | ~/.claude/hooks/personalities_track_activity.sh
 
 # Check state file
-cat /tmp/claude_activity_test.json
+cat /tmp/claude_code_personalities_activity_test.json
 ```
 
 ### Debug Mode
@@ -382,8 +277,7 @@ cat /tmp/claude_debug.json
 ### Personality Not Changing
 1. Check hooks are executable: `ls -la ~/.claude/hooks/`
 2. Verify settings.json has hook configuration
-3. Check state file exists: `ls /tmp/claude_activity_*.json`
-4. Ensure jq is installed: `brew install jq`
+3. Check state file exists: `ls /tmp/claude_code_personalities_activity_*.json`
 
 ### Update Not Working
 1. Check command is installed: `which claude-code-personalities`
@@ -404,12 +298,6 @@ All installations create timestamped backups:
 
 ## Configuration Options
 
-### Environment Variables
-```bash
-CLAUDE_AUTO_INSTALL=true   # Skip all prompts during installation
-CLAUDE_DIR=/custom/path     # Use custom Claude directory
-```
-
 ### Custom Personalities
 Edit `~/.claude/hooks/personalities_track_activity.sh` to add custom personalities:
 ```bash
@@ -422,24 +310,3 @@ Remove specific hooks from `settings.json` to disable features:
 - Remove `PreToolUse/PostToolUse` to disable activity tracking
 - Remove `UserPromptSubmit` to keep error count across prompts
 - Remove `Stop` to keep state files after session
-
-## Contributing
-
-1. Fork the repository
-2. Add new personalities to `personalities_track_activity.sh`
-3. Test with various Claude Code activities
-4. Submit PR with personality description
-
-## License
-
-MIT - See LICENSE file
-
-## Credits
-
-Created for Claude Code v1.0.60+  
-Requires Nerd Fonts for icons  
-Uses jq for JSON processing  
-
----
-
-*This is a Claude Code enhancement project. For Claude Code documentation, see [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code)*

@@ -5,7 +5,7 @@
 Give your Claude Code assistant a dynamic, context-aware statusline with 30+ text-face emoticons that change based on Claude's current activity.  
 Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠДಠ)┛彡┻━┻ Frustrated Developer` when encountering errors!
 
-**🦀 Now powered by Rust** - Lightning fast performance with interactive configuration!
+**🦀 Powered by Rust** - Lightning fast performance with interactive configuration!
 
 ![Claude Code Personalities Screenshot](screenshot.png)
 
@@ -19,19 +19,6 @@ curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/
 
 # Step 2: Configure Claude Code (interactive prompts)
 claude-code-personalities install
-```
-
-### Non-Interactive Install
-
-```bash
-# Step 1: Install the CLI tool
-curl -fsSL https://raw.githubusercontent.com/Mehdi-Hp/claude-code-personalities/main/install.sh | bash
-
-# Step 2: Configure Claude Code (no prompts, safe defaults)
-claude-code-personalities install --yes
-
-# Or use environment variable
-NONINTERACTIVE=1 claude-code-personalities install
 ```
 
 ### Installation Options
@@ -78,12 +65,6 @@ claude-code-personalities help                # Show help with all options
 - Claude Code v1.0.60+
 - Nerd Fonts for icons (`brew install --cask font-hack-nerd-font`)
 
-### For Rust Version (Recommended)
-- **No additional dependencies** - Self-contained binary!
-
-### For Legacy Bash Version  
-- jq (`brew install jq`)
-
 ## Configuration
 
 Customize what appears in your statusline using the interactive configuration:
@@ -93,20 +74,20 @@ claude-code-personalities config
 ```
 
 This opens a multi-select menu where you can toggle:
-- 🎭 **Show Personality** - Text-face emoticons (ʕ•ᴥ•ʔ, (╯°□°)╯, etc.)
-- ⚡ **Show Activity** - Current activity (editing, coding, debugging, etc.)
-- 📝 **Show Current Job/File** - Current file being worked on
-- 📁 **Show Current Directory** - Working directory path
-- 🤖 **Show Model Indicator** - Claude model (Opus, Sonnet, Haiku)
-- 🚨 **Show Error Indicators** - Warning/error icons based on error count
-- 🎨 **Use Icons** - Nerd Font icons for visual appeal
-- 🌈 **Use Colors** - ANSI color formatting
+- **Show Personality** - Text-face emoticons (ʕ•ᴥ•ʔ, (╯°□°)╯, etc.)
+- **Show Activity** - Current activity (editing, coding, debugging, etc.)
+- **Show Current Job/File** - Current file being worked on
+- **Show Current Directory** - Working directory path
+- **Show Model Indicator** - Claude model (Opus, Sonnet, Haiku)
+- **Show Error Indicators** - Warning/error icons based on error count
+- **Use Icons** - Nerd Font icons for visual appeal
+- **Use Colors** - ANSI color formatting
 
 Settings are saved to `~/.claude/personalities_config.json` and take effect immediately.
 
 ## Building from Source
 
-For developers who want to build the Rust version:
+For developers:
 
 ```bash
 git clone https://github.com/Mehdi-Hp/claude-code-personalities
@@ -115,10 +96,6 @@ cargo build --release
 
 # Binary will be at target/release/claude-code-personalities
 ```
-
-## Documentation
-
-For detailed information, customization options, and the complete personality list, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 

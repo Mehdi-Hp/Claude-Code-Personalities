@@ -1,6 +1,6 @@
 use clap::{Arg, Command};
 use anyhow::Result;
-use colored::*;
+use colored::Colorize;
 
 mod cli;
 mod statusline;
@@ -9,18 +9,17 @@ mod state;
 mod config;
 mod types;
 mod error;
-mod animation;
-
-// Module imports handled per-function
+mod platform;
+mod version;
 
 #[tokio::main]
 async fn main() {
     if let Err(e) = run().await {
         // Check if it's our custom error type that already has nice formatting
         if let Some(personality_err) = e.downcast_ref::<error::PersonalityError>() {
-            eprintln!("{}", personality_err);
+            eprintln!("{personality_err}");
         } else {
-            // Fallback for other anyhow errors - using Nerd Font error icon
+            // Fallback for other anyhow errors
             eprintln!("\u{f057} {}: {}", "Error".red().bold(), e);
         }
         std::process::exit(1);
@@ -29,7 +28,7 @@ async fn main() {
 
 async fn run() -> Result<()> {
     let matches = Command::new("claude-code-personalities")
-        .version("0.1.0")
+        .version(version::CURRENT_VERSION)
         .about("Dynamic text-face personalities for Claude Code's statusline")
         .subcommand(
             Command::new("install")

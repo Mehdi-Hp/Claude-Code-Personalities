@@ -1,53 +1,59 @@
 use anyhow::Result;
-use colored::*;
+use colored::Colorize;
 use std::path::PathBuf;
-use tokio::fs;
 use inquire::MultiSelect;
 
-use crate::statusline::icons::*;
+use crate::statusline::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
 use crate::config::PersonalityPreferences;
+use crate::version::CURRENT_VERSION;
 
-const VERSION: &str = "0.1.0";
-#[allow(dead_code)]
-const GITHUB_REPO: &str = "Mehdi-Hp/claude-code-personalities";
+// Sub-modules
+pub mod install;
+pub mod update;
+pub mod uninstall;
+pub mod settings;
 
+/// Install Claude Code Personalities with default options.
+///
+/// # Errors
+///
+/// This function will return an error if the installation process fails.
+/// See [`install::install_personalities`] for detailed error conditions.
 pub async fn install() -> Result<()> {
-    println!("{}", "Installing Claude Code Personalities...".bold().blue());
-    println!("This is the Rust version - much faster than the bash implementation!");
-    
-    // TODO: Implement full installation logic
-    // For now, just show what would happen
-    
-    let claude_dir = get_claude_dir()?;
-    println!("Would install to: {}", claude_dir.display());
-    
-    println!("\n{} {}", ICON_CHECK.green(), "Installation planned (not yet implemented)".green());
-    println!("Next steps:");
-    println!("  1. Copy binary to ~/.claude/");
-    println!("  2. Update settings.json");
-    println!("  3. Configure hooks");
-    
-    Ok(())
+    let options = install::InstallationOptions::default();
+    install::install_personalities(options).await
 }
 
+/// Update Claude Code Personalities to the latest version with default options.
+///
+/// # Errors
+///
+/// This function will return an error if the update process fails.
+/// See [`update::update_personalities`] for detailed error conditions.
 pub async fn update() -> Result<()> {
-    println!("{}", "Updating Claude Code Personalities...".bold().blue());
-    
-    // TODO: Implement update logic
-    println!("\n{} {}", ICON_CHECK.green(), "Update planned (not yet implemented)".green());
-    
-    Ok(())
+    let options = update::UpdateOptions::default();
+    update::update_personalities(options).await
 }
 
+/// Uninstall Claude Code Personalities with default options.
+///
+/// # Errors
+///
+/// This function will return an error if the uninstallation process fails.
+/// See [`uninstall::uninstall_personalities`] for detailed error conditions.
 pub async fn uninstall() -> Result<()> {
-    println!("{}", "Uninstalling Claude Code Personalities...".bold().blue());
-    
-    // TODO: Implement uninstall logic
-    println!("\n{} {}", ICON_CHECK.green(), "Uninstall planned (not yet implemented)".green());
-    
-    Ok(())
+    let options = uninstall::UninstallOptions::default();
+    uninstall::uninstall_personalities(options).await
 }
 
+/// Display the current installation and configuration status.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The Claude directory path cannot be determined
+/// - Settings files cannot be read or parsed
+/// - Update checking fails due to network or API errors
 pub async fn status() -> Result<()> {
     use anyhow::Context;
     
@@ -69,11 +75,15 @@ pub async fn status() -> Result<()> {
     if settings_file.exists() {
         println!("{} Settings file found", ICON_CHECK.green());
         
-        // Check if configured for personalities
-        let content = fs::read_to_string(&settings_file).await
-            .with_context(|| format!("Failed to read Claude settings from {}", settings_file.display()))?;
-        if content.contains("claude-code-personalities") {
-            println!("{} Personalities configured in settings", ICON_CHECK.green());
+        // Use our settings module to check configuration
+        let settings = settings::ClaudeSettings::load().await
+            .with_context(|| "Failed to load Claude settings")?;
+        let summary = settings.get_configuration_summary();
+        
+        if summary.is_fully_configured() {
+            println!("{} Personalities fully configured", ICON_CHECK.green());
+        } else if summary.has_personality_statusline {
+            println!("{} Personalities partially configured", ICON_WARNING.yellow());
         } else {
             println!("{} Personalities not configured in settings", ICON_WARNING.yellow());
         }
@@ -86,7 +96,7 @@ pub async fn status() -> Result<()> {
     let test_input = r#"{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"},"session_id":"test"}"#;
     
     // Simulate statusline output
-    use crate::statusline::*;
+    use crate::statusline::{ClaudeInput, build_statusline};
     use crate::state::SessionState;
     
     let claude_input: ClaudeInput = serde_json::from_str(test_input)
@@ -97,26 +107,70 @@ pub async fn status() -> Result<()> {
         .unwrap_or_else(|| "Claude".to_string());
     
     let state = SessionState::load(&session_id).await
-        .with_context(|| format!("Failed to load test session state for session {}", session_id))?;
+        .with_context(|| format!("Failed to load test session state for session {session_id}"))?;
     let prefs = PersonalityPreferences::load_or_default().await
         .with_context(|| "Failed to load preferences for status test")?;
     let statusline = build_statusline(&state, &model_name, &prefs);
-    println!("  Output: {}", statusline);
+    println!("  Output: {statusline}");
     
     Ok(())
 }
 
+/// Check for available updates and display version information.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Version manager initialization fails
+/// - GitHub API requests fail or return invalid responses
+/// - Network connectivity issues prevent update checking
+/// - Version parsing or comparison fails
 pub async fn check_update() -> Result<()> {
-    println!("{}", "Checking for updates...".bold().blue());
+    use anyhow::Context;
+    use crate::version::{VersionManager, format_version_comparison};
     
-    // TODO: Implement actual GitHub API check
-    println!("Current version: v{}", VERSION);
-    println!("Latest version: v{} (placeholder)", VERSION);
-    println!("\n{} You are running the latest version!", ICON_CHECK.green());
+    println!("{}", "Checking for updates...".bold().blue());
+    println!();
+    
+    let version_manager = VersionManager::new()
+        .with_context(|| "Failed to initialize version manager")?;
+    
+    print_info("Checking latest version...");
+    let update_info = version_manager.check_for_update().await
+        .with_context(|| "Failed to check for updates")?;
+    
+    match update_info {
+        Some(release) => {
+            let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
+            let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
+            
+            println!();
+            println!("{} {}", "📦 Update Available:".bold().green(), comparison);
+            if let Some(name) = &release.name {
+                println!("{} {}", "📋 Release:".bold(), name);
+            }
+            println!();
+            println!("Run {} to update", "claude-code-personalities update".cyan());
+        }
+        None => {
+            println!();
+            println!("{} You are running the latest version!", ICON_CHECK.green());
+            println!("Current version: v{CURRENT_VERSION}");
+        }
+    }
     
     Ok(())
 }
 
+/// Configure personality display preferences through interactive prompts.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Current preferences cannot be loaded from disk
+/// - User interaction prompts fail to display or receive input
+/// - Preferences cannot be saved after configuration
+/// - File system operations fail during save
 pub async fn configure() -> Result<()> {
     use anyhow::Context;
     
@@ -177,8 +231,14 @@ pub async fn configure() -> Result<()> {
     Ok(())
 }
 
+/// Display help information and available commands.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Output to stdout fails due to pipe closure or other I/O errors
 pub fn help() -> Result<()> {
-    println!("Claude Code Personalities v{}", VERSION);
+    println!("Claude Code Personalities v{CURRENT_VERSION}");
     println!("Dynamic text-face personalities for Claude Code's statusline");
     println!();
     println!("Usage: claude-code-personalities [COMMAND]");
@@ -194,7 +254,7 @@ pub fn help() -> Result<()> {
     println!();
     println!("Modes (called by Claude Code):");
     println!("  --statusline  Run in statusline mode");
-    println!("  --hook TYPE   Run in hook mode (pre-tool, post-tool, prompt-submit, session-end)");
+    println!("  --hook TYPE   Run in hook mode (activity, prompt-submit, session-end)");
     println!();
     println!("This is the Rust rewrite - much faster than the bash version!");
     
@@ -202,10 +262,10 @@ pub fn help() -> Result<()> {
 }
 
 fn get_claude_dir() -> Result<PathBuf> {
-    use anyhow::Context;
-    
-    let home = dirs::home_dir()
-        .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))
-        .with_context(|| "Unable to locate home directory. Ensure the HOME environment variable is set.")?;
-    Ok(home.join(".claude"))
+    settings::get_claude_dir()
+}
+
+/// Helper functions for status output
+fn print_info(message: &str) {
+    println!("  {} {}", ICON_INFO.cyan(), message);
 }

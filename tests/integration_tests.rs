@@ -16,7 +16,7 @@ async fn test_statusline_end_to_end() {
 
     // Build the binary first
     let output = Command::new("cargo")
-        .args(&["build", "--release"])
+        .args(["build", "--release"])
         .output()
         .expect("Failed to build binary");
 
@@ -24,7 +24,7 @@ async fn test_statusline_end_to_end() {
 
     // Test statusline mode
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--statusline"])
+        .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -44,7 +44,7 @@ async fn test_statusline_end_to_end() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Should succeed
-    assert!(output.status.success(), "Process failed with stderr: {}", stderr);
+    assert!(output.status.success(), "Process failed with stderr: {stderr}");
 
     // Should contain a valid statusline
     assert!(!stdout.is_empty(), "No statusline output");
@@ -67,7 +67,7 @@ async fn test_hook_mode() {
 
     // Test hook mode
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--hook", "pre-tool"])
+        .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -86,7 +86,7 @@ async fn test_hook_mode() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Should succeed (hook mode doesn't usually produce stdout)
-    assert!(output.status.success(), "Hook process failed with stderr: {}", stderr);
+    assert!(output.status.success(), "Hook process failed with stderr: {stderr}");
 
     // Now test that the state was created
     let statusline_input = r#"{
@@ -97,7 +97,7 @@ async fn test_hook_mode() {
     }"#;
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--statusline"])
+        .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -117,12 +117,12 @@ async fn test_hook_mode() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Should succeed
-    assert!(output.status.success(), "Statusline process failed with stderr: {}", stderr);
+    assert!(output.status.success(), "Statusline process failed with stderr: {stderr}");
 
     // Should show the personality that was set by the hook
     assert!(!stdout.is_empty(), "No statusline output after hook");
     assert!(stdout.contains("JS Master") || stdout.contains("Code Wizard"), 
-           "Should contain JS or Code personality for .js file. Got: {}", stdout);
+           "Should contain JS or Code personality for .js file. Got: {stdout}");
 
     println!("Integration test hook -> statusline output: {}", stdout.trim());
 }
@@ -130,7 +130,7 @@ async fn test_hook_mode() {
 #[test]
 fn test_cli_help() {
     let output = Command::new("cargo")
-        .args(&["run", "--", "help"])
+        .args(["run", "--", "help"])
         .output()
         .expect("Failed to run help command");
 
@@ -145,7 +145,7 @@ fn test_invalid_json_input() {
     let invalid_json = "not json at all";
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--statusline"])
+        .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -173,13 +173,13 @@ async fn test_personality_progression() {
     
     // 1. Start with JS file editing
     let js_edit = format!(r#"{{
-        "session_id": "{}",
+        "session_id": "{session_id}",
         "tool_name": "Edit",
         "tool_input": {{"file_path": "app.js"}}
-    }}"#, session_id);
+    }}"#);
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--hook", "pre-tool"])
+        .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -197,12 +197,12 @@ async fn test_personality_progression() {
 
     // 2. Check statusline shows JS personality
     let statusline_input = format!(r#"{{
-        "session_id": "{}",
+        "session_id": "{session_id}",
         "model": {{"display_name": "Claude"}}
-    }}"#, session_id);
+    }}"#);
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--statusline"])
+        .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -220,13 +220,13 @@ async fn test_personality_progression() {
     
     // 3. Now edit a markdown file
     let md_edit = format!(r#"{{
-        "session_id": "{}",
+        "session_id": "{session_id}",
         "tool_name": "Edit",
         "tool_input": {{"file_path": "README.md"}}
-    }}"#, session_id);
+    }}"#);
 
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--hook", "pre-tool"])
+        .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -244,7 +244,7 @@ async fn test_personality_progression() {
 
     // 4. Check statusline shows documentation personality
     let mut child = Command::new("cargo")
-        .args(&["run", "--", "--statusline"])
+        .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -265,5 +265,5 @@ async fn test_personality_progression() {
     println!("MD file statusline: {}", stdout2.trim());
     
     assert!(stdout2.contains("Documentation Writer"), 
-           "Should show Documentation Writer for .md file. Got: {}", stdout2);
+           "Should show Documentation Writer for .md file. Got: {stdout2}");
 }
