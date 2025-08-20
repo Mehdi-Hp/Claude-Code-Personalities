@@ -49,6 +49,13 @@ async fn run() -> Result<()> {
         .subcommand(
             Command::new("check-update")
                 .about("Check for available updates")
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .short('f')
+                        .help("Force refresh from GitHub, bypassing cache")
+                        .action(clap::ArgAction::SetTrue)
+                )
         )
         .subcommand(
             Command::new("config")
@@ -81,7 +88,10 @@ async fn run() -> Result<()> {
             Some(("update", _)) => cli::update().await,
             Some(("uninstall", _)) => cli::uninstall().await,
             Some(("status", _)) => cli::status().await,
-            Some(("check-update", _)) => cli::check_update().await,
+            Some(("check-update", sub_matches)) => {
+                let force = sub_matches.get_flag("force");
+                cli::check_update_with_force(force).await
+            },
             Some(("config", _)) => cli::configure().await,
             _ => cli::help(),
         }

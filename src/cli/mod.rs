@@ -125,7 +125,7 @@ pub async fn status() -> Result<()> {
 /// - GitHub API requests fail or return invalid responses
 /// - Network connectivity issues prevent update checking
 /// - Version parsing or comparison fails
-pub async fn check_update() -> Result<()> {
+pub async fn check_update_with_force(force: bool) -> Result<()> {
     use anyhow::Context;
     use crate::version::{VersionManager, format_version_comparison};
     
@@ -135,9 +135,19 @@ pub async fn check_update() -> Result<()> {
     let version_manager = VersionManager::new()
         .with_context(|| "Failed to initialize version manager")?;
     
-    print_info("Checking latest version...");
-    let update_info = version_manager.check_for_update().await
-        .with_context(|| "Failed to check for updates")?;
+    if force {
+        print_info("Force refresh enabled - bypassing cache...");
+    } else {
+        print_info("Checking latest version...");
+    }
+    
+    let update_info = if force {
+        version_manager.check_for_update_force().await
+            .with_context(|| "Failed to check for updates (forced refresh)")?
+    } else {
+        version_manager.check_for_update().await
+            .with_context(|| "Failed to check for updates")?
+    };
     
     match update_info {
         Some(release) => {
@@ -156,6 +166,11 @@ pub async fn check_update() -> Result<()> {
             println!();
             println!("{} You are running the latest version!", ICON_CHECK.green());
             println!("Current version: v{CURRENT_VERSION}");
+            
+            if !force {
+                println!();
+                print_info("Tip: Use --force to bypass cache and check GitHub directly");
+            }
         }
     }
     
