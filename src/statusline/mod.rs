@@ -1,17 +1,15 @@
 pub mod personality;
 pub mod icons;
-pub mod animated;
 
 use anyhow::Result;
 use serde::Deserialize;
 use std::io::{self, Read};
-use colored::*;
+use colored::Colorize;
 
 use crate::state::SessionState;
 use crate::types::Activity;
 use crate::config::PersonalityPreferences;
-use icons::*;
-use animated::AnimatedStatuslineRenderer;
+use icons::{ICON_BUILDING, ICON_CODE, ICON_DEBUGGING, ICON_EDITING, ICON_ERROR, ICON_EXECUTING, ICON_FOLDER, ICON_GEAR, ICON_IDLE, ICON_INSTALLING, ICON_NORTH_STAR, ICON_READING, ICON_REVIEWING, ICON_SEARCHING, ICON_TESTING, ICON_THINKING, ICON_WARNING, ICON_WORKING, ICON_WRITING};
 
 #[derive(Debug, Deserialize)]
 pub struct ClaudeInput {
@@ -34,6 +32,15 @@ pub struct WorkspaceInfo {
     pub project_dir: Option<String>,
 }
 
+/// Run the statusline generator, reading JSON from stdin and outputting formatted statusline.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - No input is received from Claude Code via stdin
+/// - The input JSON is malformed or cannot be parsed
+/// - Session state cannot be loaded from disk
+/// - Personality preferences cannot be loaded
 pub async fn run_statusline() -> Result<()> {
     use anyhow::Context;
     
@@ -54,7 +61,7 @@ pub async fn run_statusline() -> Result<()> {
             } else {
                 input.clone()
             };
-            format!("Failed to parse JSON input from Claude Code. Received: {}", preview)
+            format!("Failed to parse JSON input from Claude Code. Received: {preview}")
         })?;
     
     let session_id = claude_input.session_id.unwrap_or_else(|| "unknown".to_string());
@@ -63,33 +70,16 @@ pub async fn run_statusline() -> Result<()> {
         .unwrap_or_else(|| "Claude".to_string());
     
     // Load session state and preferences
-    let mut state = SessionState::load(&session_id).await
-        .with_context(|| format!("Failed to load session state for session '{}'", session_id))?;
+    let state = SessionState::load(&session_id).await
+        .with_context(|| format!("Failed to load session state for session '{session_id}'"))?;
     let prefs = PersonalityPreferences::load_or_default().await
         .with_context(|| "Failed to load personality preferences")?;
     
-    // Check if animations are needed and enabled
-    let needs_animation = should_use_animation(&state, &prefs);
+    // Use static renderer
+    let statusline = build_statusline(&state, &model_name, &prefs);
     
-    let statusline = if needs_animation {
-        // Use animated renderer
-        let mut animator = AnimatedStatuslineRenderer::new(prefs.clone());
-        animator.render_animated_statusline(&mut state, &model_name, &prefs).await
-            .unwrap_or_else(|_| {
-                // Fallback to static if animation fails
-                build_statusline(&state, &model_name, &prefs)
-            })
-    } else {
-        // Use static renderer
-        build_statusline(&state, &model_name, &prefs)
-    };
+    println!("{statusline}");
     
-    println!("{}", statusline);
-    
-    // Save state if it was modified
-    if state.animation_state.should_transition {
-        state.save().await.ok(); // Don't fail if save fails
-    }
     
     Ok(())
 }
@@ -143,7 +133,7 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
         };
         
         if !parts.is_empty() {
-            parts.push(format!(" {} {}", separator, activity_text));
+            parts.push(format!(" {separator} {activity_text}"));
         } else {
             parts.push(activity_text);
         }
@@ -157,14 +147,14 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
             } else {
                 ICON_ERROR.to_string()
             };
-            parts.push(format!(" {}", error_icon));
+            parts.push(format!(" {error_icon}"));
         } else if state.error_count > 0 {
             let warning_icon = if prefs.use_colors {
                 ICON_WARNING.yellow().to_string()
             } else {
                 ICON_WARNING.to_string()
             };
-            parts.push(format!(" {}", warning_icon));
+            parts.push(format!(" {warning_icon}"));
         }
     }
     
@@ -177,9 +167,9 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
         };
         
         let model_text = if model_icon.is_empty() {
-            format!("[{}]", model_name)
+            format!("[{model_name}]")
         } else {
-            format!("[{} {}]", model_icon, model_name)
+            format!("[{model_icon} {model_name}]")
         };
         
         let colored_model = if prefs.use_colors {
@@ -196,7 +186,7 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
         };
         
         if !parts.is_empty() {
-            parts.push(format!(" {} {}", separator, colored_model));
+            parts.push(format!(" {separator} {colored_model}"));
         } else {
             parts.push(colored_model);
         }
@@ -242,31 +232,6 @@ fn get_model_color(model_name: &str) -> &'static str {
     }
 }
 
-/// Determine if animation should be used based on state and preferences
-fn should_use_animation(state: &SessionState, prefs: &PersonalityPreferences) -> bool {
-    // Animations must be enabled in preferences
-    if !prefs.enable_animations {
-        return false;
-    }
-    
-    // Use animation if:
-    // 1. There's a pending personality transition
-    if state.should_show_transition() && prefs.enable_transitions {
-        return true;
-    }
-    
-    // 2. Activity animations are enabled and we have an active activity
-    if prefs.enable_activity_animations && state.activity != Activity::Idle {
-        return true;
-    }
-    
-    // 3. High error count should show error animations
-    if state.error_count >= 3 {
-        return true;
-    }
-    
-    false
-}
 
 #[cfg(test)]
 mod tests {
@@ -279,8 +244,10 @@ mod tests {
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
             personality: "ʕ•ᴥ•ʔ Code Wizard".to_string(),
+            previous_personality: None,
             consecutive_actions: 1,
             error_count: 0,
+            recent_activities: Vec::new(),
         }
     }
 

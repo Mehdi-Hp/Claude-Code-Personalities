@@ -47,12 +47,26 @@ pub struct HookCommand {
 }
 
 impl ClaudeSettings {
+    /// Get the path to Claude Code's settings.json file.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The home directory cannot be determined
     #[allow(dead_code)]
     pub fn get_claude_settings_path() -> Result<PathBuf> {
         let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
         Ok(home.join(".claude").join("settings.json"))
     }
     
+    /// Load Claude Code settings from disk, or return None if file doesn't exist.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The settings path cannot be determined
+    /// - The settings file exists but cannot be read
+    /// - The settings file contains invalid JSON
     #[allow(dead_code)]
     pub async fn load() -> Result<Option<Self>> {
         let path = Self::get_claude_settings_path()?;
@@ -66,6 +80,14 @@ impl ClaudeSettings {
         }
     }
     
+    /// Save Claude Code settings to disk.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - The settings path cannot be determined
+    /// - JSON serialization fails
+    /// - The settings file cannot be written to disk
     #[allow(dead_code)]
     pub async fn save(&self) -> Result<()> {
         let path = Self::get_claude_settings_path()?;
@@ -79,7 +101,7 @@ impl ClaudeSettings {
         Self {
             status_line: Some(StatusLineConfig {
                 type_: "command".to_string(),
-                command: format!("{} --statusline", binary_path),
+                command: format!("{binary_path} --statusline"),
                 padding: Some(0),
             }),
             hooks: Some(HooksConfig {
@@ -87,28 +109,28 @@ impl ClaudeSettings {
                     matcher: Some("*".to_string()),
                     hooks: vec![HookCommand {
                         type_: "command".to_string(),
-                        command: format!("{} --hook pre-tool", binary_path),
+                        command: format!("{binary_path} --hook pre-tool"),
                     }],
                 }]),
                 post_tool_use: Some(vec![HookConfig {
                     matcher: Some("*".to_string()),
                     hooks: vec![HookCommand {
                         type_: "command".to_string(),
-                        command: format!("{} --hook post-tool", binary_path),
+                        command: format!("{binary_path} --hook post-tool"),
                     }],
                 }]),
                 user_prompt_submit: Some(vec![HookConfig {
                     matcher: None,
                     hooks: vec![HookCommand {
                         type_: "command".to_string(),
-                        command: format!("{} --hook prompt-submit", binary_path),
+                        command: format!("{binary_path} --hook prompt-submit"),
                     }],
                 }]),
                 stop: Some(vec![HookConfig {
                     matcher: Some("".to_string()),
                     hooks: vec![HookCommand {
                         type_: "command".to_string(),
-                        command: format!("{} --hook session-end", binary_path),
+                        command: format!("{binary_path} --hook session-end"),
                     }],
                 }]),
             }),

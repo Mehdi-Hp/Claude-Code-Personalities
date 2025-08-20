@@ -30,7 +30,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-${{ hashFiles('claude-code-personalities-rust/Cargo.lock') }}
+          key: cargo-${{ hashFiles('Cargo.lock') }}
 
       - name: Build all binaries
         run: just build-all

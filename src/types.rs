@@ -1,8 +1,9 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Activity types that Claude can be performing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Activity {
     /// General editing of files
     Editing,
@@ -58,15 +59,16 @@ impl Display for Activity {
             Activity::Idle => "idle",
             Activity::Working => "working",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
-impl Activity {
+impl FromStr for Activity {
+    type Err = ();
+    
     /// Convert from string (case-insensitive)
-    #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
             "editing" => Activity::Editing,
             "coding" => Activity::Coding,
             "configuring" => Activity::Configuring,
@@ -83,7 +85,15 @@ impl Activity {
             "installing" => Activity::Installing,
             "idle" => Activity::Idle,
             _ => Activity::Working,
-        }
+        })
+    }
+}
+
+impl Activity {
+    /// Convert from string (case-insensitive) - convenience method
+    #[allow(dead_code)]
+    pub fn parse_activity(s: &str) -> Self {
+        s.parse().unwrap_or(Activity::Working)
     }
 }
 
@@ -97,16 +107,25 @@ pub enum HookType {
     SessionEnd,
 }
 
-impl HookType {
-    #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for HookType {
+    type Err = ();
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "pre-tool" => Some(HookType::PreTool),
-            "post-tool" => Some(HookType::PostTool),
-            "prompt-submit" => Some(HookType::PromptSubmit),
-            "session-end" => Some(HookType::SessionEnd),
-            _ => None,
+            "pre-tool" => Ok(HookType::PreTool),
+            "post-tool" => Ok(HookType::PostTool),
+            "prompt-submit" => Ok(HookType::PromptSubmit),
+            "session-end" => Ok(HookType::SessionEnd),
+            _ => Err(()),
         }
+    }
+}
+
+impl HookType {
+    /// Try to parse a HookType from a string
+    #[allow(dead_code)]
+    pub fn parse_hook_type(s: &str) -> Option<Self> {
+        s.parse().ok()
     }
 }
 
@@ -118,7 +137,7 @@ impl Display for HookType {
             HookType::PromptSubmit => "prompt-submit",
             HookType::SessionEnd => "session-end",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -132,11 +151,12 @@ pub enum ModelType {
     Other(String),
 }
 
-impl ModelType {
-    #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Self {
+impl FromStr for ModelType {
+    type Err = ();
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let lower = s.to_lowercase();
-        if lower.contains("opus") {
+        Ok(if lower.contains("opus") {
             ModelType::Opus
         } else if lower.contains("sonnet") {
             ModelType::Sonnet
@@ -144,7 +164,15 @@ impl ModelType {
             ModelType::Haiku
         } else {
             ModelType::Other(s.to_string())
-        }
+        })
+    }
+}
+
+impl ModelType {
+    /// Parse a ModelType from a string - convenience method
+    #[allow(dead_code)]
+    pub fn parse_model(s: &str) -> Self {
+        s.parse().unwrap_or_else(|_| ModelType::Other(s.to_string()))
     }
     
     #[allow(dead_code)]
@@ -166,6 +194,6 @@ impl Display for ModelType {
             ModelType::Haiku => "Haiku",
             ModelType::Other(name) => name,
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
