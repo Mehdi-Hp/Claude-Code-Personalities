@@ -1,0 +1,4 @@
+.DS_STORE
+target
+build
+.claude/settings.local.json

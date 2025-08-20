@@ -1,4 +1,3 @@
-use chrono::{Local, Timelike};
 use regex::Regex;
 use once_cell::sync::Lazy;
 
@@ -23,174 +22,54 @@ static ENV_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(export |source |echo
 static VCS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(svn |hg |cvs |diff |patch )").expect("Invalid vcs regex"));
 static CONTAINER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(docker |podman |kubectl |helm |k9s )").expect("Invalid container regex"));
 
+#[must_use] 
 pub fn determine_personality(
     state: &SessionState,
     tool_name: &str,
     file_path: Option<&str>,
     command: Option<&str>,
 ) -> String {
-    // Frustration states based on error count (highest priority)
-    if state.error_count >= 5 {
-        return "(╯°□°)╯︵ ┻━┻ Table Flipper".to_string();
-    } else if state.error_count >= 3 {
-        return "(ノಠ益ಠ)ノ Error Warrior".to_string();
+    // Check for frustration states first (highest priority)
+    if let Some(frustration_personality) = get_frustration_personality(state.error_count) {
+        return frustration_personality;
     }
-
-    // Git operations
-    if tool_name == "Bash" {
-        if let Some(cmd) = command {
-            if cmd.starts_with("git ") {
-                return "┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager".to_string();
-            }
-            
-            // Test execution
-            if is_test_command(cmd) {
-                return "( ദ്ദി ˙ᗜ˙ ) Test Taskmaster".to_string();
-            }
-            
-            // Deployment/Infrastructure
-            if is_deploy_command(cmd) {
-                return "( ͡ _ ͡°)ﾉ⚲ Deployment Guard".to_string();
-            }
-            
-            // Database operations
-            if is_database_command(cmd) {
-                return "⚆_⚆ Database Expert".to_string();
-            }
-            
-            // Build/compilation
-            if is_build_command(cmd) {
-                return "ᕦ(ò_óˇ)ᕤ Compilation Warrior".to_string();
-            }
-            
-            // Package management
-            if is_package_command(cmd) {
-                return "^⎚-⎚^ Dependency Wrangler".to_string();
-            }
-            
-            // File operations
-            if is_file_command(cmd) {
-                return "ᓚ₍ ^. .^₎ File Explorer".to_string();
-            }
-            
-            // Process management
-            if is_process_command(cmd) {
-                return "(╬ ಠ益ಠ) Task Assassin".to_string();
-            }
-            
-            // Network operations
-            if is_network_command(cmd) {
-                return "(╭ರ_ಠ) Network Sentinel".to_string();
-            }
-            
-            // System monitoring
-            if is_system_command(cmd) {
-                return "(◉_◉) System Detective".to_string();
-            }
-            
-            // System administration
-            if is_admin_command(cmd) {
-                return "( ͡ಠ ʖ̯ ͡ಠ) System Admin".to_string();
-            }
-            
-            // Permissions
-            if is_permission_command(cmd) {
-                return "(╯‵□′)╯ Permission Police".to_string();
-            }
-            
-            // Text processing
-            if is_text_command(cmd) {
-                return "(˘▾˘~) String Surgeon".to_string();
-            }
-            
-            // Editors
-            if is_editor_command(cmd) {
-                return "( . .)φ Editor User".to_string();
-            }
-            
-            // Archive/Compression
-            if is_archive_command(cmd) {
-                return "(っ˘ڡ˘ς) Compression Chef".to_string();
-            }
-            
-            // Environment/Shell
-            if is_env_command(cmd) {
-                return "(∗´ര ᎑ ര`∗) Environment Enchanter".to_string();
-            }
-            
-            // Version control (non-git)
-            if is_vcs_command(cmd) {
-                return "(╯︵╰,) Code Historian".to_string();
-            }
-            
-            // Container/Orchestration
-            if is_container_command(cmd) {
-                return "(づ｡◕‿‿◕｡)づ Container Captain".to_string();
-            }
-        }
+    
+    // Check tool-specific personalities (only high-priority ones like Bash git commands, Grep)
+    if let Some(tool_personality) = get_tool_personality(tool_name, command) {
+        return tool_personality;
     }
-
-    // Debugging with Grep
-    if tool_name == "Grep" {
-        return "(つ◉益◉)つ Bug Hunter".to_string();
+    
+    // Check file-type specific personalities
+    if let Some(file_personality) = get_file_personality(file_path) {
+        return file_personality;
     }
-
-    // File type based personalities
-    if let Some(file) = file_path {
-        // Auth/Security files (higher priority)
-        if is_auth_file(file) {
-            return "ಠ_ಠ Security Analyst".to_string();
-        }
-        
-        // Performance files (higher priority)
-        if is_performance_file(file) {
-            return "★⌒ヽ( ͡° ε ͡°) Performance Tuner".to_string();
-        }
-        
-        // Quality/Lint files (higher priority)
-        if is_quality_file(file) {
-            return "৻( •̀ ᗜ •́ ৻) Quality Auditor".to_string();
-        }
-        
-        // Documentation
-        if is_doc_file(file) {
-            return "φ(．．) Documentation Writer".to_string();
-        }
-        
-        // React/Vue/Svelte components
-        if is_ui_component_file(file) {
-            return "(✿◠ᴗ◠) UI Developer".to_string();
-        }
-        
-        // CSS and styling files
-        if is_style_file(file) {
-            return "♥‿♥ Style Artist".to_string();
-        }
-        
-        // HTML and templates
-        if is_template_file(file) {
-            return "<(￣︶￣)> Markup Wizard".to_string();
-        }
-        
-        // Config files
-        if is_config_file(file) {
-            return "(๑>؂•̀๑) Config Helper".to_string();
-        }
-        
-        // JavaScript/TypeScript files (lower priority)
-        if is_js_file(file) {
-            return "(▀̿Ĺ̯▀̿ ̿) JS Master".to_string();
-        }
+    
+    // Check consecutive action patterns
+    if let Some(pattern_personality) = get_pattern_personality(state) {
+        return pattern_personality;
     }
+    
+    // Default tool personalities (lowest priority)
+    get_default_tool_personality(tool_name, state)
+}
 
-    // Long sessions (consecutive actions)
-    if state.consecutive_actions > 20 {
-        return "【╯°□°】╯︵ ┻━┻ Code Berserker".to_string();
-    } else if state.consecutive_actions > 10 {
-        return "┌༼◉ل͟◉༽┐ Hyperfocused Coder".to_string();
+fn get_frustration_personality(error_count: u32) -> Option<String> {
+    match error_count {
+        5.. => Some("(╯°□°)╯︵ ┻━┻ Table Flipper".to_string()),
+        3..=4 => Some("(ノಠ益ಠ)ノ Error Warrior".to_string()),
+        _ => None,
     }
+}
 
-    // Tool-specific personalities
+fn get_tool_personality(tool_name: &str, command: Option<&str>) -> Option<String> {
+    match tool_name {
+        "Bash" => get_bash_personality(command?),
+        "Grep" => Some(get_grep_personality()),
+        _ => None,
+    }
+}
+
+fn get_default_tool_personality(tool_name: &str, state: &SessionState) -> String {
     match tool_name {
         "Edit" => "(⌐■_■) Code Wizard".to_string(),
         "Write" => "(• ε •) Gentle Refactorer".to_string(),
@@ -203,20 +82,170 @@ pub fn determine_personality(
                 "╭༼ ººل͟ºº ༽╮ Research King".to_string()
             }
         }
-        _ => time_based_personality(),
+        _ => "ʕ•ᴥ•ʔ Code Wizard".to_string(),
     }
 }
 
-fn time_based_personality() -> String {
-    let hour = Local::now().hour();
-    
-    match hour {
-        6..=11 => "( ˶˘ ³˘)☕ Coffee Powered".to_string(),
-        12..=16 => "(つ°ヮ°)つ Afternoon Thinker".to_string(),
-        17..=21 => "(￣ω￣;) Evening Explorer".to_string(),
-        _ => "˙ ͜ʟ˙ Night Coder".to_string(),
+fn get_bash_personality(command: &str) -> Option<String> {
+    // Git operations
+    if command.starts_with("git ") {
+        return Some("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager".to_string());
     }
+    
+    // Test execution
+    if is_test_command(command) {
+        return Some("( ദ്ദി ˙ᗜ˙ ) Test Taskmaster".to_string());
+    }
+    
+    // Deployment/Infrastructure
+    if is_deploy_command(command) {
+        return Some("( ͡ _ ͡°)ﾉ⚲ Deployment Guard".to_string());
+    }
+    
+    // Database operations
+    if is_database_command(command) {
+        return Some("⚆_⚆ Database Expert".to_string());
+    }
+    
+    // Build/compilation
+    if is_build_command(command) {
+        return Some("ᕦ(ò_óˇ)ᕤ Compilation Warrior".to_string());
+    }
+    
+    // Package management
+    if is_package_command(command) {
+        return Some("^⎚-⎚^ Dependency Wrangler".to_string());
+    }
+    
+    // File operations
+    if is_file_command(command) {
+        return Some("ᓚ₍ ^. .^₎ File Explorer".to_string());
+    }
+    
+    // Process management
+    if is_process_command(command) {
+        return Some("(╬ ಠ益ಠ) Task Assassin".to_string());
+    }
+    
+    // Network operations
+    if is_network_command(command) {
+        return Some("(╭ರ_ಠ) Network Sentinel".to_string());
+    }
+    
+    // System monitoring
+    if is_system_command(command) {
+        return Some("(◉_◉) System Detective".to_string());
+    }
+    
+    // System administration
+    if is_admin_command(command) {
+        return Some("( ͡ಠ ʖ̯ ͡ಠ) System Admin".to_string());
+    }
+    
+    // Permissions
+    if is_permission_command(command) {
+        return Some("(╯‵□′)╯ Permission Police".to_string());
+    }
+    
+    // Text processing
+    if is_text_command(command) {
+        return Some("(˘▾˘~) String Surgeon".to_string());
+    }
+    
+    // Editors
+    if is_editor_command(command) {
+        return Some("( . .)φ Editor User".to_string());
+    }
+    
+    // Archive/Compression
+    if is_archive_command(command) {
+        return Some("(っ˘ڡ˘ς) Compression Chef".to_string());
+    }
+    
+    // Environment/Shell
+    if is_env_command(command) {
+        return Some("(∗´ര ᎑ ര`∗) Environment Enchanter".to_string());
+    }
+    
+    // Version control (non-git)
+    if is_vcs_command(command) {
+        return Some("(╯︵╰,) Code Historian".to_string());
+    }
+    
+    // Container/Orchestration
+    if is_container_command(command) {
+        return Some("(づ｡◕‿‿◕｡)づ Container Captain".to_string());
+    }
+    
+    None
 }
+
+fn get_grep_personality() -> String {
+    "(つ◉益◉)つ Bug Hunter".to_string()
+}
+
+fn get_file_personality(file_path: Option<&str>) -> Option<String> {
+    let file = file_path?;
+    
+    // Auth/Security files (higher priority)
+    if is_auth_file(file) {
+        return Some("ಠ_ಠ Security Analyst".to_string());
+    }
+    
+    // Performance files (higher priority)
+    if is_performance_file(file) {
+        return Some("★⌒ヽ( ͡° ε ͡°) Performance Tuner".to_string());
+    }
+    
+    // Quality/Lint files (higher priority)
+    if is_quality_file(file) {
+        return Some("৻( •̀ ᗜ •́ ৻) Quality Auditor".to_string());
+    }
+    
+    // Documentation
+    if is_doc_file(file) {
+        return Some("φ(．．) Documentation Writer".to_string());
+    }
+    
+    // React/Vue/Svelte components
+    if is_ui_component_file(file) {
+        return Some("(✿◠ᴗ◠) UI Developer".to_string());
+    }
+    
+    // CSS and styling files
+    if is_style_file(file) {
+        return Some("♥‿♥ Style Artist".to_string());
+    }
+    
+    // HTML and templates
+    if is_template_file(file) {
+        return Some("<(￣︶￣)> Markup Wizard".to_string());
+    }
+    
+    // Config files
+    if is_config_file(file) {
+        return Some("(๑>؂•̀๑) Config Helper".to_string());
+    }
+        
+    // JavaScript/TypeScript files (lower priority)
+    if is_js_file(file) {
+        return Some("(▀̿Ĺ̯▀̿ ̿) JS Master".to_string());
+    }
+    
+    None
+}
+
+fn get_pattern_personality(state: &SessionState) -> Option<String> {
+    // Long sessions (consecutive actions)
+    if state.consecutive_actions > 20 {
+        return Some("【╯°□°】╯︵ ┻━┻ Code Berserker".to_string());
+    } else if state.consecutive_actions > 10 {
+        return Some("┌༼◉ل͟◉༽┐ Hyperfocused Coder".to_string());
+    }
+    
+    None
+}
+
 
 // Command classification functions
 fn is_test_command(cmd: &str) -> bool {
@@ -349,8 +378,10 @@ mod tests {
             activity: crate::types::Activity::Idle,
             current_job: None,
             personality: "Test".to_string(),
+            previous_personality: None,
             consecutive_actions,
             error_count,
+            recent_activities: Vec::new(),
         }
     }
 
