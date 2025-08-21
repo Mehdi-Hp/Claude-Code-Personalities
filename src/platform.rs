@@ -10,6 +10,11 @@ pub struct Platform {
 
 impl Platform {
     /// Detect the current platform from the system
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the current OS or architecture
+    /// is not supported, or if platform detection fails
     pub fn detect() -> Result<Self> {
         let os = detect_os()?;
         let arch = detect_arch()?;
@@ -18,14 +23,9 @@ impl Platform {
         Ok(Platform { os, arch, target })
     }
     
-    /// Get the expected binary name for this platform
-    #[allow(dead_code)]
-    pub fn binary_name(&self) -> String {
-        format!("claude-code-personalities-{}", self.target)
-    }
     
     /// Check if this platform is supported
-    pub fn is_supported(&self) -> bool {
+    #[must_use] pub fn is_supported(&self) -> bool {
         matches!(
             (self.os.as_str(), self.arch.as_str()),
             ("apple-darwin" | "linux", "x86_64" | "aarch64")
@@ -33,7 +33,7 @@ impl Platform {
     }
     
     /// Get human-readable description
-    pub fn description(&self) -> String {
+    #[must_use] pub fn description(&self) -> String {
         match (self.os.as_str(), self.arch.as_str()) {
             ("apple-darwin", "x86_64") => "macOS (Intel)".to_string(),
             ("apple-darwin", "aarch64") => "macOS (Apple Silicon)".to_string(),
@@ -75,9 +75,8 @@ mod tests {
         assert!(!platform.arch.is_empty());
         assert!(!platform.target.is_empty());
         
-        // Should generate valid binary name
-        let binary_name = platform.binary_name();
-        assert!(binary_name.starts_with("claude-code-personalities-"));
+        // Should be in supported target format
+        assert!(platform.target.contains('-'));
     }
     
     #[test]
@@ -147,13 +146,15 @@ mod tests {
     }
     
     #[test]
-    fn test_binary_name_generation() {
+    fn test_target_format() {
         let platform = Platform {
             os: "apple-darwin".to_string(),
             arch: "x86_64".to_string(),
             target: "x86_64-apple-darwin".to_string(),
         };
         
-        assert_eq!(platform.binary_name(), "claude-code-personalities-x86_64-apple-darwin");
+        assert_eq!(platform.target, "x86_64-apple-darwin");
+        assert!(platform.target.starts_with("x86_64"));
+        assert!(platform.target.ends_with("apple-darwin"));
     }
 }

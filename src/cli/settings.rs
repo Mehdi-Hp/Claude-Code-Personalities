@@ -154,14 +154,14 @@ impl ClaudeSettings {
             "matcher": "*",
             "hooks": [activity_hook.clone()]
         });
-        self.merge_hook_array(&mut hooks_obj, "PreToolUse", pre_tool_personality_hook)?;
+        Self::merge_hook_array(&mut hooks_obj, "PreToolUse", pre_tool_personality_hook)?;
         
         // Configure PostToolUse hook - merge with existing
         let post_tool_personality_hook = serde_json::json!({
             "matcher": "*",
             "hooks": [activity_hook]
         });
-        self.merge_hook_array(&mut hooks_obj, "PostToolUse", post_tool_personality_hook)?;
+        Self::merge_hook_array(&mut hooks_obj, "PostToolUse", post_tool_personality_hook)?;
         
         // User prompt submit hook for error reset - merge with existing
         let prompt_submit_personality_hook = serde_json::json!({
@@ -171,7 +171,7 @@ impl ClaudeSettings {
                 "args": ["--hook", "prompt-submit"]
             }]
         });
-        self.merge_hook_array(&mut hooks_obj, "UserPromptSubmit", prompt_submit_personality_hook)?;
+        Self::merge_hook_array(&mut hooks_obj, "UserPromptSubmit", prompt_submit_personality_hook)?;
         
         // Session end hook for cleanup - merge with existing
         let session_end_personality_hook = serde_json::json!({
@@ -182,7 +182,7 @@ impl ClaudeSettings {
                 "args": ["--hook", "session-end"]
             }]
         });
-        self.merge_hook_array(&mut hooks_obj, "Stop", session_end_personality_hook)?;
+        Self::merge_hook_array(&mut hooks_obj, "Stop", session_end_personality_hook)?;
         
         self.content["hooks"] = Value::Object(hooks_obj);
         Ok(())
@@ -196,7 +196,6 @@ impl ClaudeSettings {
     /// - The existing hook type exists but is not a valid array structure
     /// - JSON serialization fails during the merge process
     fn merge_hook_array(
-        &self,
         hooks_obj: &mut Map<String, Value>,
         hook_type: &str,
         personality_hook: Value,
@@ -234,6 +233,11 @@ impl ClaudeSettings {
     }
     
     /// Remove personality configuration from Claude settings
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the JSON structure is malformed and cannot be converted
+    /// to a JSON object. This should only happen if the content was corrupted externally.
     pub fn remove_personality_config(&mut self) {
         // Remove statusline if it's our command
         if let Some(statusline) = self.content.get("statusLine") {
@@ -270,7 +274,7 @@ impl ClaudeSettings {
     }
     
     /// Check if personalities are currently configured
-    pub fn is_personality_configured(&self) -> bool {
+    #[must_use] pub fn is_personality_configured(&self) -> bool {
         // Check statusline
         if let Some(statusline) = self.content.get("statusLine") {
             if let Some(command) = statusline.get("command") {
@@ -295,12 +299,10 @@ impl ClaudeSettings {
     }
     
     /// Get a summary of current configuration
-    pub fn get_configuration_summary(&self) -> ConfigurationSummary {
+    #[must_use] pub fn get_configuration_summary(&self) -> ConfigurationSummary {
         ConfigurationSummary {
-            has_statusline: self.content.get("statusLine").is_some(),
             has_personality_statusline: self.is_personality_configured(),
             hook_types: self.get_configured_hook_types(),
-            settings_file_exists: self.settings_path.exists(),
         }
     }
     
@@ -316,16 +318,12 @@ impl ClaudeSettings {
 
 #[derive(Debug, Clone)]
 pub struct ConfigurationSummary {
-    #[allow(dead_code)]
-    pub has_statusline: bool,
     pub has_personality_statusline: bool,
     pub hook_types: Vec<String>,
-    #[allow(dead_code)]
-    pub settings_file_exists: bool,
 }
 
 impl ConfigurationSummary {
-    pub fn is_fully_configured(&self) -> bool {
+    #[must_use] pub fn is_fully_configured(&self) -> bool {
         self.has_personality_statusline 
             && self.hook_types.contains(&"PreToolUse".to_string())
             && self.hook_types.contains(&"PostToolUse".to_string())
@@ -529,7 +527,7 @@ mod tests {
         // Check that existing pylint hook is preserved
         let has_pylint = pre_tool_hooks.iter().any(|hook| {
             hook.get("matcher").and_then(|m| m.as_str()) == Some("*.py") &&
-            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
                 hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("pylint"))
             })
         });
@@ -538,7 +536,7 @@ mod tests {
         // Check that existing notify-send hook is preserved
         let has_notify = post_tool_hooks.iter().any(|hook| {
             hook.get("matcher").and_then(|m| m.as_str()) == Some("build*") &&
-            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
                 hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("notify-send"))
             })
         });
@@ -547,11 +545,11 @@ mod tests {
         // Check that personality hooks are added
         let has_personality_pre = pre_tool_hooks.iter().any(|hook| {
             hook.get("matcher").and_then(|m| m.as_str()) == Some("*") &&
-            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
                 hooks.iter().any(|h| 
                     h.get("command").and_then(|c| c.as_str()) == Some("/path/to/claude-code-personalities") &&
-                    h.get("args").and_then(|a| a.as_array()).map_or(false, |args| 
-                        args.get(0).and_then(|arg| arg.as_str()) == Some("--hook") &&
+                    h.get("args").and_then(|a| a.as_array()).is_some_and(|args| 
+                        args.first().and_then(|arg| arg.as_str()) == Some("--hook") &&
                         args.get(1).and_then(|arg| arg.as_str()) == Some("activity")
                     )
                 )
@@ -608,7 +606,7 @@ mod tests {
         // Verify eslint hook is preserved
         let has_eslint = pre_tool_hooks.iter().any(|hook| {
             hook.get("matcher").and_then(|m| m.as_str()) == Some("*.js") &&
-            hook.get("hooks").and_then(|h| h.as_array()).map_or(false, |hooks| {
+            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
                 hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("eslint"))
             })
         });

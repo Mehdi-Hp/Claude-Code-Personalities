@@ -45,7 +45,9 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
     
     // Step 1: Check if Claude directory exists
     let claude_dir = get_claude_dir()?;
-    if !claude_dir.exists() {
+    if claude_dir.exists() {
+        print_success(&format!("Found Claude directory: {}", claude_dir.display()));
+    } else {
         if options.interactive {
             let create_dir = Confirm::new("Claude directory not found. Create ~/.claude/ directory?")
                 .with_default(true)
@@ -61,8 +63,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
         fs::create_dir_all(&claude_dir).await
             .with_context(|| format!("Failed to create Claude directory: {}", claude_dir.display()))?;
         print_success(&format!("Created directory: {}", claude_dir.display()));
-    } else {
-        print_success(&format!("Found Claude directory: {}", claude_dir.display()));
     }
     
     // Step 2: Get current binary location
