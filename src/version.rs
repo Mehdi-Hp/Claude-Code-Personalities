@@ -188,7 +188,7 @@ impl VersionManager {
     }
     
     /// Find the appropriate asset for the current platform
-    pub fn find_platform_asset<'a>(&self, release: &'a GitHubRelease, platform_target: &str) -> Option<&'a GitHubAsset> {
+    #[must_use] pub fn find_platform_asset<'a>(&self, release: &'a GitHubRelease, platform_target: &str) -> Option<&'a GitHubAsset> {
         let expected_name = format!("claude-code-personalities-{platform_target}");
         release.assets.iter()
             .find(|asset| asset.name == expected_name)
@@ -268,7 +268,7 @@ impl Default for VersionManager {
 }
 
 /// Format a version comparison for display
-pub fn format_version_comparison(current: &str, latest: &str) -> String {
+#[must_use] pub fn format_version_comparison(current: &str, latest: &str) -> String {
     format!("Current: v{current} → Available: v{latest}")
 }
 
