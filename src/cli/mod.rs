@@ -56,6 +56,8 @@ pub async fn uninstall() -> Result<()> {
 /// - Update checking fails due to network or API errors
 pub async fn status() -> Result<()> {
     use anyhow::Context;
+    use crate::statusline::{ClaudeInput, build_statusline};
+    use crate::state::SessionState;
     
     println!("{}", "Claude Code Personalities Status".bold().blue());
     println!();
@@ -96,9 +98,6 @@ pub async fn status() -> Result<()> {
     let test_input = r#"{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"},"session_id":"test"}"#;
     
     // Simulate statusline output
-    use crate::statusline::{ClaudeInput, build_statusline};
-    use crate::state::SessionState;
-    
     let claude_input: ClaudeInput = serde_json::from_str(test_input)
         .with_context(|| "Failed to parse test statusline input")?;
     let session_id = claude_input.session_id.unwrap_or_else(|| "test".to_string());
@@ -149,28 +148,25 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
             .with_context(|| "Failed to check for updates")?
     };
     
-    match update_info {
-        Some(release) => {
-            let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
-            let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
-            
-            println!();
-            println!("{} {}", "📦 Update Available:".bold().green(), comparison);
-            if let Some(name) = &release.name {
-                println!("{} {}", "📋 Release:".bold(), name);
-            }
-            println!();
-            println!("Run {} to update", "claude-code-personalities update".cyan());
+    if let Some(release) = update_info {
+        let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
+        let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
+        
+        println!();
+        println!("{} {}", "📦 Update Available:".bold().green(), comparison);
+        if let Some(name) = &release.name {
+            println!("{} {}", "📋 Release:".bold(), name);
         }
-        None => {
+        println!();
+        println!("Run {} to update", "claude-code-personalities update".cyan());
+    } else {
+        println!();
+        println!("{} You are running the latest version!", ICON_CHECK.green());
+        println!("Current version: v{CURRENT_VERSION}");
+        
+        if !force {
             println!();
-            println!("{} You are running the latest version!", ICON_CHECK.green());
-            println!("Current version: v{CURRENT_VERSION}");
-            
-            if !force {
-                println!();
-                print_info("Tip: Use --force to bypass cache and check GitHub directly");
-            }
+            print_info("Tip: Use --force to bypass cache and check GitHub directly");
         }
     }
     

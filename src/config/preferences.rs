@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tokio::fs;
 
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersonalityPreferences {
     pub show_personality: bool,
@@ -94,7 +95,7 @@ impl PersonalityPreferences {
     }
     
     /// Get a list of all preference options with their current values
-    pub fn get_options(&self) -> Vec<(&'static str, bool)> {
+    #[must_use] pub fn get_options(&self) -> Vec<(&'static str, bool)> {
         vec![
             ("Show Personality", self.show_personality),
             ("Show Activity", self.show_activity),

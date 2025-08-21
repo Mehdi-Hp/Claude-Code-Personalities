@@ -15,7 +15,6 @@ use icons::{ICON_BUILDING, ICON_CODE, ICON_DEBUGGING, ICON_EDITING, ICON_ERROR, 
 pub struct ClaudeInput {
     pub session_id: Option<String>,
     pub model: Option<ModelInfo>,
-    #[allow(dead_code)]
     pub workspace: Option<WorkspaceInfo>,
 }
 
@@ -26,9 +25,7 @@ pub struct ModelInfo {
 
 #[derive(Debug, Deserialize)]
 pub struct WorkspaceInfo {
-    #[allow(dead_code)]
     pub current_dir: Option<String>,
-    #[allow(dead_code)]
     pub project_dir: Option<String>,
 }
 
@@ -84,7 +81,7 @@ pub async fn run_statusline() -> Result<()> {
     Ok(())
 }
 
-pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &PersonalityPreferences) -> String {
+#[must_use] pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &PersonalityPreferences) -> String {
     let mut parts = Vec::new();
     
     // Personality (bold)
@@ -132,10 +129,10 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
             "•".to_string()
         };
         
-        if !parts.is_empty() {
-            parts.push(format!(" {separator} {activity_text}"));
-        } else {
+        if parts.is_empty() {
             parts.push(activity_text);
+        } else {
+            parts.push(format!(" {separator} {activity_text}"));
         }
     }
     
@@ -185,10 +182,10 @@ pub fn build_statusline(state: &SessionState, model_name: &str, prefs: &Personal
             "•".to_string()
         };
         
-        if !parts.is_empty() {
-            parts.push(format!(" {separator} {colored_model}"));
-        } else {
+        if parts.is_empty() {
             parts.push(colored_model);
+        } else {
+            parts.push(format!(" {separator} {colored_model}"));
         }
     }
     
@@ -309,7 +306,7 @@ mod tests {
     fn test_build_statusline_empty_job() {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
-        state.current_job = Some("".to_string());
+        state.current_job = Some(String::new());
         let statusline = build_statusline(&state, "Haiku", &prefs);
         
         // Should treat empty job same as no job
@@ -387,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_claude_input_parsing_minimal() {
-        let json_str = r#"{}"#;
+        let json_str = r"{}";
         let claude_input: ClaudeInput = serde_json::from_str(json_str).unwrap();
         assert_eq!(claude_input.session_id, None);
         assert!(claude_input.model.is_none());
@@ -431,8 +428,8 @@ mod tests {
         assert!(statusline.contains("•"));
         
         // Should contain brackets for model
-        assert!(statusline.contains("["));
-        assert!(statusline.contains("]"));
+        assert!(statusline.contains('['));
+        assert!(statusline.contains(']'));
         
         // Should be structured as: personality • activity job • [model]
         // We can't test exact formatting due to ANSI codes, but can check basic structure

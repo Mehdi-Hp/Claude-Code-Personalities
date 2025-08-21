@@ -208,8 +208,8 @@ async fn download_and_verify_binary(
     if size_mb > 0 {
         print_info(&format!("Downloading {} ({} MB)...", asset.name, size_mb));
     } else {
-        let size_kb = asset.size / 1024; // Show in KB for smaller files
-        print_info(&format!("Downloading {} ({} KB)...", asset.name, size_kb));
+        let size_kilobytes = asset.size / 1024; // Show in KB for smaller files
+        print_info(&format!("Downloading {} ({} KB)...", asset.name, size_kilobytes));
     }
     version_manager.download_asset(asset, temp_binary).await
         .with_context(|| "Failed to download update")?;

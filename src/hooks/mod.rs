@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
+use std::path::Path;
 
 use crate::state::SessionState;
 use crate::statusline::personality::determine_personality;
@@ -80,10 +81,10 @@ async fn handle_tool_hook() -> Result<()> {
     }
     
     // Extract tool parameters
-    let (file_path, command, pattern) = extract_tool_params(&hook_input.tool_input);
+    let (file_path, command, pattern) = extract_tool_params(hook_input.tool_input.as_ref());
     
     // Determine activity and current job
-    let (activity, current_job) = determine_activity(&tool_name, &file_path, &command, &pattern);
+    let (activity, current_job) = determine_activity(&tool_name, file_path.as_deref(), command.as_deref(), pattern.as_deref());
     
     // Determine personality
     let personality = determine_personality(&state, &tool_name, file_path.as_deref(), command.as_deref());
@@ -152,7 +153,18 @@ async fn handle_session_end() -> Result<()> {
     Ok(())
 }
 
-fn extract_tool_params(tool_input: &Option<serde_json::Value>) -> (Option<String>, Option<String>, Option<String>) {
+/// Helper function for case-insensitive extension checking
+fn has_extension(file: &str, extensions: &[&str]) -> bool {
+    let path = Path::new(file);
+    if let Some(ext) = path.extension() {
+        let ext_str = ext.to_string_lossy();
+        extensions.iter().any(|&expected| ext_str.eq_ignore_ascii_case(expected))
+    } else {
+        false
+    }
+}
+
+fn extract_tool_params(tool_input: Option<&serde_json::Value>) -> (Option<String>, Option<String>, Option<String>) {
     if let Some(input) = tool_input {
         let file_path = input.get("file_path")
             .and_then(|v| v.as_str())
@@ -174,13 +186,13 @@ fn extract_tool_params(tool_input: &Option<serde_json::Value>) -> (Option<String
 
 fn determine_activity(
     tool_name: &str,
-    file_path: &Option<String>,
-    command: &Option<String>,
-    pattern: &Option<String>,
+    file_path: Option<&str>,
+    command: Option<&str>,
+    pattern: Option<&str>,
 ) -> (Activity, Option<String>) {
     match tool_name {
         "Edit" | "MultiEdit" => {
-            let job = file_path.as_ref().map(|f| trim_filename(f, 20));
+            let job = file_path.map(|f| trim_filename(f, 20));
             
             // Check if it's a config file
             if let Some(path) = file_path {
@@ -194,7 +206,7 @@ fn determine_activity(
             (Activity::Editing, job)
         }
         "Write" => {
-            let job = file_path.as_ref().map(|f| trim_filename(f, 20));
+            let job = file_path.map(|f| trim_filename(f, 20));
             
             // Check if it's a config file
             if let Some(path) = file_path {
@@ -227,15 +239,15 @@ fn determine_activity(
             }
         }
         "Read" => {
-            let job = file_path.as_ref().map(|f| trim_filename(f, 20));
+            let job = file_path.map(|f| trim_filename(f, 20));
             (Activity::Reading, job)
         }
         "Grep" => {
-            let job = pattern.as_ref().map(|p| {
+            let job = pattern.map(|p| {
                 if p.len() > 20 {
                     format!("{}...", &p[..17])
                 } else {
-                    p.clone()
+                    p.to_string()
                 }
             });
             (Activity::Searching, job)
@@ -291,47 +303,78 @@ fn is_file_navigation_command(cmd: &str) -> bool {
 fn is_config_file(path: &str) -> bool {
     let lowercase_path = path.to_lowercase();
     
-    // Check filename patterns
-    // TODO: Populate every common config file like nuxt.config.ts, vitest.config.ts, etc...
-    if lowercase_path.contains("config") 
+    // Check filename patterns - comprehensive list of config files
+    if lowercase_path.contains("config")
         || lowercase_path.contains("settings")
         || lowercase_path.contains(".env")
         || lowercase_path.contains("dockerfile")
-        || lowercase_path.contains("makefile") {
+        || lowercase_path.contains("makefile")
+        || lowercase_path.contains("package.json")
+        || lowercase_path.contains("tsconfig")
+        || lowercase_path.contains("webpack")
+        || lowercase_path.contains("babel")
+        || lowercase_path.contains("eslint")
+        || lowercase_path.contains("prettier")
+        || lowercase_path.contains("tailwind")
+        || lowercase_path.contains("nuxt.config")
+        || lowercase_path.contains("vue.config")
+        || lowercase_path.contains("vite.config")
+        || lowercase_path.contains("vitest.config")
+        || lowercase_path.contains("jest.config")
+        || lowercase_path.contains("next.config")
+        || lowercase_path.contains("remix.config")
+        || lowercase_path.contains("svelte.config")
+        || lowercase_path.contains("rollup.config")
+        || lowercase_path.contains("postcss.config")
+        || lowercase_path.contains("gatsby.config")
+        || lowercase_path.contains("astro.config")
+        || lowercase_path.contains("cargo.toml")
+        || lowercase_path.contains("pyproject.toml")
+        || lowercase_path.contains("requirements.txt")
+        || lowercase_path.contains("pipfile")
+        || lowercase_path.contains("poetry.lock")
+        || lowercase_path.contains("yarn.lock")
+        || lowercase_path.contains("package-lock.json")
+        || lowercase_path.contains("pnpm-lock.yaml")
+        || lowercase_path.contains("go.mod")
+        || lowercase_path.contains("go.sum")
+        || lowercase_path.contains("composer.json")
+        || lowercase_path.contains("gemfile")
+        || lowercase_path.contains("podfile")
+        || lowercase_path.contains("build.gradle")
+        || lowercase_path.contains("pom.xml")
+        || lowercase_path.contains("cmake") {
         return true;
     }
     
-    // Check extensions
-    lowercase_path.ends_with(".json")
-        || lowercase_path.ends_with(".yaml") 
-        || lowercase_path.ends_with(".yml")
-        || lowercase_path.ends_with(".toml")
-        || lowercase_path.ends_with(".ini")
-        || lowercase_path.ends_with(".conf")
-        || lowercase_path.ends_with(".cfg")
+    // Check extensions (case-insensitive)
+    has_extension(path, &["json", "yaml", "yml", "toml", "ini", "conf", "cfg", "properties", "plist", "xml"])
 }
 
 fn is_code_file(path: &str) -> bool {
-    let lowercase_path = path.to_lowercase();
-    
-    // Programming language extensions
-    // TODO: Populate more common file types
-    lowercase_path.ends_with(".rs")
-        || lowercase_path.ends_with(".js") 
-        || lowercase_path.ends_with(".ts")
-        || lowercase_path.ends_with(".jsx")
-        || lowercase_path.ends_with(".tsx")
-        || lowercase_path.ends_with(".py")
-        || lowercase_path.ends_with(".java")
-        || lowercase_path.ends_with(".c")
-        || lowercase_path.ends_with(".cpp")
-        || lowercase_path.ends_with(".h")
-        || lowercase_path.ends_with(".go")
-        || lowercase_path.ends_with(".rb")
-        || lowercase_path.ends_with(".php")
-        || lowercase_path.ends_with(".swift")
-        || lowercase_path.ends_with(".kt")
-        || lowercase_path.ends_with(".scala")
+    // Programming language extensions - comprehensive list (case-insensitive)
+    has_extension(path, &[
+        // Web/JavaScript
+        "js", "ts", "jsx", "tsx", "vue", "svelte", "astro",
+        // Systems
+        "rs", "c", "cpp", "cc", "cxx", "c++", "h", "hpp", "hxx", "h++", "go", "zig", "v",
+        // JVM
+        "java", "kt", "kts", "scala", "clj", "cljs", "cljc", "groovy", "gradle",
+        // Functional
+        "hs", "lhs", "ml", "mli", "elm", "purs", "fs",
+        // Dynamic
+        "py", "pyx", "pyi", "rb", "php", "pl", "pm", "lua", "r", "R", "jl",
+        // Mobile/Cross-platform  
+        "swift", "dart", "cs", "vb", "m", "mm",
+        // Scripts
+        "sh", "bash", "zsh", "fish", "ps1",
+        // Emerging
+        "nim", "crystal", "cr", "ex", "exs", "erl", "hrl", "d",
+        // Data/Query
+        "sql", "graphql", "gql", "matlab",
+        // Hardware
+        "vhdl"
+    ])
 }
 
 #[cfg(test)]
@@ -354,13 +397,13 @@ mod tests {
             "pattern": "function.*test"
         });
         
-        let (file_path, command, pattern) = extract_tool_params(&Some(input));
+        let (file_path, command, pattern) = extract_tool_params(Some(&input));
         assert_eq!(file_path, Some("/path/to/test.js".to_string()));
         assert_eq!(command, Some("npm test".to_string()));
         assert_eq!(pattern, Some("function.*test".to_string()));
 
         // Test with empty input
-        let (file_path, command, pattern) = extract_tool_params(&None);
+        let (file_path, command, pattern) = extract_tool_params(None);
         assert_eq!(file_path, None);
         assert_eq!(command, None);
         assert_eq!(pattern, None);
@@ -371,9 +414,9 @@ mod tests {
         // Edit operations
         let (activity, job) = determine_activity(
             "Edit",
-            &Some("/very/long/path/to/some/deeply/nested/file.js".to_string()),
-            &None,
-            &None,
+            Some("/very/long/path/to/some/deeply/nested/file.js"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Coding); // .js files should be detected as coding
         assert!(job.is_some());
@@ -384,9 +427,9 @@ mod tests {
         // Write operations
         let (activity, job) = determine_activity(
             "Write",
-            &Some("README.md".to_string()),
-            &None,
-            &None,
+            Some("README.md"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Writing);
         assert_eq!(job, Some("README.md".to_string()));
@@ -394,27 +437,27 @@ mod tests {
         // Bash operations
         let (activity, job) = determine_activity(
             "Bash",
-            &None,
-            &Some("npm install express".to_string()),
-            &None,
+            None,
+            Some("npm install express"),
+            None,
         );
         assert_eq!(activity, Activity::Installing);
         assert_eq!(job, Some("npm".to_string()));
 
         let (activity, job) = determine_activity(
             "Bash",
-            &None,
-            &Some("cargo build --release".to_string()),
-            &None,
+            None,
+            Some("cargo build --release"),
+            None,
         );
         assert_eq!(activity, Activity::Building);
         assert_eq!(job, Some("cargo".to_string()));
 
         let (activity, job) = determine_activity(
             "Bash",
-            &None,
-            &Some("pytest tests/".to_string()),
-            &None,
+            None,
+            Some("pytest tests/"),
+            None,
         );
         assert_eq!(activity, Activity::Testing);
         assert_eq!(job, Some("pytest".to_string()));
@@ -422,9 +465,9 @@ mod tests {
         // Read operations
         let (activity, job) = determine_activity(
             "Read",
-            &Some("config.yaml".to_string()),
-            &None,
-            &None,
+            Some("config.yaml"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Reading);
         assert_eq!(job, Some("config.yaml".to_string()));
@@ -432,9 +475,9 @@ mod tests {
         // Grep operations
         let (activity, job) = determine_activity(
             "Grep",
-            &None,
-            &None,
-            &Some("function handleClick".to_string()),
+            None,
+            None,
+            Some("function handleClick"),
         );
         assert_eq!(activity, Activity::Searching);
         assert_eq!(job, Some("function handleClick".to_string()));
@@ -443,9 +486,9 @@ mod tests {
         let long_pattern = "this is a very long search pattern that should be truncated";
         let (activity, job) = determine_activity(
             "Grep",
-            &None,
-            &None,
-            &Some(long_pattern.to_string()),
+            None,
+            None,
+            Some(long_pattern.to_string().as_ref()),
         );
         assert_eq!(activity, Activity::Searching);
         let job = job.unwrap();
@@ -455,9 +498,9 @@ mod tests {
         // Unknown tool
         let (activity, job) = determine_activity(
             "UnknownTool",
-            &None,
-            &None,
-            &None,
+            None,
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Idle);
         assert_eq!(job, None);
@@ -560,8 +603,8 @@ mod tests {
         let _state = SessionState::load(&session_id).await.unwrap();
         
         // Simulate the logic from handle_tool_hook
-        let (file_path, command, pattern) = extract_tool_params(&hook_input.tool_input);
-        let (activity, current_job) = determine_activity(&hook_input.tool_name.unwrap(), &file_path, &command, &pattern);
+        let (file_path, command, pattern) = extract_tool_params(hook_input.tool_input.as_ref());
+        let (activity, current_job) = determine_activity(&hook_input.tool_name.unwrap(), file_path.as_deref(), command.as_deref(), pattern.as_deref());
         
         assert_eq!(activity, Activity::Coding); // main.js should be detected as coding
         assert_eq!(current_job, Some("main.js".to_string()));
@@ -662,77 +705,77 @@ mod tests {
         // Package management
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("npm install express".to_string()),
-            &None,
+            None,
+            Some("npm install express"),
+            None,
         );
         assert_eq!(activity, Activity::Installing);
 
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("pnpm add typescript".to_string()),
-            &None,
+            None,
+            Some("pnpm add typescript"),
+            None,
         );
         assert_eq!(activity, Activity::Installing);
 
         // Build commands
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("npm run build".to_string()),
-            &None,
+            None,
+            Some("npm run build"),
+            None,
         );
         assert_eq!(activity, Activity::Building);
 
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("cargo build --release".to_string()),
-            &None,
+            None,
+            Some("cargo build --release"),
+            None,
         );
         assert_eq!(activity, Activity::Building);
 
         // Test commands
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("npm test".to_string()),
-            &None,
+            None,
+            Some("npm test"),
+            None,
         );
         assert_eq!(activity, Activity::Testing);
 
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("pytest spec/".to_string()),
-            &None,
+            None,
+            Some("pytest spec/"),
+            None,
         );
         assert_eq!(activity, Activity::Testing);
 
         // File navigation
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("ls -la".to_string()),
-            &None,
+            None,
+            Some("ls -la"),
+            None,
         );
         assert_eq!(activity, Activity::Navigating);
         
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("cd /path/to/dir".to_string()),
-            &None,
+            None,
+            Some("cd /path/to/dir"),
+            None,
         );
         assert_eq!(activity, Activity::Navigating);
 
         // Generic execution
         let (activity, _) = determine_activity(
             "Bash",
-            &None,
-            &Some("echo hello".to_string()),
-            &None,
+            None,
+            Some("echo hello"),
+            None,
         );
         assert_eq!(activity, Activity::Executing);
     }
@@ -742,9 +785,9 @@ mod tests {
         // Test config file editing
         let (activity, job) = determine_activity(
             "Edit",
-            &Some("package.json".to_string()),
-            &None,
-            &None,
+            Some("package.json"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Configuring);
         assert_eq!(job, Some("package.json".to_string()));
@@ -752,9 +795,9 @@ mod tests {
         // Test code file editing
         let (activity, job) = determine_activity(
             "Edit",
-            &Some("main.rs".to_string()),
-            &None,
-            &None,
+            Some("main.rs"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Coding);
         assert_eq!(job, Some("main.rs".to_string()));
@@ -762,9 +805,9 @@ mod tests {
         // Test writing config files
         let (activity, job) = determine_activity(
             "Write",
-            &Some("Cargo.toml".to_string()),
-            &None,
-            &None,
+            Some("Cargo.toml"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Configuring);
         assert_eq!(job, Some("Cargo.toml".to_string()));
@@ -772,9 +815,9 @@ mod tests {
         // Test writing code files
         let (activity, job) = determine_activity(
             "Write",
-            &Some("component.tsx".to_string()),
-            &None,
-            &None,
+            Some("component.tsx"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Coding);
         assert_eq!(job, Some("component.tsx".to_string()));
@@ -782,9 +825,9 @@ mod tests {
         // Test regular markdown file (should fallback to default)
         let (activity, job) = determine_activity(
             "Edit",
-            &Some("README.md".to_string()),
-            &None,
-            &None,
+            Some("README.md"),
+            None,
+            None,
         );
         assert_eq!(activity, Activity::Editing);
         assert_eq!(job, Some("README.md".to_string()));

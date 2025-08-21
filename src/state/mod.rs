@@ -151,14 +151,6 @@ impl SessionState {
     }
     
     
-    /// Add a new activity to the recent activities list (keeping last 5)
-    #[allow(dead_code)]
-    pub fn add_recent_activity(&mut self, activity: Activity) {
-        self.recent_activities.push(activity);
-        if self.recent_activities.len() > 5 {
-            self.recent_activities.remove(0);
-        }
-    }
     
     
     
@@ -182,7 +174,7 @@ impl SessionState {
         Ok(())
     }
     
-    pub fn get_state_path(session_id: &str) -> PathBuf {
+    #[must_use] pub fn get_state_path(session_id: &str) -> PathBuf {
         PathBuf::from(format!("/tmp/claude_code_personalities_activity_{session_id}.json"))
     }
     
