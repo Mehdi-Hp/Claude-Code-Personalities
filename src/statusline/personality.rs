@@ -1,26 +1,37 @@
 use regex::Regex;
-use once_cell::sync::Lazy;
+use std::path::Path;
 
 use crate::state::SessionState;
 
+/// Helper function for case-insensitive extension checking
+fn has_extension(file: &str, extensions: &[&str]) -> bool {
+    let path = Path::new(file);
+    if let Some(ext) = path.extension() {
+        let ext_str = ext.to_string_lossy();
+        extensions.iter().any(|&expected| ext_str.eq_ignore_ascii_case(expected))
+    } else {
+        false
+    }
+}
+
 // Compiled regexes for better performance and error handling
-static BUILD_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"build|compile|make").expect("Invalid build regex"));
-static TEST_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"test|spec").expect("Invalid test regex"));
-static DEPLOY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bdeploy\b|docker-compose|rollout|release").expect("Invalid deploy regex"));
-static DATABASE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"database|sql|mongo|postgres|mysql|redis|sqlite").expect("Invalid database regex"));
-static PACKAGE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(npm|yarn|pip|cargo|gem|composer)\s+(install|add)\b").expect("Invalid package regex"));
-static NETWORK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"curl|wget|ping|ssh|scp").expect("Invalid network regex"));
-static FILE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(ls |cd |mkdir |rm |mv |cp |find |touch |tree |pwd |cat |less |more |head |tail )").expect("Invalid file regex"));
-static PROCESS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(ps |kill |killall |top|htop|jobs|fg |bg |nohup |pkill )").expect("Invalid process regex"));
-static SYSTEM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(df |du |free|uname|whoami|which |hostname|uptime|lscpu)").expect("Invalid system regex"));
-static ADMIN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(sudo |su |chmod |chown |systemctl |service |mount |umount )").expect("Invalid admin regex"));
-static PERMISSION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(chmod |chown |chgrp |umask |setfacl |getfacl )").expect("Invalid permission regex"));
-static TEXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(grep |sed |awk |sort |uniq |cut |tr |wc |diff )").expect("Invalid text regex"));
-static EDITOR_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(vim |nvim |nano |emacs |code |subl )").expect("Invalid editor regex"));
-static ARCHIVE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(tar |zip |unzip |gzip |gunzip |7z |rar )").expect("Invalid archive regex"));
-static ENV_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(export |source |echo |env|set |alias |history)").expect("Invalid env regex"));
-static VCS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(svn |hg |cvs |diff |patch )").expect("Invalid vcs regex"));
-static CONTAINER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(docker |podman |kubectl |helm |k9s )").expect("Invalid container regex"));
+static BUILD_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"build|compile|make").expect("Invalid build regex"));
+static TEST_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"test|spec").expect("Invalid test regex"));
+static DEPLOY_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\bdeploy\b|docker-compose|rollout|release").expect("Invalid deploy regex"));
+static DATABASE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"database|sql|mongo|postgres|mysql|redis|sqlite").expect("Invalid database regex"));
+static PACKAGE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\b(npm|yarn|pip|cargo|gem|composer)\s+(install|add)\b").expect("Invalid package regex"));
+static NETWORK_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"curl|wget|ping|ssh|scp").expect("Invalid network regex"));
+static FILE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(ls |cd |mkdir |rm |mv |cp |find |touch |tree |pwd |cat |less |more |head |tail )").expect("Invalid file regex"));
+static PROCESS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(ps |kill |killall |top|htop|jobs|fg |bg |nohup |pkill )").expect("Invalid process regex"));
+static SYSTEM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(df |du |free|uname|whoami|which |hostname|uptime|lscpu)").expect("Invalid system regex"));
+static ADMIN_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(sudo |su |chmod |chown |systemctl |service |mount |umount )").expect("Invalid admin regex"));
+static PERMISSION_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(chmod |chown |chgrp |umask |setfacl |getfacl )").expect("Invalid permission regex"));
+static TEXT_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(grep |sed |awk |sort |uniq |cut |tr |wc |diff )").expect("Invalid text regex"));
+static EDITOR_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(vim |nvim |nano |emacs |code |subl )").expect("Invalid editor regex"));
+static ARCHIVE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(tar |zip |unzip |gzip |gunzip |7z |rar )").expect("Invalid archive regex"));
+static ENV_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(export |source |echo |env|set |alias |history)").expect("Invalid env regex"));
+static VCS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(svn |hg |cvs |diff |patch )").expect("Invalid vcs regex"));
+static CONTAINER_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(docker |podman |kubectl |helm |k9s )").expect("Invalid container regex"));
 
 #[must_use] 
 pub fn determine_personality(
@@ -319,31 +330,23 @@ fn is_container_command(cmd: &str) -> bool {
 // File classification functions  
 fn is_doc_file(file: &str) -> bool {
     let file_lower = file.to_lowercase();
-    file_lower.contains("readme") || file_lower.ends_with(".md")
+    file_lower.contains("readme") || has_extension(file, &["md"])
 }
 
 fn is_ui_component_file(file: &str) -> bool {
-    let file_lower = file.to_lowercase();
-    file_lower.ends_with(".jsx") || file_lower.ends_with(".tsx") || file_lower.ends_with(".vue") || file_lower.ends_with(".svelte")
+    has_extension(file, &["jsx", "tsx", "vue", "svelte"])
 }
 
 fn is_js_file(file: &str) -> bool {
-    let file_lower = file.to_lowercase();
-    file_lower.ends_with(".js") || file_lower.ends_with(".ts")
+    has_extension(file, &["js", "ts"])
 }
 
 fn is_style_file(file: &str) -> bool {
-    let file_lower = file.to_lowercase();
-    file_lower.ends_with(".css") || file_lower.ends_with(".scss") || file_lower.ends_with(".sass") || 
-    file_lower.ends_with(".less") || file_lower.ends_with(".styl") || file_lower.ends_with(".stylus") || 
-    file_lower.ends_with(".postcss")
+    has_extension(file, &["css", "scss", "sass", "less", "styl", "stylus", "postcss"])
 }
 
 fn is_template_file(file: &str) -> bool {
-    let file_lower = file.to_lowercase();
-    file_lower.ends_with(".html") || file_lower.ends_with(".htm") || file_lower.ends_with(".ejs") || 
-    file_lower.ends_with(".handlebars") || file_lower.ends_with(".hbs") || file_lower.ends_with(".pug") || 
-    file_lower.ends_with(".jade") || file_lower.ends_with(".twig")
+    has_extension(file, &["html", "htm", "ejs", "handlebars", "hbs", "pug", "jade", "twig"])
 }
 
 fn is_auth_file(file: &str) -> bool {
@@ -353,8 +356,7 @@ fn is_auth_file(file: &str) -> bool {
 
 fn is_config_file(file: &str) -> bool {
     let file_lower = file.to_lowercase();
-    file_lower.contains("config") || file_lower.ends_with(".json") || 
-    file_lower.ends_with(".yaml") || file_lower.ends_with(".yml")
+    file_lower.contains("config") || has_extension(file, &["json", "yaml", "yml"])
 }
 
 fn is_performance_file(file: &str) -> bool {

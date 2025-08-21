@@ -3,7 +3,6 @@ use colored::Colorize;
 
 /// Custom error types for claude-code-personalities
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum PersonalityError {
     /// File I/O errors
     IO {
@@ -32,44 +31,6 @@ pub enum PersonalityError {
     },
 }
 
-impl PersonalityError {
-    #[allow(dead_code)]
-    pub fn io(operation: impl Into<String>, path: Option<impl Into<String>>, source: std::io::Error) -> Self {
-        Self::IO {
-            operation: operation.into(),
-            path: path.map(std::convert::Into::into),
-            source,
-            suggestion: None,
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn parsing(context: impl Into<String>, source: serde_json::Error) -> Self {
-        Self::Parsing {
-            context: context.into(),
-            input_preview: None,
-            source,
-            suggestion: None,
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn state(session_id: impl Into<String>, operation: impl Into<String>) -> Self {
-        Self::State {
-            session_id: session_id.into(),
-            operation: operation.into(),
-            suggestion: None,
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn system(message: impl Into<String>) -> Self {
-        Self::System {
-            message: message.into(),
-            suggestion: None,
-        }
-    }
-}
 
 impl fmt::Display for PersonalityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -161,6 +122,3 @@ impl std::error::Error for PersonalityError {
     }
 }
 
-/// Result type alias for convenience
-#[allow(dead_code)]
-pub type Result<T> = std::result::Result<T, PersonalityError>;
