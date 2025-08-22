@@ -65,6 +65,20 @@ claude-code-personalities help                # Show help with all options
 - Claude Code v1.0.60+
 - Nerd Fonts for icons (`brew install --cask font-hack-nerd-font`)
 
+## Platform Support
+
+### ✅ Supported Platforms
+- **macOS** (Intel & Apple Silicon)
+- **Linux** (x86_64 & ARM64)
+
+### ❌ Windows Not Supported
+**Windows is not currently supported** due to me not caring about development on windows:
+- Uses Unix-style paths (`~/.local/bin`, `/tmp`)
+- Relies on Unix file permissions
+- Hook system designed for Unix shells
+
+**Windows users:** Consider using WSL2 (Windows Subsystem for Linux) which provides full compatibility.
+
 ## Configuration
 
 Customize what appears in your statusline using the interactive configuration:

@@ -1,15 +1,15 @@
-use clap::{Arg, Command};
 use anyhow::Result;
+use clap::{Arg, Command};
 use colored::Colorize;
 
 mod cli;
-mod statusline;
-mod hooks;
-mod state;
 mod config;
-mod types;
 mod error;
+mod hooks;
 mod platform;
+mod state;
+mod statusline;
+mod types;
 mod version;
 
 #[tokio::main]
@@ -30,22 +30,10 @@ async fn run() -> Result<()> {
     let matches = Command::new("claude-code-personalities")
         .version(version::CURRENT_VERSION)
         .about("Dynamic text-face personalities for Claude Code's statusline")
-        .subcommand(
-            Command::new("install")
-                .about("Install Claude Code Personalities")
-        )
-        .subcommand(
-            Command::new("update")
-                .about("Update to the latest version")
-        )
-        .subcommand(
-            Command::new("uninstall")
-                .about("Remove Claude Code Personalities")
-        )
-        .subcommand(
-            Command::new("status")
-                .about("Check installation status")
-        )
+        .subcommand(Command::new("install").about("Install Claude Code Personalities"))
+        .subcommand(Command::new("update").about("Update to the latest version"))
+        .subcommand(Command::new("uninstall").about("Remove Claude Code Personalities"))
+        .subcommand(Command::new("status").about("Check installation status"))
         .subcommand(
             Command::new("check-update")
                 .about("Check for available updates")
@@ -54,25 +42,24 @@ async fn run() -> Result<()> {
                         .long("force")
                         .short('f')
                         .help("Force refresh from GitHub, bypassing cache")
-                        .action(clap::ArgAction::SetTrue)
-                )
+                        .action(clap::ArgAction::SetTrue),
+                ),
         )
         .subcommand(
-            Command::new("config")
-                .about("Configure Claude Code Personalities display options")
+            Command::new("config").about("Configure Claude Code Personalities display options"),
         )
         .arg(
             Arg::new("statusline")
                 .long("statusline")
                 .help("Run in statusline mode (called by Claude Code)")
-                .action(clap::ArgAction::SetTrue)
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("hook")
                 .long("hook")
                 .help("Run in hook mode")
                 .value_name("TYPE")
-                .value_parser(["pre-tool", "post-tool", "prompt-submit", "session-end"])
+                .value_parser(["pre-tool", "post-tool", "prompt-submit", "session-end"]),
         )
         .get_matches();
 
@@ -91,7 +78,7 @@ async fn run() -> Result<()> {
             Some(("check-update", sub_matches)) => {
                 let force = sub_matches.get_flag("force");
                 cli::check_update_with_force(force).await
-            },
+            }
             Some(("config", _)) => cli::configure().await,
             _ => cli::help(),
         }
