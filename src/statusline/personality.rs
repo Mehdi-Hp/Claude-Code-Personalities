@@ -8,32 +8,74 @@ fn has_extension(file: &str, extensions: &[&str]) -> bool {
     let path = Path::new(file);
     if let Some(ext) = path.extension() {
         let ext_str = ext.to_string_lossy();
-        extensions.iter().any(|&expected| ext_str.eq_ignore_ascii_case(expected))
+        extensions
+            .iter()
+            .any(|&expected| ext_str.eq_ignore_ascii_case(expected))
     } else {
         false
     }
 }
 
 // Compiled regexes for better performance and error handling
-static BUILD_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"build|compile|make").expect("Invalid build regex"));
-static TEST_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"test|spec").expect("Invalid test regex"));
-static DEPLOY_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\bdeploy\b|docker-compose|rollout|release").expect("Invalid deploy regex"));
-static DATABASE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"database|sql|mongo|postgres|mysql|redis|sqlite").expect("Invalid database regex"));
-static PACKAGE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\b(npm|yarn|pip|cargo|gem|composer)\s+(install|add)\b").expect("Invalid package regex"));
-static NETWORK_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"curl|wget|ping|ssh|scp").expect("Invalid network regex"));
-static FILE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(ls |cd |mkdir |rm |mv |cp |find |touch |tree |pwd |cat |less |more |head |tail )").expect("Invalid file regex"));
-static PROCESS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(ps |kill |killall |top|htop|jobs|fg |bg |nohup |pkill )").expect("Invalid process regex"));
-static SYSTEM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(df |du |free|uname|whoami|which |hostname|uptime|lscpu)").expect("Invalid system regex"));
-static ADMIN_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(sudo |su |chmod |chown |systemctl |service |mount |umount )").expect("Invalid admin regex"));
-static PERMISSION_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(chmod |chown |chgrp |umask |setfacl |getfacl )").expect("Invalid permission regex"));
-static TEXT_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(grep |sed |awk |sort |uniq |cut |tr |wc |diff )").expect("Invalid text regex"));
-static EDITOR_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(vim |nvim |nano |emacs |code |subl )").expect("Invalid editor regex"));
-static ARCHIVE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(tar |zip |unzip |gzip |gunzip |7z |rar )").expect("Invalid archive regex"));
-static ENV_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(export |source |echo |env|set |alias |history)").expect("Invalid env regex"));
-static VCS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(svn |hg |cvs |diff |patch )").expect("Invalid vcs regex"));
-static CONTAINER_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"^(docker |podman |kubectl |helm |k9s )").expect("Invalid container regex"));
+static BUILD_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"build|compile|make").expect("Invalid build regex"));
+static TEST_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"test|spec").expect("Invalid test regex"));
+static DEPLOY_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"\bdeploy\b|docker-compose|rollout|release").expect("Invalid deploy regex")
+});
+static DATABASE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"database|sql|mongo|postgres|mysql|redis|sqlite").expect("Invalid database regex")
+});
+static PACKAGE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"\b(npm|yarn|pip|cargo|gem|composer)\s+(install|add)\b")
+        .expect("Invalid package regex")
+});
+static NETWORK_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"curl|wget|ping|ssh|scp").expect("Invalid network regex")
+});
+static FILE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(
+        r"^(ls |cd |mkdir |rm |mv |cp |find |touch |tree |pwd |cat |less |more |head |tail )",
+    )
+    .expect("Invalid file regex")
+});
+static PROCESS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(ps |kill |killall |top|htop|jobs|fg |bg |nohup |pkill )")
+        .expect("Invalid process regex")
+});
+static SYSTEM_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(df |du |free|uname|whoami|which |hostname|uptime|lscpu)")
+        .expect("Invalid system regex")
+});
+static ADMIN_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(sudo |su |chmod |chown |systemctl |service |mount |umount )")
+        .expect("Invalid admin regex")
+});
+static PERMISSION_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(chmod |chown |chgrp |umask |setfacl |getfacl )")
+        .expect("Invalid permission regex")
+});
+static TEXT_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(grep |sed |awk |sort |uniq |cut |tr |wc |diff )").expect("Invalid text regex")
+});
+static EDITOR_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(vim |nvim |nano |emacs |code |subl )").expect("Invalid editor regex")
+});
+static ARCHIVE_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(tar |zip |unzip |gzip |gunzip |7z |rar )").expect("Invalid archive regex")
+});
+static ENV_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(export |source |echo |env|set |alias |history)").expect("Invalid env regex")
+});
+static VCS_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(svn |hg |cvs |diff |patch )").expect("Invalid vcs regex")
+});
+static CONTAINER_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^(docker |podman |kubectl |helm |k9s )").expect("Invalid container regex")
+});
 
-#[must_use] 
+#[must_use]
 pub fn determine_personality(
     state: &SessionState,
     tool_name: &str,
@@ -44,22 +86,22 @@ pub fn determine_personality(
     if let Some(frustration_personality) = get_frustration_personality(state.error_count) {
         return frustration_personality;
     }
-    
+
     // Check tool-specific personalities (only high-priority ones like Bash git commands, Grep)
     if let Some(tool_personality) = get_tool_personality(tool_name, command) {
         return tool_personality;
     }
-    
+
     // Check file-type specific personalities
     if let Some(file_personality) = get_file_personality(file_path) {
         return file_personality;
     }
-    
+
     // Check consecutive action patterns
     if let Some(pattern_personality) = get_pattern_personality(state) {
         return pattern_personality;
     }
-    
+
     // Default tool personalities (lowest priority)
     get_default_tool_personality(tool_name, state)
 }
@@ -102,92 +144,92 @@ fn get_bash_personality(command: &str) -> Option<String> {
     if command.starts_with("git ") {
         return Some("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager".to_string());
     }
-    
+
     // Test execution
     if is_test_command(command) {
         return Some("( ദ്ദി ˙ᗜ˙ ) Test Taskmaster".to_string());
     }
-    
+
     // Deployment/Infrastructure
     if is_deploy_command(command) {
         return Some("( ͡ _ ͡°)ﾉ⚲ Deployment Guard".to_string());
     }
-    
+
     // Database operations
     if is_database_command(command) {
         return Some("⚆_⚆ Database Expert".to_string());
     }
-    
+
     // Build/compilation
     if is_build_command(command) {
         return Some("ᕦ(ò_óˇ)ᕤ Compilation Warrior".to_string());
     }
-    
+
     // Package management
     if is_package_command(command) {
         return Some("^⎚-⎚^ Dependency Wrangler".to_string());
     }
-    
+
     // File operations
     if is_file_command(command) {
         return Some("ᓚ₍ ^. .^₎ File Explorer".to_string());
     }
-    
+
     // Process management
     if is_process_command(command) {
         return Some("(╬ ಠ益ಠ) Task Assassin".to_string());
     }
-    
+
     // Network operations
     if is_network_command(command) {
         return Some("(╭ರ_ಠ) Network Sentinel".to_string());
     }
-    
+
     // System monitoring
     if is_system_command(command) {
         return Some("(◉_◉) System Detective".to_string());
     }
-    
+
     // System administration
     if is_admin_command(command) {
         return Some("( ͡ಠ ʖ̯ ͡ಠ) System Admin".to_string());
     }
-    
+
     // Permissions
     if is_permission_command(command) {
         return Some("(╯‵□′)╯ Permission Police".to_string());
     }
-    
+
     // Text processing
     if is_text_command(command) {
         return Some("(˘▾˘~) String Surgeon".to_string());
     }
-    
+
     // Editors
     if is_editor_command(command) {
         return Some("( . .)φ Editor User".to_string());
     }
-    
+
     // Archive/Compression
     if is_archive_command(command) {
         return Some("(っ˘ڡ˘ς) Compression Chef".to_string());
     }
-    
+
     // Environment/Shell
     if is_env_command(command) {
         return Some("(∗´ര ᎑ ര`∗) Environment Enchanter".to_string());
     }
-    
+
     // Version control (non-git)
     if is_vcs_command(command) {
         return Some("(╯︵╰,) Code Historian".to_string());
     }
-    
+
     // Container/Orchestration
     if is_container_command(command) {
         return Some("(づ｡◕‿‿◕｡)づ Container Captain".to_string());
     }
-    
+
     None
 }
 
@@ -197,52 +239,52 @@ fn get_grep_personality() -> String {
 
 fn get_file_personality(file_path: Option<&str>) -> Option<String> {
     let file = file_path?;
-    
+
     // Auth/Security files (higher priority)
     if is_auth_file(file) {
         return Some("ಠ_ಠ Security Analyst".to_string());
     }
-    
+
     // Performance files (higher priority)
     if is_performance_file(file) {
         return Some("★⌒ヽ( ͡° ε ͡°) Performance Tuner".to_string());
     }
-    
+
     // Quality/Lint files (higher priority)
     if is_quality_file(file) {
         return Some("৻( •̀ ᗜ •́ ৻) Quality Auditor".to_string());
     }
-    
+
     // Documentation
     if is_doc_file(file) {
         return Some("φ(．．) Documentation Writer".to_string());
     }
-    
+
     // React/Vue/Svelte components
     if is_ui_component_file(file) {
         return Some("(✿◠ᴗ◠) UI Developer".to_string());
     }
-    
+
     // CSS and styling files
     if is_style_file(file) {
         return Some("♥‿♥ Style Artist".to_string());
     }
-    
+
     // HTML and templates
     if is_template_file(file) {
         return Some("<(￣︶￣)> Markup Wizard".to_string());
     }
-    
+
     // Config files
     if is_config_file(file) {
         return Some("(๑>؂•̀๑) Config Helper".to_string());
     }
-        
+
     // JavaScript/TypeScript files (lower priority)
     if is_js_file(file) {
         return Some("(▀̿Ĺ̯▀̿ ̿) JS Master".to_string());
     }
-    
+
     None
 }
 
@@ -253,10 +295,9 @@ fn get_pattern_personality(state: &SessionState) -> Option<String> {
     } else if state.consecutive_actions > 10 {
         return Some("┌༼◉ل͟◉༽┐ Hyperfocused Coder".to_string());
     }
-    
+
     None
 }
-
 
 // Command classification functions
 fn is_test_command(cmd: &str) -> bool {
@@ -327,7 +368,7 @@ fn is_container_command(cmd: &str) -> bool {
     CONTAINER_REGEX.is_match(cmd)
 }
 
-// File classification functions  
+// File classification functions
 fn is_doc_file(file: &str) -> bool {
     let file_lower = file.to_lowercase();
     file_lower.contains("readme") || has_extension(file, &["md"])
@@ -342,11 +383,26 @@ fn is_js_file(file: &str) -> bool {
 }
 
 fn is_style_file(file: &str) -> bool {
-    has_extension(file, &["css", "scss", "sass", "less", "styl", "stylus", "postcss"])
+    has_extension(
+        file,
+        &["css", "scss", "sass", "less", "styl", "stylus", "postcss"],
+    )
 }
 
 fn is_template_file(file: &str) -> bool {
-    has_extension(file, &["html", "htm", "ejs", "handlebars", "hbs", "pug", "jade", "twig"])
+    has_extension(
+        file,
+        &[
+            "html",
+            "htm",
+            "ejs",
+            "handlebars",
+            "hbs",
+            "pug",
+            "jade",
+            "twig",
+        ],
+    )
 }
 
 fn is_auth_file(file: &str) -> bool {
@@ -405,7 +461,7 @@ mod tests {
     #[test]
     fn test_git_operations() {
         let state = create_test_state(0, 0);
-        
+
         let personality = determine_personality(&state, "Bash", None, Some("git status"));
         assert_eq!(personality, "┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager");
 
@@ -609,7 +665,8 @@ mod tests {
 
         // Git should override file types
         let state = create_test_state(0, 0);
-        let personality = determine_personality(&state, "Bash", Some("test.js"), Some("git status"));
+        let personality =
+            determine_personality(&state, "Bash", Some("test.js"), Some("git status"));
         assert_eq!(personality, "┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager");
 
         // File types should override tool defaults

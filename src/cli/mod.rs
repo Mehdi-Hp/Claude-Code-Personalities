@@ -1,17 +1,17 @@
 use anyhow::Result;
 use colored::Colorize;
-use std::path::PathBuf;
 use inquire::MultiSelect;
+use std::path::PathBuf;
 
-use crate::statusline::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
 use crate::config::PersonalityPreferences;
+use crate::statusline::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
 use crate::version::CURRENT_VERSION;
 
 // Sub-modules
 pub mod install;
-pub mod update;
-pub mod uninstall;
 pub mod settings;
+pub mod uninstall;
+pub mod update;
 
 /// Install Claude Code Personalities with default options.
 ///
@@ -55,63 +55,83 @@ pub async fn uninstall() -> Result<()> {
 /// - Settings files cannot be read or parsed
 /// - Update checking fails due to network or API errors
 pub async fn status() -> Result<()> {
-    use anyhow::Context;
-    use crate::statusline::{ClaudeInput, build_statusline};
     use crate::state::SessionState;
-    
+    use crate::statusline::{ClaudeInput, build_statusline};
+    use anyhow::Context;
+
     println!("{}", "Claude Code Personalities Status".bold().blue());
     println!();
-    
-    let claude_dir = get_claude_dir()
-        .with_context(|| "Failed to determine Claude directory path")?;
+
+    let claude_dir =
+        get_claude_dir().with_context(|| "Failed to determine Claude directory path")?;
     let settings_file = claude_dir.join("settings.json");
-    
+
     // Check if Claude directory exists
     if claude_dir.exists() {
-        println!("{} Claude directory found: {}", ICON_CHECK.green(), claude_dir.display());
+        println!(
+            "{} Claude directory found: {}",
+            ICON_CHECK.green(),
+            claude_dir.display()
+        );
     } else {
-        println!("{} Claude directory not found: {}", ICON_ERROR.red(), claude_dir.display());
+        println!(
+            "{} Claude directory not found: {}",
+            ICON_ERROR.red(),
+            claude_dir.display()
+        );
     }
-    
+
     // Check if settings.json exists
     if settings_file.exists() {
         println!("{} Settings file found", ICON_CHECK.green());
-        
+
         // Use our settings module to check configuration
-        let settings = settings::ClaudeSettings::load().await
+        let settings = settings::ClaudeSettings::load()
+            .await
             .with_context(|| "Failed to load Claude settings")?;
         let summary = settings.get_configuration_summary();
-        
+
         if summary.is_fully_configured() {
             println!("{} Personalities fully configured", ICON_CHECK.green());
         } else if summary.has_personality_statusline {
-            println!("{} Personalities partially configured", ICON_WARNING.yellow());
+            println!(
+                "{} Personalities partially configured",
+                ICON_WARNING.yellow()
+            );
         } else {
-            println!("{} Personalities not configured in settings", ICON_WARNING.yellow());
+            println!(
+                "{} Personalities not configured in settings",
+                ICON_WARNING.yellow()
+            );
         }
     } else {
         println!("{} Settings file not found", ICON_ERROR.red());
     }
-    
+
     // Test statusline
     println!("\n{} Testing statusline output:", ICON_INFO.cyan());
     let test_input = r#"{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/test"},"session_id":"test"}"#;
-    
+
     // Simulate statusline output
     let claude_input: ClaudeInput = serde_json::from_str(test_input)
         .with_context(|| "Failed to parse test statusline input")?;
-    let session_id = claude_input.session_id.unwrap_or_else(|| "test".to_string());
-    let model_name = claude_input.model
+    let session_id = claude_input
+        .session_id
+        .unwrap_or_else(|| "test".to_string());
+    let model_name = claude_input
+        .model
         .and_then(|m| m.display_name)
         .unwrap_or_else(|| "Claude".to_string());
-    
-    let state = SessionState::load(&session_id).await
+
+    let state = SessionState::load(&session_id)
+        .await
         .with_context(|| format!("Failed to load test session state for session {session_id}"))?;
-    let prefs = PersonalityPreferences::load_or_default().await
+    let prefs = PersonalityPreferences::load_or_default()
+        .await
         .with_context(|| "Failed to load preferences for status test")?;
     let statusline = build_statusline(&state, &model_name, &prefs);
     println!("  Output: {statusline}");
-    
+
     Ok(())
 }
 
@@ -125,51 +145,61 @@ pub async fn status() -> Result<()> {
 /// - Network connectivity issues prevent update checking
 /// - Version parsing or comparison fails
 pub async fn check_update_with_force(force: bool) -> Result<()> {
-    use anyhow::Context;
     use crate::version::{VersionManager, format_version_comparison};
-    
+    use anyhow::Context;
+
     println!("{}", "Checking for updates...".bold().blue());
     println!();
-    
-    let version_manager = VersionManager::new()
-        .with_context(|| "Failed to initialize version manager")?;
-    
+
+    let version_manager =
+        VersionManager::new().with_context(|| "Failed to initialize version manager")?;
+
     if force {
         print_info("Force refresh enabled - bypassing cache...");
     } else {
         print_info("Checking latest version...");
     }
-    
+
     let update_info = if force {
-        version_manager.check_for_update_force().await
+        version_manager
+            .check_for_update_force()
+            .await
             .with_context(|| "Failed to check for updates (forced refresh)")?
     } else {
-        version_manager.check_for_update().await
+        version_manager
+            .check_for_update()
+            .await
             .with_context(|| "Failed to check for updates")?
     };
-    
+
     if let Some(release) = update_info {
-        let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
+        let latest_version = release
+            .tag_name
+            .strip_prefix('v')
+            .unwrap_or(&release.tag_name);
         let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
-        
+
         println!();
         println!("{} {}", "📦 Update Available:".bold().green(), comparison);
         if let Some(name) = &release.name {
             println!("{} {}", "📋 Release:".bold(), name);
         }
         println!();
-        println!("Run {} to update", "claude-code-personalities update".cyan());
+        println!(
+            "Run {} to update",
+            "claude-code-personalities update".cyan()
+        );
     } else {
         println!();
         println!("{} You are running the latest version!", ICON_CHECK.green());
         println!("Current version: v{CURRENT_VERSION}");
-        
+
         if !force {
             println!();
             print_info("Tip: Use --force to bypass cache and check GitHub directly");
         }
     }
-    
+
     Ok(())
 }
 
@@ -184,50 +214,53 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
 /// - File system operations fail during save
 pub async fn configure() -> Result<()> {
     use anyhow::Context;
-    
+
     println!("{}", "Configure Claude Code Personalities".bold().blue());
     println!("Select which elements to show in the statusline:\n");
-    
+
     // Load current preferences or defaults
-    let mut prefs = PersonalityPreferences::load_or_default().await
+    let mut prefs = PersonalityPreferences::load_or_default()
+        .await
         .with_context(|| "Failed to load current personality preferences")?;
-    
+
     // Get all options with their current states
     let options = prefs.get_options();
     let option_names: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
-    
+
     // Get indices of currently selected options
     let default_selections: Vec<usize> = options
         .iter()
         .enumerate()
         .filter_map(|(i, (_, enabled))| if *enabled { Some(i) } else { None })
         .collect();
-    
+
     // Show interactive multi-select prompt
     let selected = MultiSelect::new("Features to enable:", option_names.clone())
         .with_default(&default_selections)
         .prompt()
         .with_context(|| "Failed to get user preferences selection. Interactive prompt was cancelled or failed.")?;
-    
+
     // Update preferences based on selections
     prefs.update_from_selections(&selected);
-    
+
     // Save updated preferences
-    prefs.save().await
+    prefs
+        .save()
+        .await
         .with_context(|| "Failed to save updated personality preferences")?;
-    
+
     println!("\n{} Configuration saved successfully!", ICON_CHECK.green());
-    
+
     let prefs_path = PersonalityPreferences::get_preferences_path()
         .with_context(|| "Failed to get preferences file path for display")?;
     println!("Location: {}", prefs_path.display());
-    
+
     // Show what was enabled/disabled
     println!("\nEnabled features:");
     for feature in &selected {
         println!("  {} {}", ICON_CHECK.green(), feature);
     }
-    
+
     if selected.len() < option_names.len() {
         println!("\nDisabled features:");
         for option in &option_names {
@@ -236,9 +269,12 @@ pub async fn configure() -> Result<()> {
             }
         }
     }
-    
-    println!("\n{} Run your Claude Code session to see the changes!", ICON_INFO.cyan());
-    
+
+    println!(
+        "\n{} Run your Claude Code session to see the changes!",
+        ICON_INFO.cyan()
+    );
+
     Ok(())
 }
 
@@ -268,7 +304,7 @@ pub fn help() -> Result<()> {
     println!("  --hook TYPE   Run in hook mode (activity, prompt-submit, session-end)");
     println!();
     println!("This is the Rust rewrite - much faster than the bash version!");
-    
+
     Ok(())
 }
 

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::Local;
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
@@ -23,7 +23,7 @@ impl ClaudeSettings {
         let settings_path = get_claude_settings_path()?;
         Self::load_from_path(settings_path).await
     }
-    
+
     /// Load Claude settings from a specific file path.
     ///
     /// # Errors
@@ -34,21 +34,28 @@ impl ClaudeSettings {
     /// - Path conversion or file system operations fail
     pub async fn load_from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let settings_path = path.as_ref().to_path_buf();
-        
+
         let content = if settings_path.exists() {
-            let raw_content = fs::read_to_string(&settings_path).await
-                .with_context(|| format!("Failed to read Claude settings from {}", settings_path.display()))?;
-            
+            let raw_content = fs::read_to_string(&settings_path).await.with_context(|| {
+                format!(
+                    "Failed to read Claude settings from {}",
+                    settings_path.display()
+                )
+            })?;
+
             serde_json::from_str(&raw_content)
                 .with_context(|| "Failed to parse Claude settings JSON")?
         } else {
             // Create minimal default settings
             serde_json::json!({})
         };
-        
-        Ok(ClaudeSettings { settings_path, content })
+
+        Ok(ClaudeSettings {
+            settings_path,
+            content,
+        })
     }
-    
+
     /// Save the current settings back to the settings file.
     ///
     /// # Errors
@@ -60,19 +67,26 @@ impl ClaudeSettings {
     pub async fn save(&self) -> Result<()> {
         // Create .claude directory if it doesn't exist
         if let Some(parent) = self.settings_path.parent() {
-            fs::create_dir_all(parent).await
-                .with_context(|| format!("Failed to create Claude directory: {}", parent.display()))?;
+            fs::create_dir_all(parent).await.with_context(|| {
+                format!("Failed to create Claude directory: {}", parent.display())
+            })?;
         }
-        
+
         let pretty_json = serde_json::to_string_pretty(&self.content)
             .with_context(|| "Failed to serialize Claude settings to JSON")?;
-        
-        fs::write(&self.settings_path, pretty_json).await
-            .with_context(|| format!("Failed to write Claude settings to {}", self.settings_path.display()))?;
-        
+
+        fs::write(&self.settings_path, pretty_json)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to write Claude settings to {}",
+                    self.settings_path.display()
+                )
+            })?;
+
         Ok(())
     }
-    
+
     /// Create a timestamped backup of the current settings file.
     ///
     /// # Errors
@@ -84,22 +98,29 @@ impl ClaudeSettings {
     pub async fn create_backup(&self) -> Result<PathBuf> {
         if !self.settings_path.exists() {
             // No file to backup
-            return Err(anyhow!("Settings file does not exist, cannot create backup"));
+            return Err(anyhow!(
+                "Settings file does not exist, cannot create backup"
+            ));
         }
-        
+
         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
-        let backup_path = self.settings_path.with_extension(format!("json.backup.{timestamp}"));
-        
-        fs::copy(&self.settings_path, &backup_path).await
-            .with_context(|| format!(
-                "Failed to create backup: {} -> {}",
-                self.settings_path.display(),
-                backup_path.display()
-            ))?;
-        
+        let backup_path = self
+            .settings_path
+            .with_extension(format!("json.backup.{timestamp}"));
+
+        fs::copy(&self.settings_path, &backup_path)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to create backup: {} -> {}",
+                    self.settings_path.display(),
+                    backup_path.display()
+                )
+            })?;
+
         Ok(backup_path)
     }
-    
+
     /// Configure Claude Code to use personalities statusline.
     ///
     /// # Errors
@@ -114,11 +135,11 @@ impl ClaudeSettings {
             "args": ["--statusline"],
             "padding": 0
         });
-        
+
         self.content["statusLine"] = statusline_config;
         Ok(())
     }
-    
+
     /// Configure Claude Code hooks for personality tracking.
     ///
     /// This method merges personality hooks with existing hooks, preserving
@@ -133,36 +154,42 @@ impl ClaudeSettings {
     /// - JSON serialization of hook configuration fails
     /// - Existing hooks structure is malformed and cannot be parsed
     pub fn configure_hooks(&mut self, binary_path: &Path) -> Result<()> {
-        let binary_str = binary_path.to_str().ok_or_else(|| anyhow!("Invalid binary path"))?;
-        
+        let binary_str = binary_path
+            .to_str()
+            .ok_or_else(|| anyhow!("Invalid binary path"))?;
+
         // Get existing hooks or create new object
-        let hooks = self.content.get("hooks").cloned().unwrap_or_else(|| serde_json::json!({}));
+        let hooks = self
+            .content
+            .get("hooks")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
         let mut hooks_obj = match hooks {
             Value::Object(obj) => obj,
             _ => Map::new(),
         };
-        
+
         // Pre-tool and post-tool hooks for activity tracking
         let activity_hook = serde_json::json!({
             "type": "command",
             "command": binary_str,
             "args": ["--hook", "activity"]
         });
-        
+
         // Configure PreToolUse hook - merge with existing
         let pre_tool_personality_hook = serde_json::json!({
             "matcher": "*",
             "hooks": [activity_hook.clone()]
         });
         Self::merge_hook_array(&mut hooks_obj, "PreToolUse", pre_tool_personality_hook)?;
-        
+
         // Configure PostToolUse hook - merge with existing
         let post_tool_personality_hook = serde_json::json!({
             "matcher": "*",
             "hooks": [activity_hook]
         });
         Self::merge_hook_array(&mut hooks_obj, "PostToolUse", post_tool_personality_hook)?;
-        
+
         // User prompt submit hook for error reset - merge with existing
         let prompt_submit_personality_hook = serde_json::json!({
             "hooks": [{
@@ -171,8 +198,12 @@ impl ClaudeSettings {
                 "args": ["--hook", "prompt-submit"]
             }]
         });
-        Self::merge_hook_array(&mut hooks_obj, "UserPromptSubmit", prompt_submit_personality_hook)?;
-        
+        Self::merge_hook_array(
+            &mut hooks_obj,
+            "UserPromptSubmit",
+            prompt_submit_personality_hook,
+        )?;
+
         // Session end hook for cleanup - merge with existing
         let session_end_personality_hook = serde_json::json!({
             "matcher": "",
@@ -183,11 +214,11 @@ impl ClaudeSettings {
             }]
         });
         Self::merge_hook_array(&mut hooks_obj, "Stop", session_end_personality_hook)?;
-        
+
         self.content["hooks"] = Value::Object(hooks_obj);
         Ok(())
     }
-    
+
     /// Merge a personality hook into an existing hook array, preserving existing hooks.
     ///
     /// # Errors
@@ -201,17 +232,15 @@ impl ClaudeSettings {
         personality_hook: Value,
     ) -> Result<()> {
         let existing_hooks = hooks_obj.get(hook_type);
-        
+
         match existing_hooks {
             Some(Value::Array(existing_array)) => {
                 // Clone existing hooks and add our hook
                 let mut merged_hooks = existing_array.clone();
-                
+
                 // First remove any existing personality hooks to avoid duplicates
-                merged_hooks.retain(|hook| {
-                    !hook_contains_personality_command(hook)
-                });
-                
+                merged_hooks.retain(|hook| !hook_contains_personality_command(hook));
+
                 // Add our personality hook
                 merged_hooks.push(personality_hook);
                 hooks_obj.insert(hook_type.to_string(), Value::Array(merged_hooks));
@@ -219,7 +248,7 @@ impl ClaudeSettings {
             Some(_) => {
                 // Existing value is not an array - this is malformed, but we'll replace it
                 return Err(anyhow!(
-                    "Existing hooks configuration for {} is malformed (not an array)", 
+                    "Existing hooks configuration for {} is malformed (not an array)",
                     hook_type
                 ));
             }
@@ -228,10 +257,10 @@ impl ClaudeSettings {
                 hooks_obj.insert(hook_type.to_string(), Value::Array(vec![personality_hook]));
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Remove personality configuration from Claude settings
     ///
     /// # Panics
@@ -249,32 +278,31 @@ impl ClaudeSettings {
                 }
             }
         }
-        
+
         // Remove our hooks
         if let Some(Value::Object(hooks)) = self.content.get_mut("hooks") {
             // Remove hooks that contain our binary
             for hook_type in ["PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop"] {
                 if let Some(Value::Array(hook_array)) = hooks.get_mut(hook_type) {
-                    hook_array.retain(|hook_entry| {
-                        !hook_contains_personality_command(hook_entry)
-                    });
-                    
+                    hook_array.retain(|hook_entry| !hook_contains_personality_command(hook_entry));
+
                     // Remove the hook type entirely if no hooks remain
                     if hook_array.is_empty() {
                         hooks.remove(hook_type);
                     }
                 }
             }
-            
+
             // Remove hooks object if empty
             if hooks.is_empty() {
                 self.content.as_object_mut().unwrap().remove("hooks");
             }
         }
     }
-    
+
     /// Check if personalities are currently configured
-    #[must_use] pub fn is_personality_configured(&self) -> bool {
+    #[must_use]
+    pub fn is_personality_configured(&self) -> bool {
         // Check statusline
         if let Some(statusline) = self.content.get("statusLine") {
             if let Some(command) = statusline.get("command") {
@@ -285,7 +313,7 @@ impl ClaudeSettings {
                 }
             }
         }
-        
+
         // Check hooks
         if let Some(Value::Object(hooks)) = self.content.get("hooks") {
             for (_hook_type, hook_value) in hooks {
@@ -294,18 +322,19 @@ impl ClaudeSettings {
                 }
             }
         }
-        
+
         false
     }
-    
+
     /// Get a summary of current configuration
-    #[must_use] pub fn get_configuration_summary(&self) -> ConfigurationSummary {
+    #[must_use]
+    pub fn get_configuration_summary(&self) -> ConfigurationSummary {
         ConfigurationSummary {
             has_personality_statusline: self.is_personality_configured(),
             hook_types: self.get_configured_hook_types(),
         }
     }
-    
+
     /// Get list of configured hook types
     fn get_configured_hook_types(&self) -> Vec<String> {
         if let Some(Value::Object(hooks)) = self.content.get("hooks") {
@@ -323,8 +352,9 @@ pub struct ConfigurationSummary {
 }
 
 impl ConfigurationSummary {
-    #[must_use] pub fn is_fully_configured(&self) -> bool {
-        self.has_personality_statusline 
+    #[must_use]
+    pub fn is_fully_configured(&self) -> bool {
+        self.has_personality_statusline
             && self.hook_types.contains(&"PreToolUse".to_string())
             && self.hook_types.contains(&"PostToolUse".to_string())
             && self.hook_types.contains(&"UserPromptSubmit".to_string())
@@ -335,9 +365,7 @@ impl ConfigurationSummary {
 /// Check if a hook value contains our personality command
 fn hook_contains_personality_command(hook_value: &Value) -> bool {
     match hook_value {
-        Value::Array(arr) => {
-            arr.iter().any(hook_contains_personality_command)
-        }
+        Value::Array(arr) => arr.iter().any(hook_contains_personality_command),
         Value::Object(obj) => {
             if let Some(Value::Array(hooks)) = obj.get("hooks") {
                 return hooks.iter().any(|hook| {
@@ -366,8 +394,7 @@ fn hook_contains_personality_command(hook_value: &Value) -> bool {
 /// This function will return an error if:
 /// - The user's home directory cannot be determined
 pub fn get_claude_settings_path() -> Result<PathBuf> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| anyhow!("Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or_else(|| anyhow!("Could not find home directory"))?;
     Ok(home.join(".claude").join("settings.json"))
 }
 
@@ -378,23 +405,24 @@ pub fn get_claude_settings_path() -> Result<PathBuf> {
 /// This function will return an error if:
 /// - The user's home directory cannot be determined
 pub fn get_claude_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| anyhow!("Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or_else(|| anyhow!("Could not find home directory"))?;
     Ok(home.join(".claude"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::{NamedTempFile, TempDir};
     use std::io::Write;
+    use tempfile::{NamedTempFile, TempDir};
 
     #[tokio::test]
     async fn test_load_nonexistent_settings() {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
-        
-        let settings = ClaudeSettings::load_from_path(&settings_path).await.unwrap();
+
+        let settings = ClaudeSettings::load_from_path(&settings_path)
+            .await
+            .unwrap();
         assert_eq!(settings.content, serde_json::json!({}));
     }
 
@@ -407,11 +435,15 @@ mod tests {
                 "command": "echo test"
             }
         });
-        
-        temp_file.write_all(settings_content.to_string().as_bytes()).unwrap();
+
+        temp_file
+            .write_all(settings_content.to_string().as_bytes())
+            .unwrap();
         temp_file.flush().unwrap();
-        
-        let settings = ClaudeSettings::load_from_path(temp_file.path()).await.unwrap();
+
+        let settings = ClaudeSettings::load_from_path(temp_file.path())
+            .await
+            .unwrap();
         assert_eq!(settings.content["statusLine"]["command"], "echo test");
     }
 
@@ -419,14 +451,14 @@ mod tests {
     async fn test_save_settings() {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
-        
+
         let settings = ClaudeSettings {
             settings_path: settings_path.clone(),
             content: serde_json::json!({"test": "value"}),
         };
-        
+
         settings.save().await.unwrap();
-        
+
         // Verify file was created and has correct content
         assert!(settings_path.exists());
         let content = fs::read_to_string(&settings_path).await.unwrap();
@@ -439,14 +471,14 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/binary");
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: serde_json::json!({}),
         };
-        
+
         settings.configure_statusline(&binary_path).unwrap();
-        
+
         assert_eq!(settings.content["statusLine"]["type"], "command");
         assert_eq!(settings.content["statusLine"]["command"], "/path/to/binary");
         assert_eq!(settings.content["statusLine"]["padding"], 0);
@@ -457,27 +489,27 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/binary");
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: serde_json::json!({}),
         };
-        
+
         settings.configure_hooks(&binary_path).unwrap();
-        
+
         // Check that all required hooks are configured
         assert!(settings.content["hooks"]["PreToolUse"].is_array());
         assert!(settings.content["hooks"]["PostToolUse"].is_array());
         assert!(settings.content["hooks"]["UserPromptSubmit"].is_array());
         assert!(settings.content["hooks"]["Stop"].is_array());
     }
-    
+
     #[tokio::test]
     async fn test_configure_hooks_preserves_existing() {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/claude-code-personalities");
-        
+
         // Start with existing hooks configuration
         let existing_config = serde_json::json!({
             "hooks": {
@@ -491,7 +523,7 @@ mod tests {
                 "PostToolUse": [{
                     "matcher": "build*",
                     "hooks": [{
-                        "type": "command", 
+                        "type": "command",
                         "command": "notify-send"
                     }]
                 }],
@@ -503,67 +535,89 @@ mod tests {
                 }]
             }
         });
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: existing_config,
         };
-        
+
         // Configure personality hooks
         settings.configure_hooks(&binary_path).unwrap();
-        
+
         // Verify existing hooks are preserved
         let pre_tool_hooks = settings.content["hooks"]["PreToolUse"].as_array().unwrap();
-        let post_tool_hooks = settings.content["hooks"]["PostToolUse"].as_array().unwrap(); 
-        let prompt_submit_hooks = settings.content["hooks"]["UserPromptSubmit"].as_array().unwrap();
+        let post_tool_hooks = settings.content["hooks"]["PostToolUse"].as_array().unwrap();
+        let prompt_submit_hooks = settings.content["hooks"]["UserPromptSubmit"]
+            .as_array()
+            .unwrap();
         let stop_hooks = settings.content["hooks"]["Stop"].as_array().unwrap();
-        
+
         // Should have 2 hooks each for PreToolUse and PostToolUse (existing + personality)
         assert_eq!(pre_tool_hooks.len(), 2);
         assert_eq!(post_tool_hooks.len(), 2);
         assert_eq!(prompt_submit_hooks.len(), 2);
         assert_eq!(stop_hooks.len(), 1); // Only personality hook
-        
+
         // Check that existing pylint hook is preserved
         let has_pylint = pre_tool_hooks.iter().any(|hook| {
-            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.py") &&
-            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
-                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("pylint"))
-            })
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.py")
+                && hook
+                    .get("hooks")
+                    .and_then(|h| h.as_array())
+                    .is_some_and(|hooks| {
+                        hooks
+                            .iter()
+                            .any(|h| h.get("command").and_then(|c| c.as_str()) == Some("pylint"))
+                    })
         });
         assert!(has_pylint, "Existing pylint hook should be preserved");
-        
+
         // Check that existing notify-send hook is preserved
         let has_notify = post_tool_hooks.iter().any(|hook| {
-            hook.get("matcher").and_then(|m| m.as_str()) == Some("build*") &&
-            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
-                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("notify-send"))
-            })
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("build*")
+                && hook
+                    .get("hooks")
+                    .and_then(|h| h.as_array())
+                    .is_some_and(|hooks| {
+                        hooks.iter().any(|h| {
+                            h.get("command").and_then(|c| c.as_str()) == Some("notify-send")
+                        })
+                    })
         });
         assert!(has_notify, "Existing notify-send hook should be preserved");
-        
+
         // Check that personality hooks are added
         let has_personality_pre = pre_tool_hooks.iter().any(|hook| {
-            hook.get("matcher").and_then(|m| m.as_str()) == Some("*") &&
-            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
-                hooks.iter().any(|h| 
-                    h.get("command").and_then(|c| c.as_str()) == Some("/path/to/claude-code-personalities") &&
-                    h.get("args").and_then(|a| a.as_array()).is_some_and(|args| 
-                        args.first().and_then(|arg| arg.as_str()) == Some("--hook") &&
-                        args.get(1).and_then(|arg| arg.as_str()) == Some("activity")
-                    )
-                )
-            })
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*")
+                && hook
+                    .get("hooks")
+                    .and_then(|h| h.as_array())
+                    .is_some_and(|hooks| {
+                        hooks.iter().any(|h| {
+                            h.get("command").and_then(|c| c.as_str())
+                                == Some("/path/to/claude-code-personalities")
+                                && h.get("args")
+                                    .and_then(|a| a.as_array())
+                                    .is_some_and(|args| {
+                                        args.first().and_then(|arg| arg.as_str()) == Some("--hook")
+                                            && args.get(1).and_then(|arg| arg.as_str())
+                                                == Some("activity")
+                                    })
+                        })
+                    })
         });
-        assert!(has_personality_pre, "Personality PreToolUse hook should be added");
+        assert!(
+            has_personality_pre,
+            "Personality PreToolUse hook should be added"
+        );
     }
-    
-    #[tokio::test] 
+
+    #[tokio::test]
     async fn test_configure_hooks_removes_duplicate_personality_hooks() {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/claude-code-personalities");
-        
+
         // Start with existing personality hooks (duplicate scenario)
         let existing_config = serde_json::json!({
             "hooks": {
@@ -583,54 +637,63 @@ mod tests {
                 }]
             }
         });
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: existing_config,
         };
-        
+
         // Configure personality hooks again (should remove duplicates)
         settings.configure_hooks(&binary_path).unwrap();
-        
+
         let pre_tool_hooks = settings.content["hooks"]["PreToolUse"].as_array().unwrap();
-        
+
         // Should have 2 hooks: eslint + new personality (old personality removed)
         assert_eq!(pre_tool_hooks.len(), 2);
-        
+
         // Count personality hooks - should be exactly 1
-        let personality_hook_count = pre_tool_hooks.iter().filter(|hook| {
-            hook_contains_personality_command(hook)
-        }).count();
-        assert_eq!(personality_hook_count, 1, "Should have exactly 1 personality hook after deduplication");
-        
+        let personality_hook_count = pre_tool_hooks
+            .iter()
+            .filter(|hook| hook_contains_personality_command(hook))
+            .count();
+        assert_eq!(
+            personality_hook_count, 1,
+            "Should have exactly 1 personality hook after deduplication"
+        );
+
         // Verify eslint hook is preserved
         let has_eslint = pre_tool_hooks.iter().any(|hook| {
-            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.js") &&
-            hook.get("hooks").and_then(|h| h.as_array()).is_some_and(|hooks| {
-                hooks.iter().any(|h| h.get("command").and_then(|c| c.as_str()) == Some("eslint"))
-            })
+            hook.get("matcher").and_then(|m| m.as_str()) == Some("*.js")
+                && hook
+                    .get("hooks")
+                    .and_then(|h| h.as_array())
+                    .is_some_and(|hooks| {
+                        hooks
+                            .iter()
+                            .any(|h| h.get("command").and_then(|c| c.as_str()) == Some("eslint"))
+                    })
         });
         assert!(has_eslint, "Existing eslint hook should be preserved");
     }
-    
+
     #[tokio::test]
     async fn test_configure_hooks_handles_malformed_hooks() {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/binary");
-        
+
         // Start with malformed hooks (not an array)
         let malformed_config = serde_json::json!({
             "hooks": {
                 "PreToolUse": "not-an-array"
             }
         });
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: malformed_config,
         };
-        
+
         // Should return an error for malformed hooks
         let result = settings.configure_hooks(&binary_path);
         assert!(result.is_err());
@@ -642,19 +705,19 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/claude-code-personalities");
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: serde_json::json!({}),
         };
-        
+
         // Initially not configured
         assert!(!settings.is_personality_configured());
-        
+
         // Configure statusline
         settings.configure_statusline(&binary_path).unwrap();
         assert!(settings.is_personality_configured());
-        
+
         // Configure hooks too
         settings.configure_hooks(&binary_path).unwrap();
         assert!(settings.is_personality_configured());
@@ -665,17 +728,17 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/claude-code-personalities");
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: serde_json::json!({}),
         };
-        
+
         // Configure personalities
         settings.configure_statusline(&binary_path).unwrap();
         settings.configure_hooks(&binary_path).unwrap();
         assert!(settings.is_personality_configured());
-        
+
         // Remove configuration
         settings.remove_personality_config();
         assert!(!settings.is_personality_configured());
@@ -686,19 +749,19 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let settings_path = temp_dir.path().join("settings.json");
         let binary_path = PathBuf::from("/path/to/claude-code-personalities");
-        
+
         let mut settings = ClaudeSettings {
             settings_path,
             content: serde_json::json!({}),
         };
-        
+
         let summary = settings.get_configuration_summary();
         assert!(!summary.is_fully_configured());
-        
+
         // Configure everything
         settings.configure_statusline(&binary_path).unwrap();
         settings.configure_hooks(&binary_path).unwrap();
-        
+
         let summary = settings.get_configuration_summary();
         assert!(summary.is_fully_configured());
         assert!(summary.has_personality_statusline);
@@ -717,7 +780,7 @@ mod tests {
             }]
         }]);
         assert!(hook_contains_personality_command(&hook_array));
-        
+
         // Test with object hook structure
         let hook_obj = serde_json::json!({
             "type": "command",
@@ -725,7 +788,7 @@ mod tests {
             "args": ["--hook", "activity"]
         });
         assert!(hook_contains_personality_command(&hook_obj));
-        
+
         // Test with non-personality command
         let other_hook = serde_json::json!({
             "type": "command",
