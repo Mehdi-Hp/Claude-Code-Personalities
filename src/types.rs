@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 
 /// Activity types that Claude can be performing
@@ -65,7 +65,7 @@ impl Display for Activity {
 
 impl FromStr for Activity {
     type Err = ();
-    
+
     /// Convert from string (case-insensitive)
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
@@ -91,9 +91,8 @@ impl FromStr for Activity {
 
 impl Activity {
     /// Convert from string (case-insensitive) - convenience method
-    #[must_use] pub fn parse_activity(s: &str) -> Self {
+    #[must_use]
+    pub fn parse_activity(s: &str) -> Self {
         s.parse().unwrap_or(Activity::Working)
     }
 }
-
-
