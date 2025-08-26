@@ -4,7 +4,7 @@ use inquire::MultiSelect;
 use std::path::PathBuf;
 
 use crate::config::PersonalityPreferences;
-use crate::statusline::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
+use crate::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
 use crate::version::CURRENT_VERSION;
 
 // Sub-modules
