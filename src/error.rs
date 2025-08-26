@@ -1,6 +1,8 @@
 use colored::Colorize;
 use std::fmt;
 
+use crate::icons::{ICON_ERROR, ICON_LIGHTBULB};
+
 /// Custom error types for claude-code-personalities
 #[derive(Debug)]
 pub enum PersonalityError {
@@ -34,9 +36,7 @@ pub enum PersonalityError {
 
 impl fmt::Display for PersonalityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Nerd Font icons using UTF-8 byte sequences
-        const ERROR_ICON: &str = "\u{f057}"; // 
-        const LIGHTBULB_ICON: &str = "\u{f0eb}"; // 
+        // Use centralized icons
 
         match self {
             PersonalityError::IO {
@@ -49,7 +49,7 @@ impl fmt::Display for PersonalityError {
                     writeln!(
                         f,
                         "{} {}: Failed to {} {}",
-                        ERROR_ICON.red(),
+                        ICON_ERROR.red(),
                         "File Error".red().bold(),
                         operation,
                         path.blue()
@@ -58,7 +58,7 @@ impl fmt::Display for PersonalityError {
                     writeln!(
                         f,
                         "{} {}: Failed to {}",
-                        ERROR_ICON.red(),
+                        ICON_ERROR.red(),
                         "File Error".red().bold(),
                         operation
                     )?;
@@ -79,7 +79,7 @@ impl fmt::Display for PersonalityError {
                 writeln!(
                     f,
                     "{} {}: {}",
-                    ERROR_ICON.red(),
+                    ICON_ERROR.red(),
                     "Invalid Input".red().bold(),
                     context
                 )?;
@@ -108,7 +108,7 @@ impl fmt::Display for PersonalityError {
                 writeln!(
                     f,
                     "{} {}: Failed to {} for session {}",
-                    ERROR_ICON.red(),
+                    ICON_ERROR.red(),
                     "State Error".red().bold(),
                     operation,
                     session_id.blue()
@@ -120,7 +120,7 @@ impl fmt::Display for PersonalityError {
                     writeln!(
                         f,
                         "\n{} Try removing /tmp/claude_code_personalities_activity_*.json files",
-                        LIGHTBULB_ICON.yellow()
+                        ICON_LIGHTBULB.yellow()
                     )?;
                 }
             }
@@ -132,7 +132,7 @@ impl fmt::Display for PersonalityError {
                 writeln!(
                     f,
                     "{} {}: {}",
-                    ERROR_ICON.red(),
+                    ICON_ERROR.red(),
                     "System Error".red().bold(),
                     message
                 )?;
