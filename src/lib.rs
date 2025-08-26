@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod hooks;
 pub mod icons;
+pub mod kaomoji;
 pub mod platform;
 pub mod state;
 pub mod statusline;

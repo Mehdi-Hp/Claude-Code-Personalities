@@ -282,6 +282,7 @@ mod tests {
             consecutive_actions: 1,
             error_count: 0,
             recent_activities: Vec::new(),
+            mood: crate::state::MoodState::default(),
         }
     }
 

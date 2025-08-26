@@ -7,6 +7,7 @@ mod config;
 mod error;
 mod hooks;
 mod icons;
+mod kaomoji;
 mod platform;
 mod state;
 mod statusline;

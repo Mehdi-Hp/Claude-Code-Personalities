@@ -224,9 +224,16 @@ fn determine_activity(
         "Edit" | "MultiEdit" => {
             let job = file_path.map(|f| trim_filename(f, 20));
 
-            // Check if it's a config file
+            // Detect refactoring: MultiEdit usually indicates mass changes
+            if tool_name == "MultiEdit" {
+                return (Activity::Refactoring, job);
+            }
+
+            // Check file type for specific activities
             if let Some(path) = file_path {
-                if is_config_file(path) {
+                if is_documentation_file(path) {
+                    return (Activity::Documenting, job);
+                } else if is_config_file(path) {
                     return (Activity::Configuring, job);
                 } else if is_code_file(path) {
                     return (Activity::Coding, job);
@@ -238,9 +245,11 @@ fn determine_activity(
         "Write" => {
             let job = file_path.map(|f| trim_filename(f, 20));
 
-            // Check if it's a config file
+            // Check file type for specific activities
             if let Some(path) = file_path {
-                if is_config_file(path) {
+                if is_documentation_file(path) {
+                    return (Activity::Documenting, job);
+                } else if is_config_file(path) {
                     return (Activity::Configuring, job);
                 } else if is_code_file(path) {
                     return (Activity::Coding, job);
@@ -259,6 +268,8 @@ fn determine_activity(
                     (Activity::Building, job)
                 } else if is_test_command(cmd) {
                     (Activity::Testing, job)
+                } else if is_deploy_command(cmd) {
+                    (Activity::Deploying, job)
                 } else if is_file_navigation_command(cmd) {
                     (Activity::Navigating, job)
                 } else {
@@ -331,6 +342,46 @@ fn is_file_navigation_command(cmd: &str) -> bool {
         first_word,
         "ls" | "cd" | "pwd" | "find" | "tree" | "mkdir" | "rmdir" | "mv" | "cp" | "rm"
     )
+}
+
+fn is_deploy_command(cmd: &str) -> bool {
+    let cmd_lower = cmd.to_lowercase();
+    cmd_lower.contains("deploy")
+        || cmd_lower.contains("docker")
+        || cmd_lower.contains("kubectl")
+        || cmd_lower.contains("k8s")
+        || cmd_lower.contains("helm")
+        || cmd_lower.contains("terraform")
+        || cmd_lower.contains("ansible")
+        || cmd_lower.contains("serverless")
+        || cmd_lower.contains("sls ")
+        || cmd_lower.contains("vercel")
+        || cmd_lower.contains("netlify")
+        || cmd_lower.contains("heroku")
+        || cmd_lower.contains("aws ")
+        || cmd_lower.contains("gcloud")
+        || cmd_lower.contains("azure")
+}
+
+fn is_documentation_file(path: &str) -> bool {
+    let lowercase_path = path.to_lowercase();
+
+    // Documentation file patterns
+    if lowercase_path.contains("readme")
+        || lowercase_path.contains("docs/")
+        || lowercase_path.contains("documentation")
+        || lowercase_path.contains("guide")
+        || lowercase_path.contains("tutorial")
+        || lowercase_path.contains("changelog")
+        || lowercase_path.contains("license")
+        || lowercase_path.contains("contributing")
+        || lowercase_path.contains("api-")
+    {
+        return true;
+    }
+
+    // Documentation extensions
+    has_extension(path, &["md", "rst", "txt", "adoc", "asciidoc"])
 }
 
 fn is_config_file(path: &str) -> bool {
@@ -475,7 +526,7 @@ mod tests {
 
         // Write operations
         let (activity, job) = determine_activity("Write", Some("README.md"), None, None);
-        assert_eq!(activity, Activity::Writing);
+        assert_eq!(activity, Activity::Documenting); // README.md should be detected as documentation
         assert_eq!(job, Some("README.md".to_string()));
 
         // Bash operations
@@ -772,9 +823,9 @@ mod tests {
         assert_eq!(activity, Activity::Coding);
         assert_eq!(job, Some("component.tsx".to_string()));
 
-        // Test regular markdown file (should fallback to default)
+        // Test markdown file (should be detected as documenting)
         let (activity, job) = determine_activity("Edit", Some("README.md"), None, None);
-        assert_eq!(activity, Activity::Editing);
+        assert_eq!(activity, Activity::Documenting); // README.md should be documentation
         assert_eq!(job, Some("README.md".to_string()));
     }
 }

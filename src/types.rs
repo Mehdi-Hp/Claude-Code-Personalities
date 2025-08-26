@@ -37,6 +37,12 @@ pub enum Activity {
     Idle,
     /// Generic working state
     Working,
+    /// Refactoring code (mass changes, renames)
+    Refactoring,
+    /// Writing documentation
+    Documenting,
+    /// Deploying applications
+    Deploying,
 }
 
 impl Display for Activity {
@@ -58,6 +64,9 @@ impl Display for Activity {
             Activity::Installing => "installing",
             Activity::Idle => "idle",
             Activity::Working => "working",
+            Activity::Refactoring => "refactoring",
+            Activity::Documenting => "documenting",
+            Activity::Deploying => "deploying",
         };
         write!(f, "{s}")
     }
@@ -84,6 +93,9 @@ impl FromStr for Activity {
             "building" => Activity::Building,
             "installing" => Activity::Installing,
             "idle" => Activity::Idle,
+            "refactoring" => Activity::Refactoring,
+            "documenting" => Activity::Documenting,
+            "deploying" => Activity::Deploying,
             _ => Activity::Working,
         })
     }
