@@ -11,6 +11,7 @@ mod kaomoji;
 mod platform;
 mod state;
 mod statusline;
+mod theme;
 mod types;
 mod version;
 
@@ -53,6 +54,7 @@ async fn run() -> Result<()> {
                 .subcommand(
                     Command::new("display").about("Configure what appears in the statusline"),
                 )
+                .subcommand(Command::new("theme").about("Change color theme"))
                 .subcommand(Command::new("show").about("Show current configuration"))
                 .subcommand(Command::new("reset").about("Reset all settings to defaults"))
                 .subcommand(Command::new("export").about("Export configuration to a file"))

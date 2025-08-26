@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tokio::fs;
 
 use crate::error::PersonalityError;
+use crate::theme::Theme;
 
 type Result<T> = std::result::Result<T, PersonalityError>;
 
@@ -43,6 +44,10 @@ pub struct PersonalityPreferences {
     // Advanced configurations
     #[serde(default)]
     pub display: DisplayConfig,
+
+    // Theme configuration
+    #[serde(default)]
+    pub theme: Theme,
 }
 
 impl Default for PersonalityPreferences {
@@ -57,6 +62,7 @@ impl Default for PersonalityPreferences {
             use_icons: true,
             use_colors: true,
             display: DisplayConfig::default(),
+            theme: Theme::default(),
         }
     }
 }
@@ -168,6 +174,37 @@ impl PersonalityPreferences {
             ("Compact Mode", self.display.compact_mode),
             ("Show Debug Info", self.display.show_debug_info),
         ]
+    }
+
+    /// Get current theme name
+    #[must_use]
+    pub fn get_theme_name(&self) -> String {
+        self.theme.display_name().to_string()
+    }
+
+    /// Get current theme description
+    #[must_use]
+    pub fn get_theme_description(&self) -> String {
+        self.theme.description().to_string()
+    }
+
+    /// Set theme by name
+    pub fn set_theme_by_name(&mut self, theme_name: &str) -> Result<()> {
+        let theme = theme_name
+            .parse::<Theme>()
+            .map_err(|e| PersonalityError::Parsing {
+                context: "theme name".to_string(),
+                input_preview: Some(theme_name.to_string()),
+                source: serde_json::Error::io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    e,
+                )),
+                suggestion: Some(
+                    "Use a valid theme name like 'dark', 'light', 'solarized', etc.".to_string(),
+                ),
+            })?;
+        self.theme = theme;
+        Ok(())
     }
 
     /// Update preferences from a list of selected option names
