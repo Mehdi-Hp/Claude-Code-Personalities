@@ -169,24 +169,31 @@ impl ClaudeSettings {
             _ => Map::new(),
         };
 
-        // Pre-tool and post-tool hooks for activity tracking
-        let activity_hook = serde_json::json!({
+        // Pre-tool hook for activity tracking
+        let pre_tool_hook = serde_json::json!({
             "type": "command",
             "command": binary_str,
-            "args": ["--hook", "activity"]
+            "args": ["--hook", "pre-tool"]
+        });
+
+        // Post-tool hook for activity tracking
+        let post_tool_hook = serde_json::json!({
+            "type": "command",
+            "command": binary_str,
+            "args": ["--hook", "post-tool"]
         });
 
         // Configure PreToolUse hook - merge with existing
         let pre_tool_personality_hook = serde_json::json!({
             "matcher": "*",
-            "hooks": [activity_hook.clone()]
+            "hooks": [pre_tool_hook]
         });
         Self::merge_hook_array(&mut hooks_obj, "PreToolUse", pre_tool_personality_hook)?;
 
         // Configure PostToolUse hook - merge with existing
         let post_tool_personality_hook = serde_json::json!({
             "matcher": "*",
-            "hooks": [activity_hook]
+            "hooks": [post_tool_hook]
         });
         Self::merge_hook_array(&mut hooks_obj, "PostToolUse", post_tool_personality_hook)?;
 
@@ -600,8 +607,10 @@ mod tests {
                                     .and_then(|a| a.as_array())
                                     .is_some_and(|args| {
                                         args.first().and_then(|arg| arg.as_str()) == Some("--hook")
-                                            && args.get(1).and_then(|arg| arg.as_str())
-                                                == Some("activity")
+                                            && (args.get(1).and_then(|arg| arg.as_str())
+                                                == Some("pre-tool")
+                                                || args.get(1).and_then(|arg| arg.as_str())
+                                                    == Some("post-tool"))
                                     })
                         })
                     })

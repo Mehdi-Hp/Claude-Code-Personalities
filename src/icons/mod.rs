@@ -36,6 +36,9 @@ pub fn get_activity_icon(activity: &Activity) -> &'static str {
         Activity::Installing => ICON_INSTALLING,
         Activity::Idle => ICON_IDLE,
         Activity::Working => ICON_WORKING,
+        Activity::Refactoring => ICON_REFACTORING,
+        Activity::Documenting => ICON_DOCUMENTING,
+        Activity::Deploying => ICON_DEPLOYING,
     }
 }
 
@@ -99,6 +102,9 @@ mod tests {
         assert_eq!(get_activity_icon(&Activity::Installing), ICON_INSTALLING);
         assert_eq!(get_activity_icon(&Activity::Idle), ICON_IDLE);
         assert_eq!(get_activity_icon(&Activity::Working), ICON_WORKING);
+        assert_eq!(get_activity_icon(&Activity::Refactoring), ICON_REFACTORING);
+        assert_eq!(get_activity_icon(&Activity::Documenting), ICON_DOCUMENTING);
+        assert_eq!(get_activity_icon(&Activity::Deploying), ICON_DEPLOYING);
     }
 
     #[test]
