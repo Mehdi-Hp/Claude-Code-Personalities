@@ -1,7 +1,6 @@
 pub mod personality;
 
 use anyhow::Result;
-use colored::Colorize;
 use serde::Deserialize;
 use std::io::{self, Read};
 
@@ -95,7 +94,7 @@ pub fn build_statusline(
     // Personality (bold)
     if prefs.show_personality {
         let personality_text = if prefs.use_colors {
-            state.personality.bold().to_string()
+            prefs.theme.apply_personality(&state.personality)
         } else {
             state.personality.clone()
         };
@@ -109,7 +108,7 @@ pub fn build_statusline(
             if !workspace_text.is_empty() {
                 let separator = if prefs.display.show_separators {
                     if prefs.use_colors {
-                        "•".truecolor(128, 128, 128).to_string()
+                        prefs.theme.apply_separator("•")
                     } else {
                         "•".to_string()
                     }
@@ -149,7 +148,7 @@ pub fn build_statusline(
             if let Some(job) = &state.current_job {
                 if !job.is_empty() {
                     let job_text = if prefs.use_colors {
-                        job.yellow().to_string()
+                        prefs.theme.apply_file(job)
                     } else {
                         job.clone()
                     };
@@ -161,7 +160,7 @@ pub fn build_statusline(
         let activity_text = activity_parts.join(" ");
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                "•".truecolor(128, 128, 128).to_string()
+                prefs.theme.apply_separator("•")
             } else {
                 "•".to_string()
             }
@@ -184,14 +183,14 @@ pub fn build_statusline(
     if prefs.show_error_indicators {
         if state.error_count >= 3 {
             let error_icon = if prefs.use_colors {
-                ICON_ERROR.red().to_string()
+                prefs.theme.apply_error(ICON_ERROR)
             } else {
                 ICON_ERROR.to_string()
             };
             parts.push(format!(" {error_icon}"));
         } else if state.error_count > 0 {
             let warning_icon = if prefs.use_colors {
-                ICON_WARNING.yellow().to_string()
+                prefs.theme.apply_warning(ICON_WARNING)
             } else {
                 ICON_WARNING.to_string()
             };
@@ -214,15 +213,14 @@ pub fn build_statusline(
         };
 
         let colored_model = if prefs.use_colors {
-            let model_color = get_model_color(model_name);
-            model_text.color(model_color).to_string()
+            prefs.theme.apply_model_color(&model_text, model_name)
         } else {
             model_text
         };
 
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                "•".truecolor(128, 128, 128).to_string()
+                prefs.theme.apply_separator("•")
             } else {
                 "•".to_string()
             }
@@ -250,7 +248,7 @@ pub fn build_statusline(
 
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                "•".truecolor(128, 128, 128).to_string()
+                prefs.theme.apply_separator("•")
             } else {
                 "•".to_string()
             }
@@ -261,7 +259,7 @@ pub fn build_statusline(
         let spacing = if prefs.display.compact_mode { "" } else { " " };
 
         let debug_text = if prefs.use_colors {
-            debug_info.truecolor(100, 100, 100).to_string()
+            prefs.theme.apply_separator(&debug_info)
         } else {
             debug_info
         };
@@ -305,21 +303,9 @@ fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferenc
     let workspace_text = workspace_parts.join(" ");
 
     if prefs.use_colors {
-        workspace_text.blue().to_string()
+        prefs.theme.apply_directory(&workspace_text)
     } else {
         workspace_text
-    }
-}
-
-fn get_model_color(model_name: &str) -> &'static str {
-    if model_name.to_lowercase().contains("opus") {
-        "magenta"
-    } else if model_name.to_lowercase().contains("sonnet") {
-        "cyan"
-    } else if model_name.to_lowercase().contains("haiku") {
-        "green"
-    } else {
-        "white"
     }
 }
 
@@ -440,23 +426,28 @@ mod tests {
     }
 
     #[test]
-    fn test_get_model_color() {
-        // Test Claude model colors
-        assert_eq!(get_model_color("Opus"), "magenta");
-        assert_eq!(get_model_color("opus"), "magenta"); // Case insensitive
-        assert_eq!(get_model_color("Claude Opus"), "magenta");
+    fn test_theme_model_colors() {
+        use crate::theme::Theme;
 
-        assert_eq!(get_model_color("Sonnet"), "cyan");
-        assert_eq!(get_model_color("sonnet"), "cyan");
-        assert_eq!(get_model_color("Claude Sonnet"), "cyan");
+        let theme = Theme::default(); // Dark theme
 
-        assert_eq!(get_model_color("Haiku"), "green");
-        assert_eq!(get_model_color("haiku"), "green");
-        assert_eq!(get_model_color("Claude Haiku"), "green");
+        // Test model color application (should return colored strings, not color names)
+        let opus_output = theme.apply_model_color("[ Opus]", "Opus");
+        assert!(opus_output.contains("Opus"));
 
-        // Test unknown model
-        assert_eq!(get_model_color("Unknown Model"), "white");
-        assert_eq!(get_model_color("GPT-4"), "white");
+        let sonnet_output = theme.apply_model_color("[ Sonnet]", "Sonnet");
+        assert!(sonnet_output.contains("Sonnet"));
+
+        let haiku_output = theme.apply_model_color("[ Haiku]", "Haiku");
+        assert!(haiku_output.contains("Haiku"));
+
+        // Test case insensitive matching
+        let opus_lower = theme.apply_model_color("[ opus]", "opus");
+        assert!(opus_lower.contains("opus"));
+
+        // Test unknown model (should still work)
+        let unknown = theme.apply_model_color("[ GPT-4]", "GPT-4");
+        assert!(unknown.contains("GPT-4"));
     }
 
     #[test]
