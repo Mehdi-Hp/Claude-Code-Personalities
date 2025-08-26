@@ -17,9 +17,3 @@ pub const ICON_ERROR: &str = "\u{f057}"; // ❌
 
 /// Lightbulb for tips/suggestions
 pub const ICON_LIGHTBULB: &str = "\u{f0eb}"; // 
-
-/// General star icon for ratings/favorites
-pub const ICON_STAR: &str = "\u{f005}"; // ⭐
-
-/// North star for navigation/guidance (used for model icons currently)
-pub const ICON_NORTH_STAR: &str = "\u{f3f5}"; //
