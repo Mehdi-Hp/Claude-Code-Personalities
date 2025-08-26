@@ -83,7 +83,7 @@ pub async fn run_statusline() -> Result<()> {
         .with_context(|| "Failed to load personality preferences")?;
 
     // Use static renderer
-    let statusline = build_statusline(&state, &model_name, &prefs);
+    let statusline = build_statusline(&state, &model_name, &prefs, claude_input.workspace.as_ref());
 
     println!("{statusline}");
 
@@ -95,6 +95,7 @@ pub fn build_statusline(
     state: &SessionState,
     model_name: &str,
     prefs: &PersonalityPreferences,
+    workspace: Option<&WorkspaceInfo>,
 ) -> String {
     let mut parts = Vec::new();
 
@@ -106,6 +107,26 @@ pub fn build_statusline(
             state.personality.clone()
         };
         parts.push(personality_text);
+    }
+
+    // Workspace information
+    if prefs.show_current_dir {
+        if let Some(workspace) = workspace {
+            let workspace_text = format_workspace_info(workspace, prefs);
+            if !workspace_text.is_empty() {
+                let separator = if prefs.use_colors {
+                    "•".truecolor(128, 128, 128).to_string()
+                } else {
+                    "•".to_string()
+                };
+
+                if parts.is_empty() {
+                    parts.push(workspace_text);
+                } else {
+                    parts.push(format!(" {separator} {workspace_text}"));
+                }
+            }
+        }
     }
 
     // Activity with icon
@@ -206,6 +227,41 @@ pub fn build_statusline(
     parts.join("")
 }
 
+/// Format workspace information for display in statusline
+fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferences) -> String {
+    use crate::statusline::icons::ICON_FOLDER;
+
+    let mut workspace_parts = Vec::new();
+
+    // Add folder icon if using icons
+    if prefs.use_icons {
+        workspace_parts.push(ICON_FOLDER.to_string());
+    }
+
+    // Prefer project name from project_dir, fallback to current_dir
+    if let Some(project_dir) = &workspace.project_dir {
+        if let Some(project_name) = std::path::Path::new(project_dir).file_name() {
+            workspace_parts.push(project_name.to_string_lossy().to_string());
+        }
+    } else if let Some(current_dir) = &workspace.current_dir {
+        if let Some(dir_name) = std::path::Path::new(current_dir).file_name() {
+            workspace_parts.push(dir_name.to_string_lossy().to_string());
+        }
+    }
+
+    if workspace_parts.is_empty() {
+        return String::new();
+    }
+
+    let workspace_text = workspace_parts.join(" ");
+
+    if prefs.use_colors {
+        workspace_text.blue().to_string()
+    } else {
+        workspace_text
+    }
+}
+
 fn get_activity_icon(activity: &Activity) -> &'static str {
     match activity {
         Activity::Editing => ICON_EDITING,
@@ -269,7 +325,7 @@ mod tests {
     fn test_build_statusline_basic() {
         let state = create_test_state();
         let prefs = create_test_preferences();
-        let statusline = build_statusline(&state, "Opus", &prefs);
+        let statusline = build_statusline(&state, "Opus", &prefs, None);
 
         // Should contain personality (bold formatting is applied but we can't easily test ANSI codes)
         assert!(statusline.contains("ʕ•ᴥ•ʔ Code Wizard"));
@@ -291,7 +347,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         state.error_count = 1;
-        let statusline = build_statusline(&state, "Sonnet", &prefs);
+        let statusline = build_statusline(&state, "Sonnet", &prefs, None);
 
         // Should contain warning for 1 error
         assert!(statusline.contains(ICON_WARNING));
@@ -299,7 +355,7 @@ mod tests {
 
         // Test with many errors
         state.error_count = 5;
-        let statusline = build_statusline(&state, "Sonnet", &prefs);
+        let statusline = build_statusline(&state, "Sonnet", &prefs, None);
         assert!(statusline.contains(ICON_ERROR));
     }
 
@@ -308,7 +364,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         state.current_job = None;
-        let statusline = build_statusline(&state, "Haiku", &prefs);
+        let statusline = build_statusline(&state, "Haiku", &prefs, None);
 
         // Should contain activity but no job
         assert!(statusline.contains("editing"));
@@ -320,7 +376,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         state.current_job = Some(String::new());
-        let statusline = build_statusline(&state, "Haiku", &prefs);
+        let statusline = build_statusline(&state, "Haiku", &prefs, None);
 
         // Should treat empty job same as no job
         assert!(statusline.contains("editing"));
@@ -426,7 +482,7 @@ mod tests {
 
         for (activity, expected_icon) in activities {
             state.activity = activity.clone();
-            let statusline = build_statusline(&state, "Claude", &prefs);
+            let statusline = build_statusline(&state, "Claude", &prefs, None);
 
             // The icon should be in the statusline (though we can't easily test positioning)
             assert!(statusline.contains(expected_icon));
@@ -438,7 +494,7 @@ mod tests {
     fn test_statusline_formatting_structure() {
         let state = create_test_state();
         let prefs = create_test_preferences();
-        let statusline = build_statusline(&state, "TestModel", &prefs);
+        let statusline = build_statusline(&state, "TestModel", &prefs, None);
 
         // Should contain separators
         assert!(statusline.contains("•"));
@@ -460,7 +516,7 @@ mod tests {
         state.current_job =
             Some("very_long_filename_that_might_cause_display_issues.js".to_string());
 
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
 
         // Should handle long job names gracefully
         assert!(statusline.contains("very_long_filename_that_might_cause_display_issues.js"));
@@ -480,7 +536,7 @@ mod tests {
 
         for personality in personalities {
             state.personality = personality.to_string();
-            let statusline = build_statusline(&state, "Claude", &prefs);
+            let statusline = build_statusline(&state, "Claude", &prefs, None);
             assert!(statusline.contains(personality));
         }
     }
@@ -492,29 +548,29 @@ mod tests {
 
         // No errors
         state.error_count = 0;
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(!statusline.contains(ICON_ERROR));
         assert!(!statusline.contains(ICON_WARNING));
 
         // Low errors (warning)
         state.error_count = 1;
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(!statusline.contains(ICON_ERROR));
         assert!(statusline.contains(ICON_WARNING));
 
         state.error_count = 2;
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(!statusline.contains(ICON_ERROR));
         assert!(statusline.contains(ICON_WARNING));
 
         // High errors (error icon)
         state.error_count = 3;
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(statusline.contains(ICON_ERROR));
         assert!(!statusline.contains(ICON_WARNING));
 
         state.error_count = 10;
-        let statusline = build_statusline(&state, "Claude", &prefs);
+        let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(statusline.contains(ICON_ERROR));
         assert!(!statusline.contains(ICON_WARNING));
     }

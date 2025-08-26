@@ -129,7 +129,7 @@ pub async fn status() -> Result<()> {
     let prefs = PersonalityPreferences::load_or_default()
         .await
         .with_context(|| "Failed to load preferences for status test")?;
-    let statusline = build_statusline(&state, &model_name, &prefs);
+    let statusline = build_statusline(&state, &model_name, &prefs, None);
     println!("  Output: {statusline}");
 
     Ok(())

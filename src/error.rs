@@ -19,6 +19,7 @@ pub enum PersonalityError {
         suggestion: Option<String>,
     },
     /// Session state management errors
+    #[allow(dead_code)]
     State {
         session_id: String,
         operation: String,
