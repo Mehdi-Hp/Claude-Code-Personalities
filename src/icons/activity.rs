@@ -40,4 +40,13 @@ pub const ICON_INSTALLING: &str = "\u{f1c6}"; //
 pub const ICON_IDLE: &str = "\u{f236}"; // 
 
 /// Generic working state - Rocket icon
-pub const ICON_WORKING: &str = "\u{f135}"; //
+pub const ICON_WORKING: &str = "\u{f135}"; // 
+
+/// Refactoring code - Wrench icon
+pub const ICON_REFACTORING: &str = "\u{f0ad}"; // 
+
+/// Writing documentation - Book icon
+pub const ICON_DOCUMENTING: &str = "\u{f02d}"; // 
+
+/// Deploying applications - Cloud icon
+pub const ICON_DEPLOYING: &str = "\u{f0c2}"; //

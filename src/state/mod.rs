@@ -1,9 +1,71 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::fs;
 
 use crate::types::Activity;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoodState {
+    pub frustration_level: u8,        // 0-10, increases with errors
+    pub momentum: u8,                 // 0-10, consecutive successes
+    pub last_error_time: Option<u64>, // Unix timestamp
+}
+
+impl Default for MoodState {
+    fn default() -> Self {
+        Self {
+            frustration_level: 0,
+            momentum: 0,
+            last_error_time: None,
+        }
+    }
+}
+
+impl MoodState {
+    /// Update mood based on error occurrence
+    pub fn update(&mut self, had_error: bool) {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        if had_error {
+            self.frustration_level = (self.frustration_level + 2).min(10);
+            self.momentum = 0;
+            self.last_error_time = Some(now);
+        } else {
+            // Gradual frustration decay over time
+            if let Some(last_error) = self.last_error_time {
+                let minutes_since_error = (now - last_error) / 60;
+                if minutes_since_error > 5 {
+                    self.frustration_level = self.frustration_level.saturating_sub(1);
+                }
+            } else {
+                self.frustration_level = self.frustration_level.saturating_sub(1);
+            }
+
+            self.momentum = (self.momentum + 1).min(10);
+        }
+    }
+
+    /// Get personality modifier based on current mood
+    pub fn get_personality_modifier(&self) -> PersonalityModifier {
+        match (self.frustration_level, self.momentum) {
+            (6..=10, _) => PersonalityModifier::Frustrated,
+            (_, 8..=10) => PersonalityModifier::InTheZone,
+            _ => PersonalityModifier::Normal,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PersonalityModifier {
+    Frustrated,
+    InTheZone,
+    Normal,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
@@ -16,6 +78,8 @@ pub struct SessionState {
     pub error_count: u32,
     #[serde(default)]
     pub recent_activities: Vec<Activity>,
+    #[serde(default)]
+    pub mood: MoodState,
 }
 
 impl Default for SessionState {
@@ -29,6 +93,7 @@ impl Default for SessionState {
             consecutive_actions: 0,
             error_count: 0,
             recent_activities: Vec::new(),
+            mood: MoodState::default(),
         }
     }
 }
@@ -119,6 +184,9 @@ impl SessionState {
         self.current_job = current_job;
         self.personality = personality;
 
+        // Update mood for successful activity (no error)
+        self.mood.update(false);
+
         self.save().await.with_context(|| {
             format!(
                 "Failed to save updated activity for session {}",
@@ -139,6 +207,7 @@ impl SessionState {
         use anyhow::Context;
 
         self.error_count += 1;
+        self.mood.update(true); // Update mood for error
         self.save().await.with_context(|| {
             format!(
                 "Failed to save incremented error count for session {}",
@@ -255,6 +324,7 @@ mod tests {
             consecutive_actions: 5,
             error_count: 2,
             recent_activities: Vec::new(),
+            mood: MoodState::default(),
         };
 
         state.save().await.unwrap();
