@@ -6,9 +6,31 @@ use crate::error::PersonalityError;
 
 type Result<T> = std::result::Result<T, PersonalityError>;
 
+/// Advanced display configuration options
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DisplayConfig {
+    /// Show separator dots between elements
+    pub show_separators: bool,
+    /// Use compact mode (fewer spaces)
+    pub compact_mode: bool,
+    /// Show debugging info (error counts, session info)
+    pub show_debug_info: bool,
+}
+
+impl Default for DisplayConfig {
+    fn default() -> Self {
+        Self {
+            show_separators: true,
+            compact_mode: false,
+            show_debug_info: false,
+        }
+    }
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersonalityPreferences {
+    // Basic display toggles
     pub show_personality: bool,
     pub show_activity: bool,
     pub show_current_job: bool,
@@ -17,6 +39,10 @@ pub struct PersonalityPreferences {
     pub show_error_indicators: bool,
     pub use_icons: bool,
     pub use_colors: bool,
+
+    // Advanced configurations
+    #[serde(default)]
+    pub display: DisplayConfig,
 }
 
 impl Default for PersonalityPreferences {
@@ -30,6 +56,7 @@ impl Default for PersonalityPreferences {
             show_error_indicators: true,
             use_icons: true,
             use_colors: true,
+            display: DisplayConfig::default(),
         }
     }
 }
@@ -125,9 +152,9 @@ impl PersonalityPreferences {
         Ok(())
     }
 
-    /// Get a list of all preference options with their current values
+    /// Get a list of all basic display preference options with their current values
     #[must_use]
-    pub fn get_options(&self) -> Vec<(&'static str, bool)> {
+    pub fn get_display_options(&self) -> Vec<(&'static str, bool)> {
         vec![
             ("Show Personality", self.show_personality),
             ("Show Activity", self.show_activity),
@@ -137,7 +164,16 @@ impl PersonalityPreferences {
             ("Show Error Indicators", self.show_error_indicators),
             ("Use Icons", self.use_icons),
             ("Use Colors", self.use_colors),
+            ("Show Separators", self.display.show_separators),
+            ("Compact Mode", self.display.compact_mode),
+            ("Show Debug Info", self.display.show_debug_info),
         ]
+    }
+
+    /// Get a list of all preference options with their current values (backward compatibility)
+    #[must_use]
+    pub fn get_options(&self) -> Vec<(&'static str, bool)> {
+        self.get_display_options()
     }
 
     /// Update preferences from a list of selected option names
@@ -151,6 +187,9 @@ impl PersonalityPreferences {
         self.show_error_indicators = false;
         self.use_icons = false;
         self.use_colors = false;
+        self.display.show_separators = false;
+        self.display.compact_mode = false;
+        self.display.show_debug_info = false;
 
         // Set selected ones to true
         for selection in selections {
@@ -163,9 +202,17 @@ impl PersonalityPreferences {
                 "Show Error Indicators" => self.show_error_indicators = true,
                 "Use Icons" => self.use_icons = true,
                 "Use Colors" => self.use_colors = true,
+                "Show Separators" => self.display.show_separators = true,
+                "Compact Mode" => self.display.compact_mode = true,
+                "Show Debug Info" => self.display.show_debug_info = true,
                 _ => {} // Ignore unknown options
             }
         }
+    }
+
+    /// Reset all preferences to defaults
+    pub fn reset_to_defaults(&mut self) {
+        *self = Self::default();
     }
 }
 
@@ -192,7 +239,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_options();
 
-        assert_eq!(options.len(), 8);
+        assert_eq!(options.len(), 11); // Updated count for new display options
         assert!(options.iter().any(|(name, _)| *name == "Show Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Show Activity"));
         assert!(
@@ -217,6 +264,9 @@ mod tests {
         );
         assert!(options.iter().any(|(name, _)| *name == "Use Icons"));
         assert!(options.iter().any(|(name, _)| *name == "Use Colors"));
+        assert!(options.iter().any(|(name, _)| *name == "Show Separators"));
+        assert!(options.iter().any(|(name, _)| *name == "Compact Mode"));
+        assert!(options.iter().any(|(name, _)| *name == "Show Debug Info"));
     }
 
     #[test]
@@ -256,5 +306,27 @@ mod tests {
 
         assert!(loaded_prefs.show_current_dir);
         assert_eq!(loaded_prefs.show_personality, prefs.show_personality);
+    }
+
+    #[test]
+    fn test_reset_configurations() {
+        let mut prefs = PersonalityPreferences::default();
+
+        // Modify configurations
+        prefs.show_personality = false;
+        prefs.display.compact_mode = true;
+
+        // Test full reset
+        prefs.reset_to_defaults();
+        assert!(prefs.show_personality); // Back to default
+        assert!(!prefs.display.compact_mode); // Back to default
+    }
+
+    #[test]
+    fn test_display_config_defaults() {
+        let display = DisplayConfig::default();
+        assert!(display.show_separators);
+        assert!(!display.compact_mode);
+        assert!(!display.show_debug_info);
     }
 }

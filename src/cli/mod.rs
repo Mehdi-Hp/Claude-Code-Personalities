@@ -1,6 +1,5 @@
 use anyhow::Result;
 use colored::Colorize;
-use inquire::MultiSelect;
 use std::path::PathBuf;
 
 use crate::config::PersonalityPreferences;
@@ -8,6 +7,7 @@ use crate::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
 use crate::version::CURRENT_VERSION;
 
 // Sub-modules
+pub mod config;
 pub mod install;
 pub mod settings;
 pub mod uninstall;
@@ -205,6 +205,9 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
 
 /// Configure personality display preferences through interactive prompts.
 ///
+/// This is the legacy function that's now replaced by the new config subcommands.
+/// It calls the display configuration from the config module for backward compatibility.
+///
 /// # Errors
 ///
 /// This function will return an error if:
@@ -213,69 +216,7 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
 /// - Preferences cannot be saved after configuration
 /// - File system operations fail during save
 pub async fn configure() -> Result<()> {
-    use anyhow::Context;
-
-    println!("{}", "Configure Claude Code Personalities".bold().blue());
-    println!("Select which elements to show in the statusline:\n");
-
-    // Load current preferences or defaults
-    let mut prefs = PersonalityPreferences::load_or_default()
-        .await
-        .with_context(|| "Failed to load current personality preferences")?;
-
-    // Get all options with their current states
-    let options = prefs.get_options();
-    let option_names: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
-
-    // Get indices of currently selected options
-    let default_selections: Vec<usize> = options
-        .iter()
-        .enumerate()
-        .filter_map(|(i, (_, enabled))| if *enabled { Some(i) } else { None })
-        .collect();
-
-    // Show interactive multi-select prompt
-    let selected = MultiSelect::new("Features to enable:", option_names.clone())
-        .with_default(&default_selections)
-        .prompt()
-        .with_context(|| "Failed to get user preferences selection. Interactive prompt was cancelled or failed.")?;
-
-    // Update preferences based on selections
-    prefs.update_from_selections(&selected);
-
-    // Save updated preferences
-    prefs
-        .save()
-        .await
-        .with_context(|| "Failed to save updated personality preferences")?;
-
-    println!("\n{} Configuration saved successfully!", ICON_CHECK.green());
-
-    let prefs_path = PersonalityPreferences::get_preferences_path()
-        .with_context(|| "Failed to get preferences file path for display")?;
-    println!("Location: {}", prefs_path.display());
-
-    // Show what was enabled/disabled
-    println!("\nEnabled features:");
-    for feature in &selected {
-        println!("  {} {}", ICON_CHECK.green(), feature);
-    }
-
-    if selected.len() < option_names.len() {
-        println!("\nDisabled features:");
-        for option in &option_names {
-            if !selected.contains(option) {
-                println!("  {} {}", ICON_WARNING.yellow(), option);
-            }
-        }
-    }
-
-    println!(
-        "\n{} Run your Claude Code session to see the changes!",
-        ICON_INFO.cyan()
-    );
-
-    Ok(())
+    config::handle_config_command(Some("display")).await
 }
 
 /// Display help information and available commands.

@@ -107,16 +107,24 @@ pub fn build_statusline(
         if let Some(workspace) = workspace {
             let workspace_text = format_workspace_info(workspace, prefs);
             if !workspace_text.is_empty() {
-                let separator = if prefs.use_colors {
-                    "•".truecolor(128, 128, 128).to_string()
+                let separator = if prefs.display.show_separators {
+                    if prefs.use_colors {
+                        "•".truecolor(128, 128, 128).to_string()
+                    } else {
+                        "•".to_string()
+                    }
                 } else {
-                    "•".to_string()
+                    String::new()
                 };
+
+                let spacing = if prefs.display.compact_mode { "" } else { " " };
 
                 if parts.is_empty() {
                     parts.push(workspace_text);
+                } else if prefs.display.show_separators {
+                    parts.push(format!("{spacing}{separator}{spacing}{workspace_text}"));
                 } else {
-                    parts.push(format!(" {separator} {workspace_text}"));
+                    parts.push(format!("{spacing}{workspace_text}"));
                 }
             }
         }
@@ -151,16 +159,24 @@ pub fn build_statusline(
         }
 
         let activity_text = activity_parts.join(" ");
-        let separator = if prefs.use_colors {
-            "•".truecolor(128, 128, 128).to_string()
+        let separator = if prefs.display.show_separators {
+            if prefs.use_colors {
+                "•".truecolor(128, 128, 128).to_string()
+            } else {
+                "•".to_string()
+            }
         } else {
-            "•".to_string()
+            String::new()
         };
+
+        let spacing = if prefs.display.compact_mode { "" } else { " " };
 
         if parts.is_empty() {
             parts.push(activity_text);
+        } else if prefs.display.show_separators {
+            parts.push(format!("{spacing}{separator}{spacing}{activity_text}"));
         } else {
-            parts.push(format!(" {separator} {activity_text}"));
+            parts.push(format!("{spacing}{activity_text}"));
         }
     }
 
@@ -204,16 +220,58 @@ pub fn build_statusline(
             model_text
         };
 
-        let separator = if prefs.use_colors {
-            "•".truecolor(128, 128, 128).to_string()
+        let separator = if prefs.display.show_separators {
+            if prefs.use_colors {
+                "•".truecolor(128, 128, 128).to_string()
+            } else {
+                "•".to_string()
+            }
         } else {
-            "•".to_string()
+            String::new()
         };
+
+        let spacing = if prefs.display.compact_mode { "" } else { " " };
 
         if parts.is_empty() {
             parts.push(colored_model);
+        } else if prefs.display.show_separators {
+            parts.push(format!("{spacing}{separator}{spacing}{colored_model}"));
         } else {
-            parts.push(format!(" {separator} {colored_model}"));
+            parts.push(format!("{spacing}{colored_model}"));
+        }
+    }
+
+    // Debug info (if enabled)
+    if prefs.display.show_debug_info {
+        let debug_info = format!(
+            "[E:{} C:{} S:{}]",
+            state.error_count, state.consecutive_actions, state.session_id
+        );
+
+        let separator = if prefs.display.show_separators {
+            if prefs.use_colors {
+                "•".truecolor(128, 128, 128).to_string()
+            } else {
+                "•".to_string()
+            }
+        } else {
+            String::new()
+        };
+
+        let spacing = if prefs.display.compact_mode { "" } else { " " };
+
+        let debug_text = if prefs.use_colors {
+            debug_info.truecolor(100, 100, 100).to_string()
+        } else {
+            debug_info
+        };
+
+        if parts.is_empty() {
+            parts.push(debug_text);
+        } else if prefs.display.show_separators {
+            parts.push(format!("{spacing}{separator}{spacing}{debug_text}"));
+        } else {
+            parts.push(format!("{spacing}{debug_text}"));
         }
     }
 
@@ -542,5 +600,112 @@ mod tests {
         let statusline = build_statusline(&state, "Claude", &prefs, None);
         assert!(statusline.contains(ICON_ERROR));
         assert!(!statusline.contains(ICON_WARNING));
+    }
+
+    #[test]
+    fn test_display_configuration_options() {
+        use crate::types::Activity;
+        let mut state = SessionState::default();
+        state.activity = Activity::Editing;
+        state.current_job = Some("test.js".to_string());
+        state.error_count = 2;
+
+        // Test with all options enabled (default)
+        let prefs_all = PersonalityPreferences::default();
+        let statusline_all = build_statusline(&state, "Opus", &prefs_all, None);
+
+        // Should contain personality, activity, model, and separators
+        assert!(statusline_all.contains("Booting Up"));
+        assert!(statusline_all.contains("editing"));
+        assert!(statusline_all.contains("test.js"));
+        assert!(statusline_all.contains("Opus"));
+        assert!(statusline_all.contains("•")); // Separator
+
+        // Test with minimal configuration
+        let mut prefs_minimal = PersonalityPreferences::default();
+        prefs_minimal.show_personality = false;
+        prefs_minimal.show_activity = false;
+        prefs_minimal.show_model = false;
+        prefs_minimal.show_error_indicators = false; // Also disable error indicators
+        prefs_minimal.use_icons = false;
+        prefs_minimal.use_colors = false;
+        prefs_minimal.display.show_separators = false;
+
+        let statusline_minimal = build_statusline(&state, "Opus", &prefs_minimal, None);
+        // Should be empty since we disabled everything important
+        assert!(statusline_minimal.is_empty());
+    }
+
+    #[test]
+    fn test_compact_mode() {
+        use crate::types::Activity;
+        let mut state = SessionState::default();
+        state.activity = Activity::Editing;
+        state.current_job = Some("test.js".to_string());
+
+        // Normal mode
+        let mut prefs_normal = PersonalityPreferences::default();
+        prefs_normal.use_colors = false; // Disable colors for easier testing
+        let statusline_normal = build_statusline(&state, "Opus", &prefs_normal, None);
+
+        // Compact mode
+        let mut prefs_compact = PersonalityPreferences::default();
+        prefs_compact.use_colors = false; // Disable colors for easier testing
+        prefs_compact.display.compact_mode = true;
+        let statusline_compact = build_statusline(&state, "Opus", &prefs_compact, None);
+
+        // Compact mode should be shorter due to less spacing
+        assert!(statusline_compact.len() < statusline_normal.len());
+    }
+
+    #[test]
+    fn test_debug_info_display() {
+        use crate::types::Activity;
+        let mut state = SessionState::default();
+        state.activity = Activity::Testing;
+        state.error_count = 3;
+        state.consecutive_actions = 7;
+        state.session_id = "test123".to_string();
+
+        // Without debug info
+        let prefs_normal = PersonalityPreferences::default();
+        let statusline_normal = build_statusline(&state, "Sonnet", &prefs_normal, None);
+        assert!(!statusline_normal.contains("E:3"));
+        assert!(!statusline_normal.contains("C:7"));
+        assert!(!statusline_normal.contains("S:test123"));
+
+        // With debug info
+        let mut prefs_debug = PersonalityPreferences::default();
+        prefs_debug.display.show_debug_info = true;
+        let statusline_debug = build_statusline(&state, "Sonnet", &prefs_debug, None);
+        assert!(statusline_debug.contains("E:3"));
+        assert!(statusline_debug.contains("C:7"));
+        assert!(statusline_debug.contains("S:test123"));
+    }
+
+    #[test]
+    fn test_separators_configuration() {
+        use crate::types::Activity;
+        let mut state = SessionState::default();
+        state.activity = Activity::Coding;
+        state.current_job = Some("app.rs".to_string());
+
+        // With separators (default)
+        let mut prefs_with_sep = PersonalityPreferences::default();
+        prefs_with_sep.use_colors = false;
+        let statusline_with_sep = build_statusline(&state, "Haiku", &prefs_with_sep, None);
+        assert!(statusline_with_sep.contains("•"));
+
+        // Without separators
+        let mut prefs_no_sep = PersonalityPreferences::default();
+        prefs_no_sep.use_colors = false;
+        prefs_no_sep.display.show_separators = false;
+        let statusline_no_sep = build_statusline(&state, "Haiku", &prefs_no_sep, None);
+        assert!(!statusline_no_sep.contains("•"));
+        // But should still have content
+        assert!(statusline_no_sep.contains("Booting Up"));
+        assert!(statusline_no_sep.contains("coding"));
+        assert!(statusline_no_sep.contains("app.rs"));
+        assert!(statusline_no_sep.contains("Haiku"));
     }
 }
