@@ -14,6 +14,3 @@ pub const ICON_HAIKU: &str = "\u{f06c}"; //
 
 /// Default Claude icon - North star (fallback for unknown models)
 pub const ICON_CLAUDE_DEFAULT: &str = "\u{f3f5}"; // 
-
-/// Generic AI/robot icon (for non-Claude models)
-pub const ICON_AI_GENERIC: &str = "\u{f544}"; //
