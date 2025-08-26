@@ -7,5 +7,6 @@ pub mod kaomoji;
 pub mod platform;
 pub mod state;
 pub mod statusline;
+pub mod theme;
 pub mod types;
 pub mod version;

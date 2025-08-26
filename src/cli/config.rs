@@ -5,15 +5,17 @@
 
 use anyhow::{Context, Result};
 use colored::Colorize;
-use inquire::{Confirm, MultiSelect};
+use inquire::{Confirm, MultiSelect, Select};
 
 use crate::config::PersonalityPreferences;
 use crate::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
+use crate::theme::Theme;
 
 /// Handle configuration subcommands
 pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
     match subcommand {
         Some("display") => configure_display().await,
+        Some("theme") => configure_theme().await,
         Some("reset") => reset_configuration().await,
         Some("show") => show_current_configuration().await,
         Some("export") => export_configuration().await,
@@ -40,6 +42,7 @@ async fn interactive_config_menu() -> Result<()> {
 
     let options = vec![
         "Display Options - What appears in the statusline",
+        "Theme - Change colors and visual style",
         "Show Current Config - View all current settings",
         "Reset to Defaults - Reset all settings",
         "Export Config - Save current config to file",
@@ -54,6 +57,7 @@ async fn interactive_config_menu() -> Result<()> {
 
     match selection {
         s if s.starts_with("Display Options") => configure_display().await,
+        s if s.starts_with("Theme") => configure_theme().await,
         s if s.starts_with("Show Current Config") => show_current_configuration().await,
         s if s.starts_with("Reset to Defaults") => reset_configuration().await,
         s if s.starts_with("Export Config") => export_configuration().await,
@@ -130,6 +134,118 @@ async fn configure_display() -> Result<()> {
     Ok(())
 }
 
+/// Configure theme (color scheme)
+async fn configure_theme() -> Result<()> {
+    println!("{}", "Configure Theme".bold().blue());
+    println!("Select a theme for Claude Code Personalities:\n");
+
+    // Load current preferences
+    let mut prefs = PersonalityPreferences::load_or_default()
+        .await
+        .with_context(|| "Failed to load current personality preferences")?;
+
+    // Get all available themes with descriptions
+    let themes = Theme::all();
+    let theme_options: Vec<String> = themes
+        .iter()
+        .map(|theme| format!("{} - {}", theme.display_name(), theme.description()))
+        .collect();
+
+    // Find current theme index
+    let current_theme_index = themes
+        .iter()
+        .position(|theme| *theme == prefs.theme)
+        .unwrap_or(0);
+
+    println!("Current theme: {}", prefs.theme.display_name().bold());
+    println!();
+
+    // Show theme selection
+    let selection = Select::new("Choose a theme:", theme_options.clone())
+        .with_starting_cursor(current_theme_index)
+        .prompt()
+        .with_context(
+            || "Failed to get theme selection. Interactive prompt was cancelled or failed.",
+        )?;
+
+    // Find the selected theme
+    let selected_theme_index = theme_options
+        .iter()
+        .position(|opt| opt == &selection)
+        .unwrap_or(0);
+
+    let selected_theme = &themes[selected_theme_index];
+
+    // Preview the theme
+    println!("\n{} Theme Preview:", ICON_INFO.cyan());
+    preview_theme(selected_theme);
+
+    // Confirm selection if it's different from current
+    if *selected_theme != prefs.theme {
+        let confirmed = Confirm::new("Apply this theme?")
+            .with_default(true)
+            .prompt()
+            .with_context(|| "Failed to get theme confirmation")?;
+
+        if confirmed {
+            prefs.theme = selected_theme.clone();
+            prefs
+                .save()
+                .await
+                .with_context(|| "Failed to save theme configuration")?;
+
+            println!(
+                "\n{} Theme '{}' applied successfully!",
+                ICON_CHECK.green(),
+                selected_theme.display_name()
+            );
+
+            let prefs_path = PersonalityPreferences::get_preferences_path()
+                .with_context(|| "Failed to get preferences file path for display")?;
+            println!("Configuration saved to: {}", prefs_path.display());
+
+            println!(
+                "\n{} Run your Claude Code session to see the new theme!",
+                ICON_INFO.cyan()
+            );
+        } else {
+            println!("{} Theme change cancelled.", ICON_INFO.cyan());
+        }
+    } else {
+        println!(
+            "{} Theme '{}' is already selected.",
+            ICON_INFO.cyan(),
+            selected_theme.display_name()
+        );
+    }
+
+    Ok(())
+}
+
+/// Preview a theme by showing sample colored text
+fn preview_theme(theme: &Theme) {
+    println!(
+        "  Personality: {}",
+        theme.apply_personality("ʕ•ᴥ•ʔ Code Wizard")
+    );
+    println!("  Activity: {}", theme.apply_activity("editing"));
+    println!("  Directory: {}", theme.apply_directory("my-project"));
+    println!("  File: {}", theme.apply_file("main.rs"));
+    println!("  Error: {}", theme.apply_error("⚠ Error"));
+    println!("  Warning: {}", theme.apply_warning("⚡ Warning"));
+    println!("  Success: {}", theme.apply_success("✓ Success"));
+    println!("  Model Colors:");
+    println!("    Opus: {}", theme.apply_model_color("[ Opus]", "Opus"));
+    println!(
+        "    Sonnet: {}",
+        theme.apply_model_color("[ Sonnet]", "Sonnet")
+    );
+    println!(
+        "    Haiku: {}",
+        theme.apply_model_color("[ Haiku]", "Haiku")
+    );
+}
+
 /// Show current configuration
 async fn show_current_configuration() -> Result<()> {
     let prefs = PersonalityPreferences::load_or_default()
@@ -148,6 +264,19 @@ async fn show_current_configuration() -> Result<()> {
         };
         println!("  {} {}", status, name);
     }
+
+    println!();
+    println!("{}", "Theme:".bold());
+    println!(
+        "  {} Current: {}",
+        ICON_CHECK.green(),
+        prefs.theme.display_name()
+    );
+    println!(
+        "  {} Description: {}",
+        ICON_INFO.cyan(),
+        prefs.theme.description()
+    );
 
     let config_path = PersonalityPreferences::get_preferences_path()
         .with_context(|| "Failed to get preferences file path")?;
@@ -334,6 +463,7 @@ fn print_config_help() {
     println!();
     println!("Subcommands:");
     println!("  display    Configure what appears in the statusline");
+    println!("  theme      Change color theme");
     println!("  show       Show current configuration");
     println!("  reset      Reset all settings to defaults");
     println!("  export     Export configuration to a file");
