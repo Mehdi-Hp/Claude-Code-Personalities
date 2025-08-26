@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::fs;
 
+use crate::kaomoji::BOOTING_UP;
 use crate::types::Activity;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,7 +89,7 @@ impl Default for SessionState {
             session_id: "unknown".to_string(),
             activity: Activity::Idle,
             current_job: None,
-            personality: "( ˘ ³˘) Booting Up".to_string(),
+            personality: BOOTING_UP.personality(),
             previous_personality: None,
             consecutive_actions: 0,
             error_count: 0,

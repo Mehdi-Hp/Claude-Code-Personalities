@@ -52,34 +52,6 @@ pub fn get_model_icon(model_name: &str) -> &'static str {
     }
 }
 
-/// Error level for status icon selection
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatusLevel {
-    Success,
-    Info,
-    Warning,
-    Error,
-}
-
-/// Get the appropriate status icon based on level
-pub fn get_status_icon(level: StatusLevel) -> &'static str {
-    match level {
-        StatusLevel::Success => ICON_CHECK,
-        StatusLevel::Info => ICON_INFO,
-        StatusLevel::Warning => ICON_WARNING,
-        StatusLevel::Error => ICON_ERROR,
-    }
-}
-
-/// Convert a Unicode icon to printf format for shell scripts
-/// e.g., "\u{f044}" -> "\xef\x81\x84"
-pub fn icon_to_printf_format(icon: &str) -> String {
-    // The icon is a Unicode string, so we can get its UTF-8 bytes directly
-    let utf8_bytes = icon.as_bytes();
-    let hex_bytes: Vec<String> = utf8_bytes.iter().map(|b| format!("\\x{:02x}", b)).collect();
-    hex_bytes.join("")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,24 +95,5 @@ mod tests {
 
         assert_eq!(get_model_icon("Unknown"), ICON_CLAUDE_DEFAULT);
         assert_eq!(get_model_icon("GPT-4"), ICON_CLAUDE_DEFAULT);
-    }
-
-    #[test]
-    fn test_get_status_icon() {
-        assert_eq!(get_status_icon(StatusLevel::Success), ICON_CHECK);
-        assert_eq!(get_status_icon(StatusLevel::Info), ICON_INFO);
-        assert_eq!(get_status_icon(StatusLevel::Warning), ICON_WARNING);
-        assert_eq!(get_status_icon(StatusLevel::Error), ICON_ERROR);
-    }
-
-    #[test]
-    fn test_icon_to_printf_format() {
-        // Test the pencil icon (f044)
-        let printf_format = icon_to_printf_format("\u{f044}");
-        assert_eq!(printf_format, "\\xef\\x81\\x84");
-
-        // Test the folder icon (f07b)
-        let printf_format = icon_to_printf_format("\u{f07b}");
-        assert_eq!(printf_format, "\\xef\\x81\\xbb");
     }
 }
