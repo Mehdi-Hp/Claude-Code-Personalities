@@ -1,7 +1,10 @@
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
+
+use crate::error::PersonalityError;
+
+type Result<T> = std::result::Result<T, PersonalityError>;
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -40,11 +43,10 @@ impl PersonalityPreferences {
     /// - The home directory cannot be determined
     /// - The HOME environment variable is not set
     pub fn get_preferences_path() -> Result<PathBuf> {
-        let home = dirs::home_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))
-            .with_context(
-                || "Unable to locate home directory. Ensure the HOME environment variable is set.",
-            )?;
+        let home = dirs::home_dir().ok_or_else(|| PersonalityError::System {
+            message: "Could not find home directory".to_string(),
+            suggestion: Some("Ensure the HOME environment variable is set".to_string()),
+        })?;
         Ok(home.join(".claude").join("personalities_config.json"))
     }
 
@@ -60,14 +62,21 @@ impl PersonalityPreferences {
         let path = Self::get_preferences_path()?;
 
         if path.exists() {
-            let content = fs::read_to_string(&path).await.with_context(|| {
-                format!(
-                    "Failed to read personality preferences from {}",
-                    path.display()
-                )
-            })?;
-            let prefs: PersonalityPreferences = serde_json::from_str(&content)
-                .with_context(|| "Invalid JSON format in personality preferences file")?;
+            let content = fs::read_to_string(&path)
+                .await
+                .map_err(|e| PersonalityError::IO {
+                    operation: "read personality preferences".to_string(),
+                    path: Some(path.display().to_string()),
+                    source: e,
+                    suggestion: Some("Check file permissions".to_string()),
+                })?;
+            let prefs: PersonalityPreferences =
+                serde_json::from_str(&content).map_err(|e| PersonalityError::Parsing {
+                    context: "personality preferences file".to_string(),
+                    input_preview: Some(content.chars().take(100).collect()),
+                    source: e,
+                    suggestion: Some("Check JSON syntax in preferences file".to_string()),
+                })?;
             Ok(prefs)
         } else {
             Ok(Self::default())
@@ -90,17 +99,29 @@ impl PersonalityPreferences {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .await
-                .with_context(|| format!("Failed to create directory {}", parent.display()))?;
+                .map_err(|e| PersonalityError::IO {
+                    operation: "create directory".to_string(),
+                    path: Some(parent.display().to_string()),
+                    source: e,
+                    suggestion: Some("Check directory permissions".to_string()),
+                })?;
         }
 
-        let content = serde_json::to_string_pretty(self)
-            .with_context(|| "Failed to serialize personality preferences to JSON")?;
-        fs::write(&path, content).await.with_context(|| {
-            format!(
-                "Failed to write personality preferences to {}",
-                path.display()
-            )
-        })?;
+        let content =
+            serde_json::to_string_pretty(self).map_err(|e| PersonalityError::Parsing {
+                context: "serializing personality preferences to JSON".to_string(),
+                input_preview: None,
+                source: e,
+                suggestion: Some("Check data validity".to_string()),
+            })?;
+        fs::write(&path, content)
+            .await
+            .map_err(|e| PersonalityError::IO {
+                operation: "write personality preferences".to_string(),
+                path: Some(path.display().to_string()),
+                source: e,
+                suggestion: Some("Check file permissions".to_string()),
+            })?;
         Ok(())
     }
 

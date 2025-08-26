@@ -1,39 +1,14 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
-use inquire::Confirm;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use crate::cli::settings::{ClaudeSettings, get_claude_dir};
 use crate::statusline::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InteractionMode {
-    Interactive,
-    NonInteractive,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CleanupLevel {
-    Minimal,  // Keep preferences and backups
-    Standard, // Keep backups only
-    Complete, // Remove everything
-}
-
+#[derive(Default)]
 pub struct UninstallOptions {
-    pub interaction_mode: InteractionMode,
-    pub cleanup_level: CleanupLevel,
     pub force: bool,
-}
-
-impl Default for UninstallOptions {
-    fn default() -> Self {
-        Self {
-            interaction_mode: InteractionMode::Interactive,
-            cleanup_level: CleanupLevel::Standard, // Keep backups, remove preferences
-            force: false,
-        }
-    }
 }
 
 /// Uninstall Claude Code Personalities and remove all configuration.
@@ -66,17 +41,7 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
 
     if binary_locations.is_empty() {
         print_warning("No Claude Code Personalities installations found");
-        if options.interaction_mode == InteractionMode::Interactive && !options.force {
-            let continue_anyway = Confirm::new("Continue with cleanup anyway?")
-                .with_default(false)
-                .prompt()
-                .with_context(|| "Failed to get user confirmation")?;
-
-            if !continue_anyway {
-                print_info("Uninstall cancelled.");
-                return Ok(());
-            }
-        } else if !options.force {
+        if !options.force {
             print_info("Use --force to clean up configuration anyway.");
             return Ok(());
         }
@@ -91,36 +56,15 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
         }
     }
 
-    // Step 2: Get final confirmation if interactive
-    if options.interaction_mode == InteractionMode::Interactive {
-        println!();
-        println!("{}", "This will remove:".bold().yellow());
-        println!("  • Claude Code Personalities binary");
-        println!("  • Statusline and hook configuration from settings.json");
-        println!("  • Temporary state files");
-        match options.cleanup_level {
-            CleanupLevel::Complete => {
-                println!("  • All backup files");
-                println!("  • User preferences file");
-            }
-            CleanupLevel::Standard => {
-                println!("  • User preferences file");
-            }
-            CleanupLevel::Minimal => {}
-        }
-        println!();
-
-        let confirm_uninstall =
-            Confirm::new("Are you sure you want to uninstall Claude Code Personalities?")
-                .with_default(false)
-                .prompt()
-                .with_context(|| "Failed to get uninstall confirmation")?;
-
-        if !confirm_uninstall {
-            print_info("Uninstall cancelled.");
-            return Ok(());
-        }
-    }
+    // Step 2: Show what will be removed (non-interactive, complete cleanup)
+    println!();
+    println!("{}", "This will remove:".bold().yellow());
+    println!("  • Claude Code Personalities binary");
+    println!("  • Statusline and hook configuration from settings.json");
+    println!("  • Temporary state files");
+    println!("  • All backup files");
+    println!("  • User preferences file");
+    println!();
 
     // Step 3: Load Claude settings
     print_info("Loading Claude settings...");
@@ -185,8 +129,7 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
 
         if removed_count > 0 {
             print_success(&format!(
-                "Successfully removed {} binary/binaries",
-                removed_count
+                "Successfully removed {removed_count} binary/binaries"
             ));
         }
 
@@ -198,17 +141,15 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
         }
     }
 
-    // Step 9: Clean up backup files (if requested)
-    if matches!(options.cleanup_level, CleanupLevel::Complete) {
-        print_info("Removing backup files...");
-        let removed_count = cleanup_backup_files(&claude_dir)
-            .await
-            .with_context(|| "Failed to clean up backup files")?;
-        if removed_count > 0 {
-            print_success(&format!("Removed {removed_count} backup files"));
-        } else {
-            print_info("No backup files found");
-        }
+    // Step 9: Clean up backup files (always for complete cleanup)
+    print_info("Removing backup files...");
+    let removed_count = cleanup_backup_files(&claude_dir)
+        .await
+        .with_context(|| "Failed to clean up backup files")?;
+    if removed_count > 0 {
+        print_success(&format!("Removed {removed_count} backup files"));
+    } else {
+        print_info("No backup files found");
     }
 
     // Step 10: Clean up temporary state files
@@ -220,22 +161,18 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
         print_success(&format!("Removed {temp_files_removed} temporary files"));
     }
 
-    // Step 11: Remove user preferences (if requested)
-    if !matches!(options.cleanup_level, CleanupLevel::Minimal) {
-        print_info("Removing user preferences...");
-        let prefs_removed = cleanup_user_preferences()
-            .await
-            .with_context(|| "Failed to clean up user preferences")?;
-        if prefs_removed {
-            print_success("User preferences removed");
-        }
+    // Step 11: Remove user preferences (always for complete cleanup)
+    print_info("Removing user preferences...");
+    let prefs_removed = cleanup_user_preferences()
+        .await
+        .with_context(|| "Failed to clean up user preferences")?;
+    if prefs_removed {
+        print_success("User preferences removed");
     }
 
     // Step 12: Show completion message
     println!();
-    let kept_preferences = matches!(options.cleanup_level, CleanupLevel::Minimal);
-    let kept_backups = !matches!(options.cleanup_level, CleanupLevel::Complete);
-    print_uninstall_success(kept_preferences, kept_backups, backup_path.as_ref());
+    print_uninstall_success(false, false, backup_path.as_ref());
 
     Ok(())
 }
@@ -447,7 +384,7 @@ fn print_uninstall_success(
 ///
 /// # Errors
 /// Returns an error if directory traversal fails or command execution fails
-async fn find_all_binary_locations(claude_dir: &PathBuf) -> Result<Vec<PathBuf>> {
+async fn find_all_binary_locations(claude_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut locations = Vec::new();
 
     // 1. Check PATH using `which` command
@@ -563,8 +500,6 @@ mod tests {
     #[test]
     fn test_uninstall_options_default() {
         let options = UninstallOptions::default();
-        assert_eq!(options.interaction_mode, InteractionMode::Interactive);
-        assert_eq!(options.cleanup_level, CleanupLevel::Standard);
         assert!(!options.force);
     }
 
@@ -572,11 +507,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // Ignored by default since it would modify system state
     async fn test_uninstall_flow() {
-        let _options = UninstallOptions {
-            interaction_mode: InteractionMode::NonInteractive,
-            cleanup_level: CleanupLevel::Minimal,
-            force: true,
-        };
+        let _options = UninstallOptions { force: true };
 
         // This test would modify the actual Claude settings
         // In a real scenario, we'd use a temporary directory

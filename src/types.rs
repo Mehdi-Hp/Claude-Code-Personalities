@@ -90,7 +90,8 @@ impl FromStr for Activity {
 }
 
 impl Activity {
-    /// Convert from string (case-insensitive) - convenience method
+    /// Convert from string (case-insensitive) - convenience method for tests
+    #[cfg(test)]
     #[must_use]
     pub fn parse_activity(s: &str) -> Self {
         s.parse().unwrap_or(Activity::Working)
