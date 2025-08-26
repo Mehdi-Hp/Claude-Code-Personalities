@@ -6,6 +6,7 @@ mod cli;
 mod config;
 mod error;
 mod hooks;
+mod icons;
 mod platform;
 mod state;
 mod statusline;

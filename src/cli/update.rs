@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use crate::cli::settings::get_claude_dir;
+use crate::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
 use crate::platform::Platform;
-use crate::statusline::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
 use crate::version::{
     CURRENT_VERSION, VersionManager, format_changelog, format_version_comparison,
 };

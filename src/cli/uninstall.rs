@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use crate::cli::settings::{ClaudeSettings, get_claude_dir};
-use crate::statusline::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
+use crate::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
 
 #[derive(Default)]
 pub struct UninstallOptions {

@@ -2,6 +2,7 @@ pub mod cli;
 pub mod config;
 pub mod error;
 pub mod hooks;
+pub mod icons;
 pub mod platform;
 pub mod state;
 pub mod statusline;

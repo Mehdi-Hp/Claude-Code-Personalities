@@ -1,4 +1,3 @@
-pub mod icons;
 pub mod personality;
 
 use anyhow::Result;
@@ -7,14 +6,8 @@ use serde::Deserialize;
 use std::io::{self, Read};
 
 use crate::config::PersonalityPreferences;
+use crate::icons::{ICON_ERROR, ICON_FOLDER, ICON_WARNING, get_activity_icon, get_model_icon};
 use crate::state::SessionState;
-use crate::types::Activity;
-use icons::{
-    ICON_BUILDING, ICON_CODE, ICON_DEBUGGING, ICON_EDITING, ICON_ERROR, ICON_EXECUTING,
-    ICON_FOLDER, ICON_GEAR, ICON_IDLE, ICON_INSTALLING, ICON_NORTH_STAR, ICON_READING,
-    ICON_REVIEWING, ICON_SEARCHING, ICON_TESTING, ICON_THINKING, ICON_WARNING, ICON_WORKING,
-    ICON_WRITING,
-};
 
 #[derive(Debug, Deserialize)]
 pub struct ClaudeInput {
@@ -229,8 +222,6 @@ pub fn build_statusline(
 
 /// Format workspace information for display in statusline
 fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferences) -> String {
-    use crate::statusline::icons::ICON_FOLDER;
-
     let mut workspace_parts = Vec::new();
 
     // Add folder icon if using icons
@@ -262,31 +253,6 @@ fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferenc
     }
 }
 
-fn get_activity_icon(activity: &Activity) -> &'static str {
-    match activity {
-        Activity::Editing => ICON_EDITING,
-        Activity::Coding => ICON_CODE,
-        Activity::Configuring => ICON_GEAR,
-        Activity::Navigating => ICON_FOLDER,
-        Activity::Writing => ICON_WRITING,
-        Activity::Executing => ICON_EXECUTING,
-        Activity::Reading => ICON_READING,
-        Activity::Searching => ICON_SEARCHING,
-        Activity::Debugging => ICON_DEBUGGING,
-        Activity::Testing => ICON_TESTING,
-        Activity::Reviewing => ICON_REVIEWING,
-        Activity::Thinking => ICON_THINKING,
-        Activity::Building => ICON_BUILDING,
-        Activity::Installing => ICON_INSTALLING,
-        Activity::Idle => ICON_IDLE,
-        Activity::Working => ICON_WORKING,
-    }
-}
-
-fn get_model_icon(_model_name: &str) -> &'static str {
-    ICON_NORTH_STAR
-}
-
 fn get_model_color(model_name: &str) -> &'static str {
     if model_name.to_lowercase().contains("opus") {
         "magenta"
@@ -302,7 +268,9 @@ fn get_model_color(model_name: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::icons::*;
     use crate::state::SessionState;
+    use crate::types::Activity;
 
     fn create_test_state() -> SessionState {
         SessionState {
@@ -405,11 +373,11 @@ mod tests {
 
     #[test]
     fn test_get_model_icon() {
-        // All models should use the same icon currently
-        assert_eq!(get_model_icon("Opus"), ICON_NORTH_STAR);
-        assert_eq!(get_model_icon("Sonnet"), ICON_NORTH_STAR);
-        assert_eq!(get_model_icon("Haiku"), ICON_NORTH_STAR);
-        assert_eq!(get_model_icon("Unknown"), ICON_NORTH_STAR);
+        // Test model-specific icons
+        assert_eq!(get_model_icon("Opus"), ICON_OPUS);
+        assert_eq!(get_model_icon("Sonnet"), ICON_SONNET);
+        assert_eq!(get_model_icon("Haiku"), ICON_HAIKU);
+        assert_eq!(get_model_icon("Unknown"), ICON_CLAUDE_DEFAULT);
     }
 
     #[test]
