@@ -48,7 +48,15 @@ async fn run() -> Result<()> {
                 ),
         )
         .subcommand(
-            Command::new("config").about("Configure Claude Code Personalities display options"),
+            Command::new("config")
+                .about("Configure Claude Code Personalities display options")
+                .subcommand(
+                    Command::new("display").about("Configure what appears in the statusline"),
+                )
+                .subcommand(Command::new("show").about("Show current configuration"))
+                .subcommand(Command::new("reset").about("Reset all settings to defaults"))
+                .subcommand(Command::new("export").about("Export configuration to a file"))
+                .subcommand(Command::new("import").about("Import configuration from a file")),
         )
         .arg(
             Arg::new("statusline")
@@ -81,7 +89,10 @@ async fn run() -> Result<()> {
                 let force = sub_matches.get_flag("force");
                 cli::check_update_with_force(force).await
             }
-            Some(("config", _)) => cli::configure().await,
+            Some(("config", sub_matches)) => {
+                let subcommand = sub_matches.subcommand().map(|(name, _)| name);
+                cli::config::handle_config_command(subcommand).await
+            }
             _ => cli::help(),
         }
     }
