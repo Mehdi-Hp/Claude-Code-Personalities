@@ -203,22 +203,6 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
     Ok(())
 }
 
-/// Configure personality display preferences through interactive prompts.
-///
-/// This is the legacy function that's now replaced by the new config subcommands.
-/// It calls the display configuration from the config module for backward compatibility.
-///
-/// # Errors
-///
-/// This function will return an error if:
-/// - Current preferences cannot be loaded from disk
-/// - User interaction prompts fail to display or receive input
-/// - Preferences cannot be saved after configuration
-/// - File system operations fail during save
-pub async fn configure() -> Result<()> {
-    config::handle_config_command(Some("display")).await
-}
-
 /// Display help information and available commands.
 ///
 /// # Errors
