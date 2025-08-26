@@ -170,12 +170,6 @@ impl PersonalityPreferences {
         ]
     }
 
-    /// Get a list of all preference options with their current values (backward compatibility)
-    #[must_use]
-    pub fn get_options(&self) -> Vec<(&'static str, bool)> {
-        self.get_display_options()
-    }
-
     /// Update preferences from a list of selected option names
     pub fn update_from_selections(&mut self, selections: &[&str]) {
         // Reset all to false first
@@ -209,11 +203,6 @@ impl PersonalityPreferences {
             }
         }
     }
-
-    /// Reset all preferences to defaults
-    pub fn reset_to_defaults(&mut self) {
-        *self = Self::default();
-    }
 }
 
 #[cfg(test)]
@@ -235,9 +224,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_options() {
+    fn test_get_display_options() {
         let prefs = PersonalityPreferences::default();
-        let options = prefs.get_options();
+        let options = prefs.get_display_options();
 
         assert_eq!(options.len(), 11); // Updated count for new display options
         assert!(options.iter().any(|(name, _)| *name == "Show Personality"));
@@ -309,15 +298,15 @@ mod tests {
     }
 
     #[test]
-    fn test_reset_configurations() {
+    fn test_reset_to_defaults() {
         let mut prefs = PersonalityPreferences::default();
 
         // Modify configurations
         prefs.show_personality = false;
         prefs.display.compact_mode = true;
 
-        // Test full reset
-        prefs.reset_to_defaults();
+        // Test full reset using assignment from default
+        prefs = PersonalityPreferences::default();
         assert!(prefs.show_personality); // Back to default
         assert!(!prefs.display.compact_mode); // Back to default
     }
