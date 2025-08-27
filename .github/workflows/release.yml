@@ -6,39 +6,79 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  build:
-    name: Build and Release
+  validate:
+    name: Pre-release validation
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq gcc-aarch64-linux-gnu
-          cargo install cross --git https://github.com/cross-rs/cross
-          cargo install just
-
-      - name: Cache cargo registry
-        uses: actions/cache@v3
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-${{ hashFiles('Cargo.lock') }}
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::uninlined-format-args -A clippy::derivable-impls -A clippy::field-reassign-with-default -A dead_code
+
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build all binaries
-        run: just build-all
+        run: ./build-cross.sh
+
+      - name: Generate checksums
+        run: |
+          cd build
+          for file in claude-code-personalities-*; do
+            sha256sum "$file" > "$file.sha256"
+          done
 
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/*
+          files: |
+            build/claude-code-personalities-*
+            build/*.sha256
           generate_release_notes: true
           draft: false
           prerelease: false
