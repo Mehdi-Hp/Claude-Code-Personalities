@@ -287,7 +287,7 @@ fn print_uninstall_success(
     println!(
         "{} {} {}",
         "║".bold().green(),
-        "🗑️  Claude Code Personalities Uninstalled Successfully! ✨"
+        "Claude Code Personalities Uninstalled Successfully!"
             .bold()
             .white(),
         "║".bold().green()
