@@ -94,7 +94,6 @@ echo
 echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}( ꩜ ᯅ ꩜;) ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
-echo -e "${BOLD}${CYAN}   ║                       ${NC}${ITALIC}Rust Edition${NC}                        ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
