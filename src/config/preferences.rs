@@ -288,8 +288,10 @@ mod tests {
         let temp_path = temp_dir.path().join("test_config.json");
 
         // Mock the preferences path function temporarily
-        let mut prefs = PersonalityPreferences::default();
-        prefs.show_current_dir = true; // Change a default value
+        let prefs = PersonalityPreferences {
+            show_current_dir: true, // Change a default value
+            ..Default::default()
+        };
 
         // Manually save to temp path for testing
         let content = serde_json::to_string_pretty(&prefs).unwrap();
@@ -305,11 +307,19 @@ mod tests {
 
     #[test]
     fn test_reset_to_defaults() {
-        let mut prefs = PersonalityPreferences::default();
+        // Start with non-default values
+        let mut prefs = PersonalityPreferences {
+            show_personality: false,
+            display: DisplayConfig {
+                compact_mode: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
-        // Modify configurations
-        prefs.show_personality = false;
-        prefs.display.compact_mode = true;
+        // Verify initial non-default state
+        assert!(!prefs.show_personality);
+        assert!(prefs.display.compact_mode);
 
         // Test full reset using assignment from default
         prefs = PersonalityPreferences::default();
