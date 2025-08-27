@@ -141,7 +141,12 @@ pub fn build_statusline(
         if !activity_icon.is_empty() {
             activity_parts.push(activity_icon.to_string());
         }
-        activity_parts.push(state.activity.to_string());
+        let activity_str = if prefs.use_colors {
+            prefs.theme.apply_activity(&state.activity.to_string())
+        } else {
+            state.activity.to_string()
+        };
+        activity_parts.push(activity_str);
 
         // Current job/file
         if prefs.show_current_job {
