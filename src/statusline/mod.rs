@@ -143,7 +143,12 @@ pub fn build_statusline(
 
         let mut activity_parts = Vec::new();
         if !activity_icon.is_empty() {
-            activity_parts.push(activity_icon.to_string());
+            let colored_icon = if prefs.use_colors {
+                prefs.theme.apply_activity(activity_icon)
+            } else {
+                activity_icon.to_string()
+            };
+            activity_parts.push(colored_icon);
         }
         let activity_str = if prefs.use_colors {
             prefs.theme.apply_activity(&state.activity.to_string())
