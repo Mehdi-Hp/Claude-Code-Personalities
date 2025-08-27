@@ -317,6 +317,7 @@ fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferenc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::preferences::DisplayConfig;
     use crate::icons::*;
     use crate::state::SessionState;
     use crate::types::Activity;
@@ -601,10 +602,12 @@ mod tests {
     #[test]
     fn test_display_configuration_options() {
         use crate::types::Activity;
-        let mut state = SessionState::default();
-        state.activity = Activity::Editing;
-        state.current_job = Some("test.js".to_string());
-        state.error_count = 2;
+        let state = SessionState {
+            activity: Activity::Editing,
+            current_job: Some("test.js".to_string()),
+            error_count: 2,
+            ..Default::default()
+        };
 
         // Test with all options enabled (default)
         let prefs_all = PersonalityPreferences::default();
@@ -618,14 +621,19 @@ mod tests {
         assert!(statusline_all.contains("•")); // Separator
 
         // Test with minimal configuration
-        let mut prefs_minimal = PersonalityPreferences::default();
-        prefs_minimal.show_personality = false;
-        prefs_minimal.show_activity = false;
-        prefs_minimal.show_model = false;
-        prefs_minimal.show_error_indicators = false; // Also disable error indicators
-        prefs_minimal.use_icons = false;
-        prefs_minimal.use_colors = false;
-        prefs_minimal.display.show_separators = false;
+        let prefs_minimal = PersonalityPreferences {
+            show_personality: false,
+            show_activity: false,
+            show_model: false,
+            show_error_indicators: false, // Also disable error indicators
+            use_icons: false,
+            use_colors: false,
+            display: DisplayConfig {
+                show_separators: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
         let statusline_minimal = build_statusline(&state, "Opus", &prefs_minimal, None);
         // Should be empty since we disabled everything important
@@ -635,19 +643,28 @@ mod tests {
     #[test]
     fn test_compact_mode() {
         use crate::types::Activity;
-        let mut state = SessionState::default();
-        state.activity = Activity::Editing;
-        state.current_job = Some("test.js".to_string());
+        let state = SessionState {
+            activity: Activity::Editing,
+            current_job: Some("test.js".to_string()),
+            ..Default::default()
+        };
 
         // Normal mode
-        let mut prefs_normal = PersonalityPreferences::default();
-        prefs_normal.use_colors = false; // Disable colors for easier testing
+        let prefs_normal = PersonalityPreferences {
+            use_colors: false, // Disable colors for easier testing
+            ..Default::default()
+        };
         let statusline_normal = build_statusline(&state, "Opus", &prefs_normal, None);
 
         // Compact mode
-        let mut prefs_compact = PersonalityPreferences::default();
-        prefs_compact.use_colors = false; // Disable colors for easier testing
-        prefs_compact.display.compact_mode = true;
+        let prefs_compact = PersonalityPreferences {
+            use_colors: false, // Disable colors for easier testing
+            display: DisplayConfig {
+                compact_mode: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let statusline_compact = build_statusline(&state, "Opus", &prefs_compact, None);
 
         // Compact mode should be shorter due to less spacing
@@ -657,11 +674,13 @@ mod tests {
     #[test]
     fn test_debug_info_display() {
         use crate::types::Activity;
-        let mut state = SessionState::default();
-        state.activity = Activity::Testing;
-        state.error_count = 3;
-        state.consecutive_actions = 7;
-        state.session_id = "test123".to_string();
+        let state = SessionState {
+            activity: Activity::Testing,
+            error_count: 3,
+            consecutive_actions: 7,
+            session_id: "test123".to_string(),
+            ..Default::default()
+        };
 
         // Without debug info
         let prefs_normal = PersonalityPreferences::default();
@@ -671,8 +690,13 @@ mod tests {
         assert!(!statusline_normal.contains("S:test123"));
 
         // With debug info
-        let mut prefs_debug = PersonalityPreferences::default();
-        prefs_debug.display.show_debug_info = true;
+        let prefs_debug = PersonalityPreferences {
+            display: DisplayConfig {
+                show_debug_info: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let statusline_debug = build_statusline(&state, "Sonnet", &prefs_debug, None);
         assert!(statusline_debug.contains("E:3"));
         assert!(statusline_debug.contains("C:7"));
@@ -682,20 +706,29 @@ mod tests {
     #[test]
     fn test_separators_configuration() {
         use crate::types::Activity;
-        let mut state = SessionState::default();
-        state.activity = Activity::Coding;
-        state.current_job = Some("app.rs".to_string());
+        let state = SessionState {
+            activity: Activity::Coding,
+            current_job: Some("app.rs".to_string()),
+            ..Default::default()
+        };
 
         // With separators (default)
-        let mut prefs_with_sep = PersonalityPreferences::default();
-        prefs_with_sep.use_colors = false;
+        let prefs_with_sep = PersonalityPreferences {
+            use_colors: false,
+            ..Default::default()
+        };
         let statusline_with_sep = build_statusline(&state, "Haiku", &prefs_with_sep, None);
         assert!(statusline_with_sep.contains("•"));
 
         // Without separators
-        let mut prefs_no_sep = PersonalityPreferences::default();
-        prefs_no_sep.use_colors = false;
-        prefs_no_sep.display.show_separators = false;
+        let prefs_no_sep = PersonalityPreferences {
+            use_colors: false,
+            display: DisplayConfig {
+                show_separators: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let statusline_no_sep = build_statusline(&state, "Haiku", &prefs_no_sep, None);
         assert!(!statusline_no_sep.contains("•"));
         // But should still have content
