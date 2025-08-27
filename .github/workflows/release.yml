@@ -39,6 +39,7 @@ jobs:
     needs: validate
     
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: linux-x86_64
@@ -98,9 +99,13 @@ jobs:
           cp target/${{ matrix.target }}/release/claude-code-personalities upload/${binary_name}
           chmod +x upload/${binary_name}
           
-          # Generate checksum
+          # Generate checksum (cross-platform)
           cd upload
-          sha256sum ${binary_name} > ${binary_name}.sha256
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 ${binary_name} > ${binary_name}.sha256
+          else
+            sha256sum ${binary_name} > ${binary_name}.sha256
+          fi
           
           # Show info
           ls -la

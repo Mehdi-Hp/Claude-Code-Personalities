@@ -32,9 +32,13 @@ fi
 cp target/release/claude-code-personalities build/$binary_name
 chmod +x build/$binary_name
 
-# Generate checksum
+# Generate checksum (cross-platform)
 cd build
-sha256sum $binary_name > $binary_name.sha256
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    shasum -a 256 $binary_name > $binary_name.sha256
+else
+    sha256sum $binary_name > $binary_name.sha256
+fi
 
 # Show results
 size=$(du -h $binary_name | cut -f1)
