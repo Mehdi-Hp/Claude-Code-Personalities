@@ -77,6 +77,17 @@ detect_platform() {
     esac
 }
 
+# Map detected platform to release binary name format
+map_platform_to_binary_name() {
+    case "$1" in
+        x86_64-apple-darwin) echo "macos-x86_64" ;;
+        aarch64-apple-darwin) echo "macos-aarch64" ;;
+        x86_64-linux) echo "linux-x86_64" ;;
+        aarch64-linux) echo "linux-aarch64" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 # Header
 clear
 echo
@@ -134,7 +145,7 @@ echo
 print_info "Downloading latest version..."
 
 RELEASE_INFO=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-LATEST_VERSION=$(echo "$RELEASE_INFO" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/')
+LATEST_VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' | sed 's/^v//')
 
 if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
     print_error "Failed to get latest version from GitHub"
@@ -144,7 +155,8 @@ fi
 echo -e "    ${CYAN}Latest version: ${BOLD}v$LATEST_VERSION${NC}"
 
 # Construct binary name and download URL
-BINARY_NAME="claude-code-personalities-${PLATFORM}"
+MAPPED_PLATFORM=$(map_platform_to_binary_name "$PLATFORM")
+BINARY_NAME="claude-code-personalities-${MAPPED_PLATFORM}"
 DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$LATEST_VERSION/$BINARY_NAME"
 
 print_info "Downloading binary..."
