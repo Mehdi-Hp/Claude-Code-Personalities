@@ -232,7 +232,6 @@ pub fn help() -> Result<()> {
     println!("  --statusline  Run in statusline mode");
     println!("  --hook TYPE   Run in hook mode (activity, prompt-submit, session-end)");
     println!();
-    println!("This is the Rust rewrite - much faster than the bash version!");
 
     Ok(())
 }
