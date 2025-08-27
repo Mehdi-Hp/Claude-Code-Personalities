@@ -295,10 +295,10 @@ fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferenc
         if let Some(project_name) = std::path::Path::new(project_dir).file_name() {
             workspace_parts.push(project_name.to_string_lossy().to_string());
         }
-    } else if let Some(current_dir) = &workspace.current_dir {
-        if let Some(dir_name) = std::path::Path::new(current_dir).file_name() {
-            workspace_parts.push(dir_name.to_string_lossy().to_string());
-        }
+    } else if let Some(current_dir) = &workspace.current_dir
+        && let Some(dir_name) = std::path::Path::new(current_dir).file_name()
+    {
+        workspace_parts.push(dir_name.to_string_lossy().to_string());
     }
 
     if workspace_parts.is_empty() {

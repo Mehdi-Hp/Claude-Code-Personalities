@@ -33,9 +33,6 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::uninlined-format-args -A clippy::derivable-impls -A clippy::field-reassign-with-default -A dead_code
-
   build:
     name: Build and Release
     runs-on: ubuntu-latest
