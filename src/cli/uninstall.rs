@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use cliclack::{intro, outro};
 use colored::Colorize;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -29,11 +30,7 @@ pub struct UninstallOptions {
 /// - User cancels uninstallation when in interactive mode
 /// - Cleanup of temporary or backup files fails
 pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
-    println!(
-        "{}",
-        "Uninstalling Claude Code Personalities...".bold().red()
-    );
-    println!();
+    intro("Uninstalling Claude Code Personalities")?;
 
     // Step 1: Find all Claude Code Personalities installations
     let claude_dir = get_claude_dir()?;
@@ -172,7 +169,7 @@ pub async fn uninstall_personalities(options: UninstallOptions) -> Result<()> {
 
     // Step 12: Show completion message
     println!();
-    print_uninstall_success(false, false, backup_path.as_ref());
+    print_uninstall_success(false, false, backup_path.as_ref())?;
 
     Ok(())
 }
@@ -271,39 +268,12 @@ fn print_uninstall_success(
     kept_preferences: bool,
     kept_backups: bool,
     final_backup: Option<&PathBuf>,
-) {
-    println!(
-        "{}",
-        "╔══════════════════════════════════════════════════════════╗"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "║                                                          ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{} {} {}",
-        "║".bold().green(),
-        "Claude Code Personalities Uninstalled Successfully!"
-            .bold()
-            .white(),
-        "║".bold().green()
-    );
-    println!(
-        "{}",
-        "║                                                          ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "╚══════════════════════════════════════════════════════════╝"
-            .bold()
-            .green()
-    );
+) -> Result<()> {
+    outro(format!(
+        "{} Claude Code Personalities Uninstalled Successfully!",
+        ICON_CHECK.green()
+    ))?;
+
     println!();
 
     println!("{}", "What was removed:".bold().cyan());
@@ -364,8 +334,10 @@ fn print_uninstall_success(
 
     println!(
         "{} Thank you for using Claude Code Personalities!",
-        "👋".yellow()
+        "\u{f1e6}".yellow() // Nerd font icon instead of emoji
     );
+
+    Ok(())
 }
 
 /// Find all claude-code-personalities binary installations on the system.
