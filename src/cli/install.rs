@@ -119,37 +119,41 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
         }
     };
 
-    // Step 5: Check if already installed
-    if target_binary.exists() && !options.force_reinstall {
+    // Step 5: Load Claude settings first to check configuration
+    print_info("Loading Claude settings...");
+    let mut settings = ClaudeSettings::load()
+        .await
+        .with_context(|| "Failed to load Claude settings")?;
+
+    // Step 6: Check current Claude Code configuration
+    let config_summary = settings.get_configuration_summary();
+    let settings_configured = config_summary.has_personality_statusline;
+
+    if settings_configured && !options.force_reinstall {
+        // Claude Code is already configured
         if options.interactive {
-            let reinstall =
-                Confirm::new("Claude Code Personalities is already installed. Reinstall?")
+            let reconfigure =
+                Confirm::new("Claude Code Personalities is already configured. Reconfigure?")
                     .with_default(false)
                     .prompt()
-                    .with_context(|| "Failed to get user confirmation for reinstallation")?;
+                    .with_context(|| "Failed to get user confirmation for reconfiguration")?;
 
-            if !reinstall {
-                print_info("Installation skipped.");
+            if !reconfigure {
+                print_info("Configuration skipped.");
                 return Ok(());
             }
-        } else if !options.force_reinstall {
-            print_warning("Already installed. Use --force to reinstall.");
+        } else {
+            print_warning("Already configured. Use --force to reconfigure.");
             return Ok(());
         }
     }
 
-    // Step 6: Copy binary to target location
+    // Step 7: Copy binary to target location
     print_info("Installing binary...");
     copy_binary(&current_binary, &target_binary)
         .await
         .with_context(|| "Failed to install binary to target directory")?;
     print_success(&format!("Binary installed to: {}", target_binary.display()));
-
-    // Step 7: Load Claude settings
-    print_info("Loading Claude settings...");
-    let mut settings = ClaudeSettings::load()
-        .await
-        .with_context(|| "Failed to load Claude settings")?;
 
     // Step 8: Create backup if requested and settings exist
     if options.backup_existing && settings.settings_path.exists() {
@@ -161,47 +165,35 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
         print_success(&format!("Backup created: {}", backup_path.display()));
     }
 
-    // Step 9: Check current configuration
-    let config_summary = settings.get_configuration_summary();
-    if config_summary.has_personality_statusline {
-        print_warning("Personalities are already configured in settings.json");
-        if options.interactive {
-            let reconfigure = Confirm::new("Reconfigure anyway?")
-                .with_default(false)
-                .prompt()
-                .with_context(|| "Failed to get user confirmation for reconfiguration")?;
+    // Step 9: Configure Claude Code settings (if needed)
+    if !settings_configured || options.force_reinstall {
+        // Step 10: Configure statusline
+        print_info("Configuring statusline...");
+        settings
+            .configure_statusline(&target_binary)
+            .with_context(|| "Failed to configure statusline in settings")?;
+        print_success("Statusline configured");
 
-            if !reconfigure {
-                print_info("Settings configuration skipped.");
-                return Ok(());
-            }
-        }
+        // Step 11: Configure hooks
+        print_info("Configuring hooks...");
+        settings
+            .configure_hooks(&target_binary)
+            .with_context(|| "Failed to configure hooks in settings")?;
+        print_success("Hooks configured");
+
+        // Step 12: Save settings
+        print_info("Saving settings...");
+        settings
+            .save()
+            .await
+            .with_context(|| "Failed to save updated Claude settings")?;
+        print_success(&format!(
+            "Settings saved to: {}",
+            settings.settings_path.display()
+        ));
+    } else {
+        print_info("Claude Code already configured, skipping settings update.");
     }
-
-    // Step 10: Configure statusline
-    print_info("Configuring statusline...");
-    settings
-        .configure_statusline(&target_binary)
-        .with_context(|| "Failed to configure statusline in settings")?;
-    print_success("Statusline configured");
-
-    // Step 11: Configure hooks
-    print_info("Configuring hooks...");
-    settings
-        .configure_hooks(&target_binary)
-        .with_context(|| "Failed to configure hooks in settings")?;
-    print_success("Hooks configured");
-
-    // Step 12: Save settings
-    print_info("Saving settings...");
-    settings
-        .save()
-        .await
-        .with_context(|| "Failed to save updated Claude settings")?;
-    print_success(&format!(
-        "Settings saved to: {}",
-        settings.settings_path.display()
-    ));
 
     // Step 13: Verify installation
     print_info("Verifying installation...");
