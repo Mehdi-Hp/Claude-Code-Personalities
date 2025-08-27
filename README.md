@@ -79,28 +79,6 @@ claude-code-personalities help                # Show help with all options
 
 **Windows users:** Consider using WSL2 (Windows Subsystem for Linux) which provides full compatibility.
 
-## Pure Rust Implementation
-
-The project has been completely rewritten in Rust, providing significant advantages over the previous shell script approach:
-
-### Performance Benefits
-- **Ultra-fast statusline generation**: ~1ms total execution time
-- **Instant hook processing**: ~0.1ms for activity tracking
-- **Zero startup overhead**: No shell interpretation or external dependencies
-- **Efficient state management**: Direct JSON serialization/deserialization
-
-### Reliability Improvements
-- **Better error handling**: Comprehensive error messages and recovery
-- **No shell injection vulnerabilities**: Safe input processing
-- **Cross-platform consistency**: Same binary behavior across macOS/Linux
-- **Robust session management**: Proper cleanup and state persistence
-
-### Developer Experience
-- **Single binary**: No complex installation of multiple shell scripts
-- **Interactive installation**: Guided setup with validation
-- **Configuration management**: Built-in config command with live preview
-- **Comprehensive status checking**: Detailed diagnostics and troubleshooting
-
 ## Configuration
 
 Customize what appears in your statusline using the interactive configuration:
