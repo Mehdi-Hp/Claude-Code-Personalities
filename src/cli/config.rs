@@ -17,9 +17,6 @@ pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
         Some("display") => configure_display().await,
         Some("theme") => configure_theme().await,
         Some("reset") => reset_configuration().await,
-        Some("show") => show_current_configuration().await,
-        Some("export") => export_configuration().await,
-        Some("import") => import_configuration().await,
         None => interactive_config_menu().await,
         Some(unknown) => {
             println!(
@@ -43,10 +40,7 @@ async fn interactive_config_menu() -> Result<()> {
     let options = vec![
         "Display Options - What appears in the statusline",
         "Theme - Change colors and visual style",
-        "Show Current Config - View all current settings",
         "Reset to Defaults - Reset all settings",
-        "Export Config - Save current config to file",
-        "Import Config - Load config from file",
     ];
 
     let selection = Select::new("Configuration category:", options)
@@ -58,10 +52,7 @@ async fn interactive_config_menu() -> Result<()> {
     match selection {
         s if s.starts_with("Display Options") => configure_display().await,
         s if s.starts_with("Theme") => configure_theme().await,
-        s if s.starts_with("Show Current Config") => show_current_configuration().await,
         s if s.starts_with("Reset to Defaults") => reset_configuration().await,
-        s if s.starts_with("Export Config") => export_configuration().await,
-        s if s.starts_with("Import Config") => import_configuration().await,
         _ => Ok(()),
     }
 }
@@ -247,50 +238,6 @@ fn preview_theme(theme: &Theme) {
     );
 }
 
-/// Show current configuration
-async fn show_current_configuration() -> Result<()> {
-    let prefs = PersonalityPreferences::load_or_default()
-        .await
-        .with_context(|| "Failed to load current personality preferences")?;
-
-    println!("{}", "Current Configuration".bold().blue());
-    println!();
-
-    println!("{}", "Display Options:".bold());
-    for (name, enabled) in prefs.get_display_options() {
-        let status = if enabled {
-            ICON_CHECK.green().to_string()
-        } else {
-            ICON_WARNING.yellow().to_string()
-        };
-        println!("  {status} {name}");
-    }
-
-    println!();
-    println!("{}", "Theme:".bold());
-    println!(
-        "  {} Current: {}",
-        ICON_CHECK.green(),
-        prefs.theme.display_name()
-    );
-    println!(
-        "  {} Description: {}",
-        ICON_INFO.cyan(),
-        prefs.theme.description()
-    );
-
-    let config_path = PersonalityPreferences::get_preferences_path()
-        .with_context(|| "Failed to get preferences file path")?;
-
-    println!(
-        "\n{} Configuration file: {}",
-        ICON_INFO.cyan(),
-        config_path.display()
-    );
-
-    Ok(())
-}
-
 /// Reset all configuration to defaults
 async fn reset_configuration() -> Result<()> {
     println!("{}", "Reset Configuration".bold().red());
@@ -312,147 +259,8 @@ async fn reset_configuration() -> Result<()> {
             "{} All configuration has been reset to defaults!",
             ICON_CHECK.green()
         );
-        println!("Run 'claude-code-personalities config show' to see current settings.");
     } else {
         println!("{} Configuration reset cancelled.", ICON_INFO.cyan());
-    }
-
-    Ok(())
-}
-
-/// Export current configuration to a file
-async fn export_configuration() -> Result<()> {
-    use std::path::Path;
-    use tokio::fs;
-
-    println!("{}", "Export Configuration".bold().blue());
-
-    let prefs = PersonalityPreferences::load_or_default()
-        .await
-        .with_context(|| "Failed to load current personality preferences")?;
-
-    // Default export path
-    let default_path = "claude-code-personalities-config.json";
-    let export_path = inquire::Text::new("Export to file:")
-        .with_default(default_path)
-        .prompt()
-        .with_context(|| "Failed to get export file path")?;
-
-    let export_path = Path::new(&export_path);
-
-    // Check if file exists
-    if export_path.exists() {
-        let confirmed = Confirm::new(&format!(
-            "File '{}' already exists. Overwrite?",
-            export_path.display()
-        ))
-        .with_default(false)
-        .prompt()
-        .with_context(|| "Failed to get overwrite confirmation")?;
-
-        if !confirmed {
-            println!("{} Export cancelled.", ICON_INFO.cyan());
-            return Ok(());
-        }
-    }
-
-    // Export configuration
-    let content = serde_json::to_string_pretty(&prefs)
-        .with_context(|| "Failed to serialize configuration for export")?;
-
-    fs::write(export_path, content)
-        .await
-        .with_context(|| format!("Failed to write configuration to {}", export_path.display()))?;
-
-    println!(
-        "{} Configuration exported to: {}",
-        ICON_CHECK.green(),
-        export_path.display()
-    );
-
-    Ok(())
-}
-
-/// Import configuration from a file
-async fn import_configuration() -> Result<()> {
-    use std::path::Path;
-    use tokio::fs;
-
-    println!("{}", "Import Configuration".bold().blue());
-
-    let import_path = inquire::Text::new("Import from file:")
-        .with_default("claude-code-personalities-config.json")
-        .prompt()
-        .with_context(|| "Failed to get import file path")?;
-
-    let import_path = Path::new(&import_path);
-
-    if !import_path.exists() {
-        println!(
-            "{} File '{}' does not exist.",
-            ICON_ERROR.red(),
-            import_path.display()
-        );
-        return Ok(());
-    }
-
-    // Load and validate configuration
-    let content = fs::read_to_string(import_path).await.with_context(|| {
-        format!(
-            "Failed to read configuration from {}",
-            import_path.display()
-        )
-    })?;
-
-    let imported_prefs: PersonalityPreferences = serde_json::from_str(&content)
-        .with_context(|| format!("Invalid configuration format in {}", import_path.display()))?;
-
-    // Show what will be imported
-    println!("\nConfiguration to import:");
-    println!(
-        "  Display options: {} enabled",
-        imported_prefs
-            .get_display_options()
-            .iter()
-            .filter(|(_, enabled)| *enabled)
-            .count()
-    );
-    println!(
-        "  Compact mode: {}",
-        if imported_prefs.display.compact_mode {
-            "enabled"
-        } else {
-            "disabled"
-        }
-    );
-    println!(
-        "  Debug info: {}",
-        if imported_prefs.display.show_debug_info {
-            "enabled"
-        } else {
-            "disabled"
-        }
-    );
-
-    let confirmed = Confirm::new("\nImport this configuration?")
-        .with_default(true)
-        .prompt()
-        .with_context(|| "Failed to get import confirmation")?;
-
-    if confirmed {
-        imported_prefs
-            .save()
-            .await
-            .with_context(|| "Failed to save imported configuration")?;
-
-        println!(
-            "{} Configuration imported successfully from: {}",
-            ICON_CHECK.green(),
-            import_path.display()
-        );
-        println!("Run 'claude-code-personalities config show' to verify settings.");
-    } else {
-        println!("{} Import cancelled.", ICON_INFO.cyan());
     }
 
     Ok(())
@@ -465,10 +273,7 @@ fn print_config_help() {
     println!("Subcommands:");
     println!("  display    Configure what appears in the statusline");
     println!("  theme      Change color theme");
-    println!("  show       Show current configuration");
     println!("  reset      Reset all settings to defaults");
-    println!("  export     Export configuration to a file");
-    println!("  import     Import configuration from a file");
     println!();
     println!("If no subcommand is provided, an interactive menu will be shown.");
 }
