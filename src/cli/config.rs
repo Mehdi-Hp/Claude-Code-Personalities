@@ -234,6 +234,7 @@ fn preview_theme(theme: &Theme) {
     println!("  Error: {}", theme.apply_error("\u{f071} Error"));
     println!("  Warning: {}", theme.apply_warning("\u{f0e7} Warning"));
     println!("  Success: {}", theme.apply_success("\u{f00c} Success"));
+    println!("  Info: {}", theme.apply_info("\u{f129} Info"));
     println!("  Model Colors:");
     println!("    Opus: {}", theme.apply_model_color("[ Opus]", "Opus"));
     println!(
@@ -262,7 +263,7 @@ async fn show_current_configuration() -> Result<()> {
         } else {
             ICON_WARNING.yellow().to_string()
         };
-        println!("  {} {}", status, name);
+        println!("  {status} {name}");
     }
 
     println!();

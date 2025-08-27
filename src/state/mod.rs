@@ -7,21 +7,11 @@ use tokio::fs;
 use crate::kaomoji::BOOTING_UP;
 use crate::types::Activity;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MoodState {
     pub frustration_level: u8,        // 0-10, increases with errors
     pub momentum: u8,                 // 0-10, consecutive successes
     pub last_error_time: Option<u64>, // Unix timestamp
-}
-
-impl Default for MoodState {
-    fn default() -> Self {
-        Self {
-            frustration_level: 0,
-            momentum: 0,
-            last_error_time: None,
-        }
-    }
 }
 
 impl MoodState {
