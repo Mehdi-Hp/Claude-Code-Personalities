@@ -55,10 +55,7 @@ async fn run() -> Result<()> {
                     Command::new("display").about("Configure what appears in the statusline"),
                 )
                 .subcommand(Command::new("theme").about("Change color theme"))
-                .subcommand(Command::new("show").about("Show current configuration"))
-                .subcommand(Command::new("reset").about("Reset all settings to defaults"))
-                .subcommand(Command::new("export").about("Export configuration to a file"))
-                .subcommand(Command::new("import").about("Import configuration from a file")),
+                .subcommand(Command::new("reset").about("Reset all settings to defaults")),
         )
         .arg(
             Arg::new("statusline")
