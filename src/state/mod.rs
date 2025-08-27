@@ -112,10 +112,15 @@ impl SessionState {
             })?;
             Ok(state)
         } else {
-            Ok(Self {
+            let state = Self {
                 session_id: session_id.to_string(),
                 ..Default::default()
-            })
+            };
+            // Save the default state so it persists across calls
+            state.save().await.with_context(|| {
+                format!("Failed to save initial session state for session {session_id}")
+            })?;
+            Ok(state)
         }
     }
 
