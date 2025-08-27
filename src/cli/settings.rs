@@ -131,8 +131,7 @@ impl ClaudeSettings {
     pub fn configure_statusline(&mut self, binary_path: &Path) -> Result<()> {
         let statusline_config = serde_json::json!({
             "type": "command",
-            "command": binary_path.to_str().ok_or_else(|| anyhow!("Invalid binary path"))?,
-            "args": ["--statusline"],
+            "command": format!("{} --statusline", binary_path.to_str().ok_or_else(|| anyhow!("Invalid binary path"))?),
             "padding": 0
         });
 
