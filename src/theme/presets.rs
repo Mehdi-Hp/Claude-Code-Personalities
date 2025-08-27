@@ -1,4 +1,4 @@
-use super::{Theme, ThemeColors};
+use super::Theme;
 
 /// Helper functions for applying theme colors consistently
 impl Theme {
