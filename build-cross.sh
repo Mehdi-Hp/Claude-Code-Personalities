@@ -1,73 +1,46 @@
 #!/bin/bash
 
-# Cross-compilation script for Claude Code Personalities
+# Simple local build script for Claude Code Personalities
+# For cross-platform releases, use GitHub Actions matrix builds instead
 set -euo pipefail
 
-echo "🚀 Cross-compiling for all platforms..."
+echo "🚀 Building Claude Code Personalities locally..."
 
 # Clean build dir
 rm -rf build
 mkdir -p build
 
-# Get version from Cargo.toml (no jq dependency)
+# Get version from Cargo.toml
 VERSION=$(grep '^version = ' Cargo.toml | head -n1 | sed 's/version = "\(.*\)"/\1/')
 echo "Version: $VERSION"
 
-# Targets to build (macOS for local testing, GitHub Actions will build Linux)
-TARGETS=(
-    "x86_64-apple-darwin"
-    "aarch64-apple-darwin"
-)
+# Build for current platform
+echo "Building for current platform..."
+cargo build --release
 
-# Add Linux targets if Docker is available OR if in CI environment
-if command -v docker &>/dev/null && docker version &>/dev/null; then
-    TARGETS+=(
-        "x86_64-unknown-linux-gnu"
-        "aarch64-unknown-linux-gnu"
-    )
-    echo "Docker detected - building for all platforms"
-elif [[ "${CI:-false}" == "true" ]] || [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
-    TARGETS+=(
-        "x86_64-unknown-linux-gnu"
-        "aarch64-unknown-linux-gnu"
-    )
-    echo "CI environment detected - building for all platforms"
+# Copy to build dir
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    platform="macos-$(uname -m)"
+    binary_name="claude-code-personalities-$platform"
 else
-    echo "Local environment without Docker - building macOS binaries only"
+    # Linux or other
+    platform="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+    binary_name="claude-code-personalities-$platform"
 fi
 
-# Install cross if needed for Linux targets
-if [[ " ${TARGETS[*]} " =~ "linux" ]]; then
-    command -v cross >/dev/null || cargo install cross --git https://github.com/cross-rs/cross
-fi
+cp target/release/claude-code-personalities build/$binary_name
+chmod +x build/$binary_name
 
-# Add all targets
-for target in "${TARGETS[@]}"; do
-    rustup target add $target 2>/dev/null || true
-done
+# Generate checksum
+cd build
+sha256sum $binary_name > $binary_name.sha256
 
-# Build each target
-for target in "${TARGETS[@]}"; do
-    echo "Building for $target..."
-    
-    if [[ "$target" == *"linux"* ]]; then
-        # Use cross for all Linux targets
-        cross build --release --target $target
-    else
-        # Use regular cargo for macOS targets
-        cargo build --release --target $target
-    fi
-    
-    # Copy to build dir with proper naming
-    platform_name=$(echo $target | sed 's/unknown-//g' | sed 's/gnu//g' | sed 's/-$//')
-    cp target/$target/release/claude-code-personalities build/claude-code-personalities-$platform_name
-    chmod +x build/claude-code-personalities-$platform_name
-    
-    # Show file size
-    size=$(du -h build/claude-code-personalities-$platform_name | cut -f1)
-    echo "✅ $platform_name ($size)"
-done
-
+# Show results
+size=$(du -h $binary_name | cut -f1)
+echo "✅ Built: $binary_name ($size)"
 echo ""
-echo "✅ All binaries built in build/"
-ls -la build/
+echo "📦 Local build complete! For multi-platform releases, use:"
+echo "   git tag v$VERSION && git push origin v$VERSION"
+echo ""
+ls -la
