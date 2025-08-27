@@ -37,6 +37,10 @@ pub struct WorkspaceInfo {
 /// - Personality preferences cannot be loaded
 pub async fn run_statusline() -> Result<()> {
     use anyhow::Context;
+    use colored::control;
+
+    // Force colors to be enabled even when output is piped (Claude Code expects ANSI codes)
+    control::set_override(true);
 
     // Read JSON from stdin
     let mut input = String::new();
