@@ -4,8 +4,8 @@
 //! display preferences, mood settings, and advanced options.
 
 use anyhow::{Context, Result};
+use cliclack::{confirm, intro, multiselect, outro, select};
 use colored::Colorize;
-use inquire::{Confirm, MultiSelect, Select};
 
 use crate::config::PersonalityPreferences;
 use crate::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
@@ -32,35 +32,32 @@ pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
 
 /// Interactive configuration menu (default when just running 'config')
 async fn interactive_config_menu() -> Result<()> {
-    use inquire::Select;
+    intro("Configure Claude Code Personalities")?;
 
-    println!("{}", "Configure Claude Code Personalities".bold().blue());
-    println!("Select a configuration category:\n");
-
-    let options = vec![
-        "Display Options - What appears in the statusline",
-        "Theme - Change colors and visual style",
-        "Reset to Defaults - Reset all settings",
-    ];
-
-    let selection = Select::new("Configuration category:", options)
-        .prompt()
+    let selection = select("Select a configuration category")
+        .item(
+            "display",
+            "Display Options",
+            "What appears in the statusline",
+        )
+        .item("theme", "Theme", "Change colors and visual style")
+        .item("reset", "Reset to Defaults", "Reset all settings")
+        .interact()
         .with_context(
             || "Failed to get user selection. Interactive prompt was cancelled or failed.",
         )?;
 
-    match selection {
-        s if s.starts_with("Display Options") => configure_display().await,
-        s if s.starts_with("Theme") => configure_theme().await,
-        s if s.starts_with("Reset to Defaults") => reset_configuration().await,
+    match selection.as_ref() {
+        "display" => configure_display().await,
+        "theme" => configure_theme().await,
+        "reset" => reset_configuration().await,
         _ => Ok(()),
     }
 }
 
 /// Configure display preferences (replaces the old configure function)
 async fn configure_display() -> Result<()> {
-    println!("{}", "Configure Display Options".bold().blue());
-    println!("Select which elements to show in the statusline:\n");
+    intro("Configure Display Options")?;
 
     // Load current preferences or defaults
     let mut prefs = PersonalityPreferences::load_or_default()
@@ -69,23 +66,27 @@ async fn configure_display() -> Result<()> {
 
     // Get all display options with their current states
     let options = prefs.get_display_options();
-    let option_names: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
 
-    // Get indices of currently selected options
-    let default_selections: Vec<usize> = options
-        .iter()
-        .enumerate()
-        .filter_map(|(i, (_, enabled))| if *enabled { Some(i) } else { None })
-        .collect();
+    // Build multiselect with items and initial selections
+    let mut selector = multiselect("Select which elements to show in the statusline");
+
+    // Add each option with its current state
+    // Note: cliclack doesn't support initial selections in multiselect,
+    // so we'll show current state in the hint
+    for (name, enabled) in &options {
+        let hint = if *enabled { "(currently enabled)" } else { "" };
+        selector = selector.item(name, name, hint);
+    }
 
     // Show interactive multi-select prompt
-    let selected = MultiSelect::new("Features to enable:", option_names.clone())
-        .with_default(&default_selections)
-        .prompt()
-        .with_context(|| "Failed to get user preferences selection. Interactive prompt was cancelled or failed.")?;
+    let selected: Vec<&&str> = selector.interact().with_context(
+        || "Failed to get user preferences selection. Interactive prompt was cancelled or failed.",
+    )?;
 
-    // Update preferences based on selections
-    prefs.update_from_selections(&selected);
+    // Convert selected to owned strings first, then to refs
+    let selected_strings: Vec<String> = selected.iter().map(|s| s.to_string()).collect();
+    let selected_refs: Vec<&str> = selected_strings.iter().map(|s| s.as_str()).collect();
+    prefs.update_from_selections(&selected_refs);
 
     // Save updated preferences
     prefs
@@ -93,42 +94,41 @@ async fn configure_display() -> Result<()> {
         .await
         .with_context(|| "Failed to save updated personality preferences")?;
 
-    println!(
-        "\n{} Display configuration saved successfully!",
-        ICON_CHECK.green()
-    );
-
     let prefs_path = PersonalityPreferences::get_preferences_path()
         .with_context(|| "Failed to get preferences file path for display")?;
-    println!("Location: {}", prefs_path.display());
 
-    // Show what was enabled/disabled
+    // Show what was enabled/disabled before outro
     println!("\nEnabled features:");
-    for feature in &selected {
+    for feature in &selected_strings {
         println!("  {} {}", ICON_CHECK.green(), feature);
     }
 
-    if selected.len() < option_names.len() {
+    // Check if any options were disabled
+    let all_options: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
+    let disabled_options: Vec<&&str> = all_options
+        .iter()
+        .filter(|opt| !selected_refs.contains(opt))
+        .collect();
+
+    if !disabled_options.is_empty() {
         println!("\nDisabled features:");
-        for option in &option_names {
-            if !selected.contains(option) {
-                println!("  {} {}", ICON_WARNING.yellow(), option);
-            }
+        for option in disabled_options {
+            println!("  {} {}", ICON_WARNING.yellow(), option);
         }
     }
 
-    println!(
-        "\n{} Run your Claude Code session to see the changes!",
-        ICON_INFO.cyan()
-    );
+    outro(format!(
+        "{} Display configuration saved to: {}",
+        ICON_CHECK.green(),
+        prefs_path.display()
+    ))?;
 
     Ok(())
 }
 
 /// Configure theme (color scheme)
 async fn configure_theme() -> Result<()> {
-    println!("{}", "Configure Theme".bold().blue());
-    println!("Select a theme for Claude Code Personalities:\n");
+    intro("Configure Theme")?;
 
     // Load current preferences
     let mut prefs = PersonalityPreferences::load_or_default()
@@ -137,32 +137,31 @@ async fn configure_theme() -> Result<()> {
 
     // Get all available themes with descriptions
     let themes = Theme::all();
-    let theme_options: Vec<String> = themes
+
+    println!("Current theme: {}\n", prefs.theme.display_name().bold());
+
+    // Build select with theme items
+    // Create IDs outside the loop to ensure they live long enough
+    let theme_ids: Vec<String> = themes
         .iter()
-        .map(|theme| format!("{} - {}", theme.display_name(), theme.description()))
+        .enumerate()
+        .map(|(index, _)| format!("theme_{}", index))
         .collect();
 
-    // Find current theme index
-    let current_theme_index = themes
-        .iter()
-        .position(|theme| *theme == prefs.theme)
-        .unwrap_or(0);
-
-    println!("Current theme: {}", prefs.theme.display_name().bold());
-    println!();
+    let mut selector = select("Choose a theme");
+    for (theme, id) in themes.iter().zip(&theme_ids) {
+        selector = selector.item(id, theme.display_name(), theme.description());
+    }
 
     // Show theme selection
-    let selection = Select::new("Choose a theme:", theme_options.clone())
-        .with_starting_cursor(current_theme_index)
-        .prompt()
-        .with_context(
-            || "Failed to get theme selection. Interactive prompt was cancelled or failed.",
-        )?;
+    let selection = selector.interact().with_context(
+        || "Failed to get theme selection. Interactive prompt was cancelled or failed.",
+    )?;
 
-    // Find the selected theme
-    let selected_theme_index = theme_options
-        .iter()
-        .position(|opt| opt == &selection)
+    // Find the selected theme from the ID
+    let selected_theme_index = selection
+        .strip_prefix("theme_")
+        .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
 
     let selected_theme = &themes[selected_theme_index];
@@ -173,9 +172,9 @@ async fn configure_theme() -> Result<()> {
 
     // Confirm selection if it's different from current
     if *selected_theme != prefs.theme {
-        let confirmed = Confirm::new("Apply this theme?")
-            .with_default(true)
-            .prompt()
+        let confirmed = confirm("Apply this theme?")
+            .initial_value(true)
+            .interact()
             .with_context(|| "Failed to get theme confirmation")?;
 
         if confirmed {
@@ -185,29 +184,24 @@ async fn configure_theme() -> Result<()> {
                 .await
                 .with_context(|| "Failed to save theme configuration")?;
 
-            println!(
-                "\n{} Theme '{}' applied successfully!",
-                ICON_CHECK.green(),
-                selected_theme.display_name()
-            );
-
             let prefs_path = PersonalityPreferences::get_preferences_path()
                 .with_context(|| "Failed to get preferences file path for display")?;
-            println!("Configuration saved to: {}", prefs_path.display());
 
-            println!(
-                "\n{} Run your Claude Code session to see the new theme!",
-                ICON_INFO.cyan()
-            );
+            outro(format!(
+                "{} Theme '{}' applied! Configuration saved to: {}",
+                ICON_CHECK.green(),
+                selected_theme.display_name(),
+                prefs_path.display()
+            ))?;
         } else {
-            println!("{} Theme change cancelled.", ICON_INFO.cyan());
+            outro(format!("{} Theme change cancelled.", ICON_INFO.cyan()))?;
         }
     } else {
-        println!(
+        outro(format!(
             "{} Theme '{}' is already selected.",
             ICON_INFO.cyan(),
             selected_theme.display_name()
-        );
+        ))?;
     }
 
     Ok(())
@@ -240,12 +234,17 @@ fn preview_theme(theme: &Theme) {
 
 /// Reset all configuration to defaults
 async fn reset_configuration() -> Result<()> {
-    println!("{}", "Reset Configuration".bold().red());
-    println!("This will reset ALL settings to their default values.\n");
+    intro("Reset Configuration")?;
 
-    let confirmed = Confirm::new("Are you sure you want to reset all configuration?")
-        .with_default(false)
-        .prompt()
+    println!(
+        "{} This will reset ALL settings to their default values.",
+        ICON_WARNING.yellow()
+    );
+    println!();
+
+    let confirmed = confirm("Are you sure you want to reset all configuration?")
+        .initial_value(false)
+        .interact()
         .with_context(|| "Failed to get confirmation")?;
 
     if confirmed {
@@ -255,12 +254,15 @@ async fn reset_configuration() -> Result<()> {
             .await
             .with_context(|| "Failed to save reset configuration")?;
 
-        println!(
+        outro(format!(
             "{} All configuration has been reset to defaults!",
             ICON_CHECK.green()
-        );
+        ))?;
     } else {
-        println!("{} Configuration reset cancelled.", ICON_INFO.cyan());
+        outro(format!(
+            "{} Configuration reset cancelled.",
+            ICON_INFO.cyan()
+        ))?;
     }
 
     Ok(())
