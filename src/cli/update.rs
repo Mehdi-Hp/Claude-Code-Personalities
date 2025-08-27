@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, anyhow};
+use cliclack::{confirm, intro, outro};
 use colored::Colorize;
-use inquire::Confirm;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
@@ -46,13 +46,7 @@ impl Default for UpdateOptions {
 /// - User cancels update when in interactive mode
 /// - Binary verification fails after installation
 pub async fn update_personalities(options: UpdateOptions) -> Result<()> {
-    println!(
-        "{}",
-        "Checking for Claude Code Personalities updates..."
-            .bold()
-            .blue()
-    );
-    println!();
+    intro("Checking for Claude Code Personalities updates")?;
 
     // Step 1: Check for updates and get release info
     let version_manager =
@@ -68,9 +62,6 @@ pub async fn update_personalities(options: UpdateOptions) -> Result<()> {
 
     // Step 3: Perform the actual update
     perform_update(&version_manager, &latest_release).await?;
-
-    print_success("Update completed successfully!");
-    println!();
 
     Ok(())
 }
@@ -142,9 +133,9 @@ async fn show_update_info_and_confirm(
     // Get user confirmation if interactive
     if options.interactive {
         println!();
-        let should_update = Confirm::new("Do you want to update now?")
-            .with_default(true)
-            .prompt()
+        let should_update = confirm("Do you want to update now?")
+            .initial_value(true)
+            .interact()
             .with_context(|| "Failed to get user confirmation for update")?;
 
         if !should_update {
@@ -310,7 +301,7 @@ async fn verify_installation_and_cleanup(paths: &UpdatePaths, latest_version: &s
         .with_context(|| "Failed to clean up old backups")?;
 
     println!();
-    print_update_success(CURRENT_VERSION, latest_version, &paths.current_binary);
+    print_update_success(CURRENT_VERSION, latest_version, &paths.current_binary)?;
 
     Ok(())
 }
@@ -424,39 +415,12 @@ async fn cleanup_old_backups(claude_dir: &PathBuf) -> Result<()> {
 }
 
 /// Print update success message
-fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path) {
-    println!(
-        "{}",
-        "╔═══════════════════════════════════════════════════════════╗"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "║                                                           ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{} {} {}",
-        "║".bold().green(),
-        "🎉 Claude Code Personalities Updated Successfully! 🎉"
-            .bold()
-            .white(),
-        "║".bold().green()
-    );
-    println!(
-        "{}",
-        "║                                                           ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "╚═══════════════════════════════════════════════════════════╝"
-            .bold()
-            .green()
-    );
+fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path) -> Result<()> {
+    outro(format!(
+        "{} Claude Code Personalities Updated Successfully!",
+        ICON_CHECK.green()
+    ))?;
+
     println!();
 
     let version_change = format!("v{old_version} → v{new_version}");
@@ -500,6 +464,8 @@ fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path
         "{} Your Claude Code personalities are now up to date!",
         "\u{f135}".yellow()
     );
+
+    Ok(())
 }
 
 /// Helper functions for status output

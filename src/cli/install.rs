@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, anyhow};
+use cliclack::{confirm, intro, outro};
 use colored::Colorize;
-use inquire::Confirm;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
@@ -40,11 +40,7 @@ impl Default for InstallationOptions {
 /// - File permissions cannot be set correctly
 /// - Configuration validation fails
 pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
-    println!(
-        "{}",
-        "Installing Claude Code Personalities...".bold().blue()
-    );
-    println!();
+    intro("Installing Claude Code Personalities")?;
 
     // Step 1: Check if Claude directory exists
     let claude_dir = get_claude_dir()?;
@@ -52,11 +48,10 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
         print_success(&format!("Found Claude directory: {}", claude_dir.display()));
     } else {
         if options.interactive {
-            let create_dir =
-                Confirm::new("Claude directory not found. Create ~/.claude/ directory?")
-                    .with_default(true)
-                    .prompt()
-                    .with_context(|| "Failed to get user confirmation for directory creation")?;
+            let create_dir = confirm("Claude directory not found. Create ~/.claude/ directory?")
+                .initial_value(true)
+                .interact()
+                .with_context(|| "Failed to get user confirmation for directory creation")?;
 
             if !create_dir {
                 return Err(anyhow!(
@@ -133,9 +128,9 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
         // Claude Code is already configured
         if options.interactive {
             let reconfigure =
-                Confirm::new("Claude Code Personalities is already configured. Reconfigure?")
-                    .with_default(false)
-                    .prompt()
+                confirm("Claude Code Personalities is already configured. Reconfigure?")
+                    .initial_value(false)
+                    .interact()
                     .with_context(|| "Failed to get user confirmation for reconfiguration")?;
 
             if !reconfigure {
@@ -209,7 +204,7 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
 
     // Step 14: Show success message
     println!();
-    print_installation_success(&target_binary, &settings.settings_path);
+    print_installation_success(&target_binary, &settings.settings_path)?;
 
     Ok(())
 }
@@ -260,39 +255,12 @@ fn get_current_binary_path() -> Result<PathBuf> {
 }
 
 /// Print installation success message
-fn print_installation_success(binary_path: &Path, settings_path: &Path) {
-    println!(
-        "{}",
-        "╔══════════════════════════════════════════════════════════╗"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "║                                                          ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{} {} {}",
-        "║".bold().green(),
-        "🎉 Claude Code Personalities Installed Successfully! 🎉"
-            .bold()
-            .white(),
-        "║".bold().green()
-    );
-    println!(
-        "{}",
-        "║                                                          ║"
-            .bold()
-            .green()
-    );
-    println!(
-        "{}",
-        "╚══════════════════════════════════════════════════════════╝"
-            .bold()
-            .green()
-    );
+fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
+    outro(format!(
+        "{} Claude Code Personalities Installed Successfully!",
+        ICON_CHECK.green()
+    ))?;
+
     println!();
 
     println!(
@@ -349,6 +317,8 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) {
         "{} Start a new Claude Code session to see your personalities in action!",
         "\u{f135}".yellow()
     );
+
+    Ok(())
 }
 
 /// Find existing claude-code-personalities binary installation.
