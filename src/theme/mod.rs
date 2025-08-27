@@ -95,7 +95,7 @@ impl std::str::FromStr for Theme {
             "nord" => Ok(Theme::Nord),
             "gruvbox" | "gruvbox-dark" => Ok(Theme::Gruvbox),
             "high-contrast" | "highcontrast" => Ok(Theme::HighContrast),
-            _ => Err(format!("Unknown theme: {}", s)),
+            _ => Err(format!("Unknown theme: {s}")),
         }
     }
 }
@@ -125,7 +125,10 @@ mod tests {
         for theme in Theme::all() {
             let colors = theme.colors();
             // Just verify we get some colors back
-            assert!(!colors.personality.is_empty());
+            // Verify personality color has some value (not all zeros)
+            assert!(
+                colors.personality.r > 0 || colors.personality.g > 0 || colors.personality.b > 0
+            );
         }
     }
 }
