@@ -9,8 +9,8 @@ echo "🚀 Cross-compiling for all platforms..."
 rm -rf build
 mkdir -p build
 
-# Get version
-VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "claude-code-personalities") | .version')
+# Get version from Cargo.toml (no jq dependency)
+VERSION=$(grep '^version = ' Cargo.toml | head -n1 | sed 's/version = "\(.*\)"/\1/')
 echo "Version: $VERSION"
 
 # Targets to build (macOS for local testing, GitHub Actions will build Linux)
