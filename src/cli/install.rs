@@ -377,14 +377,13 @@ async fn find_existing_binary() -> Result<Option<PathBuf>> {
         .arg("claude-code-personalities")
         .output()
         .await
+        && output.status.success()
     {
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path_str.is_empty() {
-                let path_binary = PathBuf::from(path_str);
-                if path_binary.exists() {
-                    return Ok(Some(path_binary));
-                }
+        let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path_str.is_empty() {
+            let path_binary = PathBuf::from(path_str);
+            if path_binary.exists() {
+                return Ok(Some(path_binary));
             }
         }
     }

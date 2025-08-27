@@ -276,14 +276,12 @@ impl ClaudeSettings {
     /// to a JSON object. This should only happen if the content was corrupted externally.
     pub fn remove_personality_config(&mut self) {
         // Remove statusline if it's our command
-        if let Some(statusline) = self.content.get("statusLine") {
-            if let Some(command) = statusline.get("command") {
-                if let Some(cmd_str) = command.as_str() {
-                    if cmd_str.contains("claude-code-personalities") {
-                        self.content.as_object_mut().unwrap().remove("statusLine");
-                    }
-                }
-            }
+        if let Some(statusline) = self.content.get("statusLine")
+            && let Some(command) = statusline.get("command")
+            && let Some(cmd_str) = command.as_str()
+            && cmd_str.contains("claude-code-personalities")
+        {
+            self.content.as_object_mut().unwrap().remove("statusLine");
         }
 
         // Remove our hooks

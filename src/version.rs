@@ -125,10 +125,10 @@ impl VersionManager {
     /// Get the latest release information from GitHub
     pub async fn get_latest_release(&self) -> Result<GitHubRelease> {
         // Try to load from cache first
-        if let Ok(cached) = self.load_cached_version().await {
-            if !cached.is_expired() {
-                return Ok(cached.release_info);
-            }
+        if let Ok(cached) = self.load_cached_version().await
+            && !cached.is_expired()
+        {
+            return Ok(cached.release_info);
         }
 
         // Fetch from GitHub API
