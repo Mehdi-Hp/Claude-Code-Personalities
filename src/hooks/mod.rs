@@ -66,9 +66,11 @@ async fn handle_tool_hook() -> Result<()> {
     let hook_input: HookInput =
         serde_json::from_str(&input).with_context(|| "Failed to parse hook input JSON")?;
 
-    let session_id = hook_input
-        .session_id
-        .unwrap_or_else(|| "unknown".to_string());
+    // Use a consistent fallback when session_id is missing
+    let session_id = hook_input.session_id.unwrap_or_else(|| {
+        // Use a predictable session ID for the current Claude session
+        std::env::var("CLAUDE_SESSION_ID").unwrap_or_else(|_| "claude_current".to_string())
+    });
     let tool_name = hook_input.tool_name.unwrap_or_default();
 
     // Load current state
