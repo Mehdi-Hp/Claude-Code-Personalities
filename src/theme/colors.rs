@@ -30,11 +30,6 @@ impl Color {
     pub fn apply_bold<T: AsRef<str>>(&self, text: T) -> ColoredString {
         text.as_ref().truecolor(self.r, self.g, self.b).bold()
     }
-
-    /// Check if color is effectively empty (pure black)
-    pub fn is_empty(&self) -> bool {
-        self.r == 0 && self.g == 0 && self.b == 0
-    }
 }
 
 /// Complete color scheme for a theme
@@ -203,17 +198,10 @@ mod tests {
     }
 
     #[test]
-    fn test_color_empty() {
-        let empty = Color::new(0, 0, 0);
-        let not_empty = Color::new(1, 0, 0);
-        assert!(empty.is_empty());
-        assert!(!not_empty.is_empty());
-    }
-
-    #[test]
     fn test_theme_colors_dark() {
         let colors = ThemeColors::dark();
-        assert!(!colors.personality.is_empty());
-        assert!(!colors.error.is_empty());
+        // Verify dark theme has proper colors (not all zeros)
+        assert!(colors.personality.r > 0 || colors.personality.g > 0 || colors.personality.b > 0);
+        assert!(colors.error.r > 0 || colors.error.g > 0 || colors.error.b > 0);
     }
 }
