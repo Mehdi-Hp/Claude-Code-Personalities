@@ -171,15 +171,13 @@ impl ClaudeSettings {
         // Pre-tool hook for activity tracking
         let pre_tool_hook = serde_json::json!({
             "type": "command",
-            "command": binary_str,
-            "args": ["--hook", "pre-tool"]
+            "command": format!("{} --hook pre-tool", binary_str)
         });
 
         // Post-tool hook for activity tracking
         let post_tool_hook = serde_json::json!({
             "type": "command",
-            "command": binary_str,
-            "args": ["--hook", "post-tool"]
+            "command": format!("{} --hook post-tool", binary_str)
         });
 
         // Configure PreToolUse hook - merge with existing
@@ -200,8 +198,7 @@ impl ClaudeSettings {
         let prompt_submit_personality_hook = serde_json::json!({
             "hooks": [{
                 "type": "command",
-                "command": binary_str,
-                "args": ["--hook", "prompt-submit"]
+                "command": format!("{} --hook prompt-submit", binary_str)
             }]
         });
         Self::merge_hook_array(
@@ -215,8 +212,7 @@ impl ClaudeSettings {
             "matcher": "",
             "hooks": [{
                 "type": "command",
-                "command": binary_str,
-                "args": ["--hook", "session-end"]
+                "command": format!("{} --hook session-end", binary_str)
             }]
         });
         Self::merge_hook_array(&mut hooks_obj, "Stop", session_end_personality_hook)?;
@@ -598,17 +594,13 @@ mod tests {
                     .and_then(|h| h.as_array())
                     .is_some_and(|hooks| {
                         hooks.iter().any(|h| {
-                            h.get("command").and_then(|c| c.as_str())
-                                == Some("/path/to/claude-code-personalities")
-                                && h.get("args")
-                                    .and_then(|a| a.as_array())
-                                    .is_some_and(|args| {
-                                        args.first().and_then(|arg| arg.as_str()) == Some("--hook")
-                                            && (args.get(1).and_then(|arg| arg.as_str())
-                                                == Some("pre-tool")
-                                                || args.get(1).and_then(|arg| arg.as_str())
-                                                    == Some("post-tool"))
-                                    })
+                            h.get("command")
+                                .and_then(|c| c.as_str())
+                                .is_some_and(|cmd| {
+                                    cmd.contains("claude-code-personalities")
+                                        && (cmd.contains("--hook pre-tool")
+                                            || cmd.contains("--hook post-tool"))
+                                })
                         })
                     })
         });
@@ -631,8 +623,7 @@ mod tests {
                     "matcher": "*",
                     "hooks": [{
                         "type": "command",
-                        "command": "/path/to/claude-code-personalities",
-                        "args": ["--hook", "activity"]
+                        "command": "/path/to/claude-code-personalities --hook activity"
                     }]
                 }, {
                     "matcher": "*.js",
@@ -781,8 +772,7 @@ mod tests {
             "matcher": "*",
             "hooks": [{
                 "type": "command",
-                "command": "/path/to/claude-code-personalities",
-                "args": ["--hook", "activity"]
+                "command": "/path/to/claude-code-personalities --hook activity"
             }]
         }]);
         assert!(hook_contains_personality_command(&hook_array));
@@ -790,16 +780,14 @@ mod tests {
         // Test with object hook structure
         let hook_obj = serde_json::json!({
             "type": "command",
-            "command": "/path/to/claude-code-personalities",
-            "args": ["--hook", "activity"]
+            "command": "/path/to/claude-code-personalities --hook activity"
         });
         assert!(hook_contains_personality_command(&hook_obj));
 
         // Test with non-personality command
         let other_hook = serde_json::json!({
             "type": "command",
-            "command": "/path/to/other-tool",
-            "args": ["--some-flag"]
+            "command": "/path/to/other-tool --some-flag"
         });
         assert!(!hook_contains_personality_command(&other_hook));
     }
