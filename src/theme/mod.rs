@@ -4,7 +4,6 @@ pub mod colors;
 pub mod presets;
 
 pub use colors::ThemeColors;
-pub use presets::*;
 
 /// Built-in theme options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
