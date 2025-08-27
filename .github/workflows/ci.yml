@@ -83,4 +83,4 @@ jobs:
             exit 1
           fi
           
-          echo "✅ Versions are in sync"
+          echo "SUCCESS: Versions are in sync"

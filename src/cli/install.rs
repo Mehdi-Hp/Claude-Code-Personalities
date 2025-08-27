@@ -303,8 +303,16 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) {
     );
     println!();
 
-    println!("{} {}", "📍 Installed to:".bold(), binary_path.display());
-    println!("{} {}", "⚙️  Settings:   ".bold(), settings_path.display());
+    println!(
+        "{} {}",
+        format!("{}Installed to:", "\u{f07b} ").bold(),
+        binary_path.display()
+    );
+    println!(
+        "{} {}",
+        format!("{}Settings:   ", "\u{f013} ").bold(),
+        settings_path.display()
+    );
     println!();
 
     println!("{}", "Next Steps:".bold().cyan());
@@ -347,7 +355,7 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) {
 
     println!(
         "{} Start a new Claude Code session to see your personalities in action!",
-        "🚀".yellow()
+        "\u{f135}".yellow()
     );
 }
 
