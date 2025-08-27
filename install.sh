@@ -93,7 +93,7 @@ clear
 echo
 echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}( ꩜ ᯅ ꩜;) ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}૮ ․ ․ ྀིა ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
@@ -217,13 +217,13 @@ fi
 # Success message with next steps
 echo
 echo -e "  $divider"
-echo -e "  ${BOLD}${GREEN}Claude Code Personalities Installed${NC} ${ICON_CHECK}"
+echo -e "  ${ICON_CHECK} ${BOLD}${GREEN}Claude Code Personalities Installed${NC}"
 echo -e "  $divider"
 echo
 echo
 
 echo -e "  ${BOLD}${GREEN}Next Steps${NC}"
-echo
+
 echo -e "    ${CYAN}claude-code-personalities install${NC}"
 echo
 echo
