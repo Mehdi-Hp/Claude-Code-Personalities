@@ -62,9 +62,11 @@ pub async fn run_statusline() -> Result<()> {
         format!("Failed to parse JSON input from Claude Code. Received: {preview}")
     })?;
 
-    let session_id = claude_input
-        .session_id
-        .unwrap_or_else(|| "unknown".to_string());
+    // Use a consistent fallback when session_id is missing
+    let session_id = claude_input.session_id.unwrap_or_else(|| {
+        // Use a predictable session ID for the current Claude session
+        std::env::var("CLAUDE_SESSION_ID").unwrap_or_else(|_| "claude_current".to_string())
+    });
     let model_name = claude_input
         .model
         .and_then(|m| m.display_name)
