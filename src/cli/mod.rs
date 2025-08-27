@@ -180,9 +180,13 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
         let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
 
         println!();
-        println!("{} {}", "📦 Update Available:".bold().green(), comparison);
+        println!(
+            "{} {}",
+            format!("{}Update Available:", "\u{f135} ").bold().green(),
+            comparison
+        );
         if let Some(name) = &release.name {
-            println!("{} {}", "📋 Release:".bold(), name);
+            println!("{} {}", format!("{}Release:", "\u{f044} ").bold(), name);
         }
         println!();
         println!(

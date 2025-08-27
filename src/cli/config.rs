@@ -231,9 +231,9 @@ fn preview_theme(theme: &Theme) {
     println!("  Activity: {}", theme.apply_activity("editing"));
     println!("  Directory: {}", theme.apply_directory("my-project"));
     println!("  File: {}", theme.apply_file("main.rs"));
-    println!("  Error: {}", theme.apply_error("⚠ Error"));
-    println!("  Warning: {}", theme.apply_warning("⚡ Warning"));
-    println!("  Success: {}", theme.apply_success("✓ Success"));
+    println!("  Error: {}", theme.apply_error("\u{f071} Error"));
+    println!("  Warning: {}", theme.apply_warning("\u{f0e7} Warning"));
+    println!("  Success: {}", theme.apply_success("\u{f00c} Success"));
     println!("  Model Colors:");
     println!("    Opus: {}", theme.apply_model_color("[ Opus]", "Opus"));
     println!(

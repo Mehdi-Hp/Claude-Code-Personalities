@@ -44,14 +44,14 @@ jobs:
           if [ -s audit-results.json ]; then
             VULNERABILITIES=$(jq '.vulnerabilities.count' audit-results.json 2>/dev/null || echo "0")
             if [ "$VULNERABILITIES" -gt 0 ]; then
-              echo "⚠️ Found $VULNERABILITIES security vulnerabilities"
+              echo "WARNING: Found $VULNERABILITIES security vulnerabilities"
               cargo audit
               exit 1
             else
-              echo "✅ No security vulnerabilities found"
+              echo "SUCCESS: No security vulnerabilities found"
             fi
           else
-            echo "✅ No security issues detected"
+            echo "SUCCESS: No security issues detected"
           fi
 
       - name: Upload audit results

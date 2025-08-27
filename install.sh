@@ -87,8 +87,8 @@ echo -e "${BOLD}${CYAN}   ║                       ${NC}${ITALIC}Rust Edition${
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "   ${ICON_ROCKET} ${ITALIC}High-performance dynamic personalities for Claude Code${NC}"
-echo -e "   ${ITALIC}with animated transitions and real-time activity tracking${NC}"
+echo -e "   ${ICON_ROCKET} ${ITALIC}Lightning-fast Rust binary (~1ms statusline generation)${NC}"
+echo -e "   ${ITALIC}with zero dependencies and intelligent activity tracking${NC}"
 echo
 echo
 
@@ -122,9 +122,8 @@ if ! command -v curl &> /dev/null; then
     exit 1
 fi
 
-if ! command -v jq &> /dev/null; then
-    print_error "jq is required but not installed"
-    echo "Install with: brew install jq"
+if ! command -v grep &> /dev/null || ! command -v sed &> /dev/null; then
+    print_error "grep and sed are required but not found"
     exit 1
 fi
 
@@ -135,7 +134,7 @@ echo
 print_info "Downloading latest version..."
 
 RELEASE_INFO=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-LATEST_VERSION=$(echo "$RELEASE_INFO" | jq -r '.tag_name' | sed 's/^v//')
+LATEST_VERSION=$(echo "$RELEASE_INFO" | grep -o '"tag_name": *"[^"]*"' | sed 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/')
 
 if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
     print_error "Failed to get latest version from GitHub"

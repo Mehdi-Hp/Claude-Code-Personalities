@@ -10,7 +10,7 @@ pub const ICON_EDITING: &str = "\u{f044}"; //
 pub const ICON_WRITING: &str = "\u{f15c}"; // 
 
 /// Executing commands - Lightning bolt icon
-pub const ICON_EXECUTING: &str = "\u{f0e7}"; // ⚡
+pub const ICON_EXECUTING: &str = "\u{f0e7}"; // Lightning/Run
 
 /// Reading files - Eye icon
 pub const ICON_READING: &str = "\u{f06e}"; // 

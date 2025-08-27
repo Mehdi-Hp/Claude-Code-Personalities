@@ -117,10 +117,14 @@ async fn show_update_info_and_confirm(
         .unwrap_or(&latest_release.tag_name);
     let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
     println!();
-    println!("{} {}", "📦 Update Available:".bold().green(), comparison);
+    println!(
+        "{} {}",
+        format!("{}Update Available:", "\u{f135} ").bold().green(),
+        comparison
+    );
 
     if let Some(name) = &latest_release.name {
-        println!("{} {}", "📋 Release:".bold(), name);
+        println!("{} {}", format!("{}Release:", "\u{f044} ").bold(), name);
     }
 
     let changelog = format_changelog(latest_release);
@@ -456,8 +460,16 @@ fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path
     println!();
 
     let version_change = format!("v{old_version} → v{new_version}");
-    println!("{} {}", "📦 Version:".bold(), version_change.green());
-    println!("{} {}", "📍 Location:".bold(), binary_path.display());
+    println!(
+        "{} {}",
+        format!("{}Version:", "\u{f135} ").bold(),
+        version_change.green()
+    );
+    println!(
+        "{} {}",
+        format!("{}Location:", "\u{f07b} ").bold(),
+        binary_path.display()
+    );
     println!();
 
     println!("{}", "What's Next:".bold().cyan());
@@ -486,7 +498,7 @@ fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path
 
     println!(
         "{} Your Claude Code personalities are now up to date!",
-        "🚀".yellow()
+        "\u{f135}".yellow()
     );
 }
 
