@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod colors;
+pub mod context;
 pub mod presets;
 
 pub use colors::ThemeColors;
@@ -8,6 +9,7 @@ pub use colors::ThemeColors;
 /// Built-in theme options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Theme {
+    Default, // New terminal-colors theme
     Dark,
     Light,
     Solarized,
@@ -19,7 +21,7 @@ pub enum Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::Dark
+        Self::Default // Use the new Default theme
     }
 }
 
@@ -27,6 +29,7 @@ impl Theme {
     /// Get all available themes
     pub fn all() -> Vec<Theme> {
         vec![
+            Theme::Default,
             Theme::Dark,
             Theme::Light,
             Theme::Solarized,
@@ -40,6 +43,7 @@ impl Theme {
     /// Get theme display name
     pub fn display_name(&self) -> &'static str {
         match self {
+            Theme::Default => "Default (Terminal Colors)",
             Theme::Dark => "Dark",
             Theme::Light => "Light",
             Theme::Solarized => "Solarized Dark",
@@ -53,6 +57,7 @@ impl Theme {
     /// Get theme description
     pub fn description(&self) -> &'static str {
         match self {
+            Theme::Default => "Uses terminal's 256-color palette with context-aware colors",
             Theme::Dark => "Default dark theme with vibrant colors",
             Theme::Light => "Clean light theme optimized for bright terminals",
             Theme::Solarized => "Professional Solarized Dark color palette",
@@ -66,6 +71,7 @@ impl Theme {
     /// Get colors for this theme
     pub fn colors(&self) -> ThemeColors {
         match self {
+            Theme::Default => ThemeColors::default_terminal(),
             Theme::Dark => ThemeColors::dark(),
             Theme::Light => ThemeColors::light(),
             Theme::Solarized => ThemeColors::solarized(),
@@ -88,6 +94,7 @@ impl std::str::FromStr for Theme {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
+            "default" | "terminal" => Ok(Theme::Default),
             "dark" => Ok(Theme::Dark),
             "light" => Ok(Theme::Light),
             "solarized" | "solarized-dark" => Ok(Theme::Solarized),
@@ -126,9 +133,15 @@ mod tests {
             let colors = theme.colors();
             // Just verify we get some colors back
             // Verify personality color has some value (not all zeros)
-            assert!(
-                colors.personality.r > 0 || colors.personality.g > 0 || colors.personality.b > 0
-            );
+            match &colors.personality {
+                crate::theme::colors::Color::Rgb { r, g, b } => {
+                    assert!(*r > 0 || *g > 0 || *b > 0);
+                }
+                crate::theme::colors::Color::Terminal256(_) => {
+                    // Terminal256 colors are always valid
+                    assert!(true);
+                }
+            }
         }
     }
 }

@@ -2,33 +2,71 @@ use colored::{ColoredString, Colorize};
 
 /// Color wrapper for theme support
 #[derive(Debug, Clone)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+pub enum Color {
+    /// RGB color for regular themes
+    Rgb { r: u8, g: u8, b: u8 },
+    /// Terminal 256-color palette index for Default theme
+    Terminal256(u8),
 }
 
 impl Color {
     pub const fn new(r: u8, g: u8, b: u8) -> Self {
-        Self { r, g, b }
+        Self::Rgb { r, g, b }
     }
 
     pub const fn from_hex(hex: u32) -> Self {
-        Self {
+        Self::Rgb {
             r: ((hex >> 16) & 0xFF) as u8,
             g: ((hex >> 8) & 0xFF) as u8,
             b: (hex & 0xFF) as u8,
         }
     }
 
+    pub const fn from_terminal_256(index: u8) -> Self {
+        Self::Terminal256(index)
+    }
+
+    /// Convert terminal 256-color index to RGB values
+    fn terminal_256_to_rgb(index: u8) -> (u8, u8, u8) {
+        match index {
+            19 => (0, 0, 95),       // Deep blue
+            32 => (0, 135, 175),    // Teal
+            33 => (0, 135, 215),    // Dark cyan
+            75 => (95, 175, 255),   // Light blue
+            82 => (95, 255, 0),     // Bright green
+            121 => (135, 255, 175), // Light purple
+            124 => (175, 0, 0),     // Red
+            139 => (175, 95, 175),  // Purple
+            202 => (255, 135, 0),   // Orange
+            226 => (255, 255, 0),   // Yellow
+            227 => (255, 255, 95),  // Light yellow
+            231 => (255, 255, 255), // Bright white
+            234 => (28, 28, 28),    // Dark gray
+            253 => (218, 218, 218), // Very light gray
+            _ => (128, 128, 128),   // Default gray
+        }
+    }
+
     /// Apply this color to a string
     pub fn apply<T: AsRef<str>>(&self, text: T) -> ColoredString {
-        text.as_ref().truecolor(self.r, self.g, self.b)
+        match self {
+            Self::Rgb { r, g, b } => text.as_ref().truecolor(*r, *g, *b),
+            Self::Terminal256(index) => {
+                let (r, g, b) = Self::terminal_256_to_rgb(*index);
+                text.as_ref().truecolor(r, g, b)
+            }
+        }
     }
 
     /// Apply this color with bold formatting
     pub fn apply_bold<T: AsRef<str>>(&self, text: T) -> ColoredString {
-        text.as_ref().truecolor(self.r, self.g, self.b).bold()
+        match self {
+            Self::Rgb { r, g, b } => text.as_ref().truecolor(*r, *g, *b).bold(),
+            Self::Terminal256(index) => {
+                let (r, g, b) = Self::terminal_256_to_rgb(*index);
+                text.as_ref().truecolor(r, g, b).bold()
+            }
+        }
     }
 }
 
@@ -175,6 +213,24 @@ impl ThemeColors {
             model_haiku: Color::new(0, 255, 0),     // Pure green
         }
     }
+
+    /// Default terminal theme using 256-color palette
+    pub fn default_terminal() -> Self {
+        Self {
+            personality: Color::from_terminal_256(253), // Base neutral (very light gray)
+            activity: Color::from_terminal_256(19),     // Deep blue
+            directory: Color::from_terminal_256(231),   // Bright white
+            file: Color::from_terminal_256(231),        // Bright white
+            error: Color::from_terminal_256(124),       // Red
+            warning: Color::from_terminal_256(208),     // Orange warning
+            success: Color::from_terminal_256(82),      // Bright green
+            info: Color::from_terminal_256(75),         // Light blue
+            separator: Color::from_terminal_256(234),   // Dark gray
+            model_opus: Color::from_terminal_256(226),  // Yellow
+            model_sonnet: Color::from_terminal_256(121), // Light purple
+            model_haiku: Color::from_terminal_256(32),  // Teal
+        }
+    }
 }
 
 #[cfg(test)]
@@ -184,24 +240,57 @@ mod tests {
     #[test]
     fn test_color_creation() {
         let color = Color::new(255, 128, 64);
-        assert_eq!(color.r, 255);
-        assert_eq!(color.g, 128);
-        assert_eq!(color.b, 64);
+        if let Color::Rgb { r, g, b } = color {
+            assert_eq!(r, 255);
+            assert_eq!(g, 128);
+            assert_eq!(b, 64);
+        } else {
+            panic!("Expected RGB color");
+        }
     }
 
     #[test]
     fn test_color_from_hex() {
         let color = Color::from_hex(0xff8040);
-        assert_eq!(color.r, 255);
-        assert_eq!(color.g, 128);
-        assert_eq!(color.b, 64);
+        if let Color::Rgb { r, g, b } = color {
+            assert_eq!(r, 255);
+            assert_eq!(g, 128);
+            assert_eq!(b, 64);
+        } else {
+            panic!("Expected RGB color");
+        }
     }
 
     #[test]
     fn test_theme_colors_dark() {
         let colors = ThemeColors::dark();
         // Verify dark theme has proper colors (not all zeros)
-        assert!(colors.personality.r > 0 || colors.personality.g > 0 || colors.personality.b > 0);
-        assert!(colors.error.r > 0 || colors.error.g > 0 || colors.error.b > 0);
+        if let Color::Rgb { r, g, b } = colors.personality {
+            assert!(r > 0 || g > 0 || b > 0);
+        }
+        if let Color::Rgb { r, g, b } = colors.error {
+            assert!(r > 0 || g > 0 || b > 0);
+        }
+    }
+
+    #[test]
+    fn test_terminal_256_color() {
+        let color = Color::from_terminal_256(226); // Yellow
+        if let Color::Terminal256(index) = color {
+            assert_eq!(index, 226);
+        } else {
+            panic!("Expected Terminal256 color");
+        }
+    }
+
+    #[test]
+    fn test_default_terminal_theme() {
+        let colors = ThemeColors::default_terminal();
+        // Verify it returns Terminal256 colors
+        if let Color::Terminal256(index) = colors.personality {
+            assert_eq!(index, 253);
+        } else {
+            panic!("Expected Terminal256 personality color");
+        }
     }
 }
