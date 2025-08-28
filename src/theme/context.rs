@@ -24,7 +24,7 @@ pub fn get_personality_color_256(personality: &str) -> u8 {
         || personality.contains("Task Assassin")
         || personality.contains("Deployment Guard")
     {
-        return 124; // Red
+        return 197; // Red
     }
 
     // Searching/Detective personalities (light yellow)
@@ -37,7 +37,7 @@ pub fn get_personality_color_256(personality: &str) -> u8 {
         return 227; // Light yellow
     }
 
-    // Thinking/Processing personalities (purple)
+    // Thinking/Processing personalities (soft purple-pink)
     if personality.contains("Gentle Refactorer")
         || personality.contains("Quality Auditor")
         || personality.contains("Test Taskmaster")
@@ -46,7 +46,12 @@ pub fn get_personality_color_256(personality: &str) -> u8 {
         || personality.contains("Compression Chef")
         || personality.contains("String Surgeon")
     {
-        return 139; // Purple
+        return 183; // Soft purple-pink
+    }
+
+    // Hyperfocused personalities (light yellow/cream)
+    if personality.contains("Hyperfocused") {
+        return 222; // Light yellow/cream
     }
 
     // Happy/Success personalities (orange)
@@ -59,7 +64,6 @@ pub fn get_personality_color_256(personality: &str) -> u8 {
         || personality.contains("Container Captain")
         || personality.contains("Database Expert")
         || personality.contains("Network Sentinel")
-        || personality.contains("Hyperfocused")
         || personality.contains("Berserker")
     {
         return 202; // Orange
@@ -71,7 +75,7 @@ pub fn get_personality_color_256(personality: &str) -> u8 {
     }
 
     // Base/Neutral personalities (very light gray) - default
-    253
+    254
 }
 
 /// Create a context-aware color for personality based on mood
@@ -89,7 +93,7 @@ pub fn get_model_color_256(model_name: &str) -> u8 {
     } else if model_name.to_lowercase().contains("haiku") {
         32 // Teal
     } else {
-        253 // Default to neutral color
+        254 // Default to neutral color
     }
 }
 
@@ -115,9 +119,9 @@ mod tests {
         // Test error personalities
         assert_eq!(
             get_personality_color_256("(╯°□°)╯︵ ┻━┻ Table Flipper"),
-            124
+            197
         );
-        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 124);
+        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 197);
 
         // Test searching personalities
         assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 227);
@@ -128,8 +132,8 @@ mod tests {
         assert_eq!(get_personality_color_256("JS Master"), 202);
 
         // Test default (base/neutral)
-        assert_eq!(get_personality_color_256("Booting Up"), 253);
-        assert_eq!(get_personality_color_256("Editor User"), 253);
+        assert_eq!(get_personality_color_256("Booting Up"), 254);
+        assert_eq!(get_personality_color_256("Editor User"), 254);
     }
 
     #[test]
@@ -140,6 +144,6 @@ mod tests {
         assert_eq!(get_model_color_256("Claude-3.5-Sonnet"), 121);
         assert_eq!(get_model_color_256("Haiku"), 32);
         assert_eq!(get_model_color_256("Claude-3-Haiku"), 32);
-        assert_eq!(get_model_color_256("GPT-4"), 253); // Unknown model
+        assert_eq!(get_model_color_256("GPT-4"), 254); // Unknown model
     }
 }

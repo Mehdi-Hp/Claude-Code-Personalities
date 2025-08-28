@@ -17,28 +17,14 @@ pub use models::*;
 pub use status::*;
 pub use ui::*;
 
-/// Get the appropriate icon for an activity
+/// Get the appropriate icon for an activity (only for Executing, Reading, and Idle)
 pub fn get_activity_icon(activity: &Activity) -> &'static str {
     match activity {
-        Activity::Editing => ICON_EDITING,
-        Activity::Coding => ICON_CODE,
-        Activity::Configuring => ICON_GEAR,
-        Activity::Navigating => ICON_FOLDER,
-        Activity::Writing => ICON_WRITING,
         Activity::Executing => ICON_EXECUTING,
         Activity::Reading => ICON_READING,
-        Activity::Searching => ICON_SEARCHING,
-        Activity::Debugging => ICON_DEBUGGING,
-        Activity::Testing => ICON_TESTING,
-        Activity::Reviewing => ICON_REVIEWING,
-        Activity::Thinking => ICON_THINKING,
-        Activity::Building => ICON_BUILDING,
-        Activity::Installing => ICON_INSTALLING,
         Activity::Idle => ICON_IDLE,
-        Activity::Working => ICON_WORKING,
-        Activity::Refactoring => ICON_REFACTORING,
-        Activity::Documenting => ICON_DOCUMENTING,
-        Activity::Deploying => ICON_DEPLOYING,
+        // All other activities show no icon to reduce visual clutter
+        _ => "",
     }
 }
 
@@ -58,25 +44,28 @@ mod tests {
 
     #[test]
     fn test_get_activity_icon() {
-        assert_eq!(get_activity_icon(&Activity::Editing), ICON_EDITING);
-        assert_eq!(get_activity_icon(&Activity::Coding), ICON_CODE);
-        assert_eq!(get_activity_icon(&Activity::Configuring), ICON_GEAR);
-        assert_eq!(get_activity_icon(&Activity::Navigating), ICON_FOLDER);
-        assert_eq!(get_activity_icon(&Activity::Writing), ICON_WRITING);
+        // Activities that should have icons
         assert_eq!(get_activity_icon(&Activity::Executing), ICON_EXECUTING);
         assert_eq!(get_activity_icon(&Activity::Reading), ICON_READING);
-        assert_eq!(get_activity_icon(&Activity::Searching), ICON_SEARCHING);
-        assert_eq!(get_activity_icon(&Activity::Debugging), ICON_DEBUGGING);
-        assert_eq!(get_activity_icon(&Activity::Testing), ICON_TESTING);
-        assert_eq!(get_activity_icon(&Activity::Reviewing), ICON_REVIEWING);
-        assert_eq!(get_activity_icon(&Activity::Thinking), ICON_THINKING);
-        assert_eq!(get_activity_icon(&Activity::Building), ICON_BUILDING);
-        assert_eq!(get_activity_icon(&Activity::Installing), ICON_INSTALLING);
         assert_eq!(get_activity_icon(&Activity::Idle), ICON_IDLE);
-        assert_eq!(get_activity_icon(&Activity::Working), ICON_WORKING);
-        assert_eq!(get_activity_icon(&Activity::Refactoring), ICON_REFACTORING);
-        assert_eq!(get_activity_icon(&Activity::Documenting), ICON_DOCUMENTING);
-        assert_eq!(get_activity_icon(&Activity::Deploying), ICON_DEPLOYING);
+
+        // Activities that should have no icon (empty string)
+        assert_eq!(get_activity_icon(&Activity::Editing), "");
+        assert_eq!(get_activity_icon(&Activity::Coding), "");
+        assert_eq!(get_activity_icon(&Activity::Configuring), "");
+        assert_eq!(get_activity_icon(&Activity::Navigating), "");
+        assert_eq!(get_activity_icon(&Activity::Writing), "");
+        assert_eq!(get_activity_icon(&Activity::Searching), "");
+        assert_eq!(get_activity_icon(&Activity::Debugging), "");
+        assert_eq!(get_activity_icon(&Activity::Testing), "");
+        assert_eq!(get_activity_icon(&Activity::Reviewing), "");
+        assert_eq!(get_activity_icon(&Activity::Thinking), "");
+        assert_eq!(get_activity_icon(&Activity::Building), "");
+        assert_eq!(get_activity_icon(&Activity::Installing), "");
+        assert_eq!(get_activity_icon(&Activity::Working), "");
+        assert_eq!(get_activity_icon(&Activity::Refactoring), "");
+        assert_eq!(get_activity_icon(&Activity::Documenting), "");
+        assert_eq!(get_activity_icon(&Activity::Deploying), "");
     }
 
     #[test]

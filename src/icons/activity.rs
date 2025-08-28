@@ -36,8 +36,8 @@ pub const ICON_BUILDING: &str = "\u{f0e9}"; //
 /// Installing packages - Package/box icon
 pub const ICON_INSTALLING: &str = "\u{f1c6}"; // 
 
-/// Idle state - Sleep/zzz icon
-pub const ICON_IDLE: &str = "\u{f236}"; // 
+/// Idle state - Custom icon
+pub const ICON_IDLE: &str = "\u{f04b2}"; // 󰒲
 
 /// Generic working state - Rocket icon
 pub const ICON_WORKING: &str = "\u{f135}"; // 

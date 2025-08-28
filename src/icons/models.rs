@@ -3,8 +3,8 @@
 //! These icons differentiate between different Claude models and AI systems.
 //! Currently using different crown/star variations for different model tiers.
 
-/// Claude Opus - Crown icon (premium/powerful model)
-pub const ICON_OPUS: &str = "\u{f521}"; // 
+/// Claude Opus - Custom icon (premium/powerful model)
+pub const ICON_OPUS: &str = "\u{f4f5}"; // 
 
 /// Claude Sonnet - Diamond icon (balanced model)  
 pub const ICON_SONNET: &str = "\u{f219}"; // 
