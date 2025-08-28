@@ -229,15 +229,12 @@ fn preview_theme(theme: &Theme) {
     println!("  Success: {}", theme.apply_success("\u{f00c} Success"));
     println!("  Info: {}", theme.apply_info("\u{f129} Info"));
     println!("  Model Colors:");
-    println!("    Opus: {}", theme.apply_model_color("[ Opus]", "Opus"));
+    println!("    Opus: {}", theme.apply_model_color("Opus", "Opus"));
     println!(
         "    Sonnet: {}",
-        theme.apply_model_color("[ Sonnet]", "Sonnet")
+        theme.apply_model_color("Sonnet", "Sonnet")
     );
-    println!(
-        "    Haiku: {}",
-        theme.apply_model_color("[ Haiku]", "Haiku")
-    );
+    println!("    Haiku: {}", theme.apply_model_color("Haiku", "Haiku"));
 }
 
 /// Reset all configuration to defaults

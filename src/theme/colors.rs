@@ -29,23 +29,15 @@ impl Color {
     /// Convert terminal 256-color index to RGB values
     fn terminal_256_to_rgb(index: u8) -> (u8, u8, u8) {
         match index {
-            19 => (0, 0, 95),       // Deep blue
-            32 => (0, 135, 175),    // Teal
-            33 => (0, 135, 215),    // Dark cyan
-            69 => (95, 175, 255),   // Bright blue-cyan
-            75 => (95, 175, 255),   // Light blue
-            82 => (95, 255, 0),     // Bright green
-            121 => (135, 255, 175), // Light purple
-            197 => (255, 0, 95),    // Bright red/pink
-            139 => (175, 95, 175),  // Purple
-            183 => (215, 175, 255), // Soft purple-pink
-            202 => (255, 135, 0),   // Orange
-            222 => (255, 215, 175), // Light yellow/cream
-            226 => (255, 255, 0),   // Yellow
-            227 => (255, 255, 95),  // Light yellow
-            231 => (255, 255, 255), // Bright white
-            234 => (28, 28, 28),    // Dark gray
-            254 => (228, 228, 228), // Very light gray
+            32 => (0, 135, 175),    // Teal (Haiku model)
+            69 => (95, 175, 255),   // Bright blue-cyan (activity)
+            82 => (95, 255, 0),     // Bright green (success)
+            121 => (135, 255, 175), // Light purple (Sonnet model)
+            208 => (255, 135, 0),   // Orange (warning)
+            226 => (255, 255, 0),   // Yellow (Opus model)
+            231 => (255, 255, 255), // Bright white (files/directory)
+            234 => (28, 28, 28),    // Dark gray (separators)
+            254 => (228, 228, 228), // Very light gray (personalities)
             _ => (128, 128, 128),   // Default gray
         }
     }
@@ -68,6 +60,29 @@ impl Color {
             Self::Terminal256(index) => {
                 let (r, g, b) = Self::terminal_256_to_rgb(*index);
                 text.as_ref().truecolor(r, g, b).bold()
+            }
+        }
+    }
+
+    /// Apply this color as foreground with a dimmed version as background
+    pub fn apply_with_dim_background<T: AsRef<str>>(&self, text: T) -> ColoredString {
+        match self {
+            Self::Rgb { r, g, b } => {
+                let bg_r = ((*r as f32) * 0.15) as u8;
+                let bg_g = ((*g as f32) * 0.15) as u8;
+                let bg_b = ((*b as f32) * 0.15) as u8;
+                text.as_ref()
+                    .truecolor(*r, *g, *b)
+                    .on_truecolor(bg_r, bg_g, bg_b)
+            }
+            Self::Terminal256(index) => {
+                let (r, g, b) = Self::terminal_256_to_rgb(*index);
+                let bg_r = ((r as f32) * 0.15) as u8;
+                let bg_g = ((g as f32) * 0.15) as u8;
+                let bg_b = ((b as f32) * 0.15) as u8;
+                text.as_ref()
+                    .truecolor(r, g, b)
+                    .on_truecolor(bg_r, bg_g, bg_b)
             }
         }
     }
