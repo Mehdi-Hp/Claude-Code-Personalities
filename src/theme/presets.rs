@@ -1,4 +1,6 @@
 use super::Theme;
+use crate::state::SessionState;
+use crate::theme::context::{get_context_aware_model_color, get_context_aware_personality_color};
 
 /// Helper functions for applying theme colors consistently
 impl Theme {
@@ -69,6 +71,36 @@ impl Theme {
             &colors.personality
         };
         color.apply(text).to_string()
+    }
+
+    /// Apply personality color with context awareness for Default theme
+    pub fn apply_personality_with_context(&self, text: &str, state: &SessionState) -> String {
+        match self {
+            Theme::Default => {
+                // Use context-aware coloring for Default theme
+                let color = get_context_aware_personality_color(&state.personality);
+                color.apply_bold(text).to_string()
+            }
+            _ => {
+                // Use standard personality color for other themes
+                self.apply_personality(text)
+            }
+        }
+    }
+
+    /// Apply model color with context awareness for Default theme
+    pub fn apply_model_color_with_context(&self, text: &str, model_name: &str) -> String {
+        match self {
+            Theme::Default => {
+                // Use context-aware coloring for Default theme
+                let color = get_context_aware_model_color(model_name);
+                color.apply(text).to_string()
+            }
+            _ => {
+                // Use standard model color for other themes
+                self.apply_model_color(text, model_name)
+            }
+        }
     }
 }
 

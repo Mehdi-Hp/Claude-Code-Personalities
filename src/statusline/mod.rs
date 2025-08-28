@@ -100,7 +100,9 @@ pub fn build_statusline(
     // Personality (bold)
     if prefs.show_personality {
         let personality_text = if prefs.use_colors {
-            prefs.theme.apply_personality(&state.personality)
+            prefs
+                .theme
+                .apply_personality_with_context(&state.personality, state)
         } else {
             state.personality.clone()
         };
@@ -229,7 +231,9 @@ pub fn build_statusline(
         };
 
         let colored_model = if prefs.use_colors {
-            prefs.theme.apply_model_color(&model_text, model_name)
+            prefs
+                .theme
+                .apply_model_color_with_context(&model_text, model_name)
         } else {
             model_text
         };
