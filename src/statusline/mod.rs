@@ -225,9 +225,9 @@ pub fn build_statusline(
         };
 
         let model_text = if model_icon.is_empty() {
-            format!("[{model_name}]")
+            model_name.to_string()
         } else {
-            format!("[{model_icon} {model_name}]")
+            format!("{model_icon} {model_name}")
         };
 
         let colored_model = if prefs.use_colors {
@@ -365,7 +365,7 @@ mod tests {
         assert!(statusline.contains("ʕ•ᴥ•ʔ Code Wizard"));
 
         // Should contain activity and job
-        assert!(statusline.contains("editing"));
+        assert!(statusline.contains("Editing"));
         assert!(statusline.contains("test.js"));
 
         // Should contain model info
@@ -401,7 +401,7 @@ mod tests {
         let statusline = build_statusline(&state, "Haiku", &prefs, None);
 
         // Should contain activity but no job
-        assert!(statusline.contains("editing"));
+        assert!(statusline.contains("Editing"));
         assert!(!statusline.contains("test.js"));
     }
 
@@ -413,7 +413,7 @@ mod tests {
         let statusline = build_statusline(&state, "Haiku", &prefs, None);
 
         // Should treat empty job same as no job
-        assert!(statusline.contains("editing"));
+        assert!(statusline.contains("Editing"));
     }
 
     #[test]
@@ -455,13 +455,13 @@ mod tests {
         let theme = Theme::default(); // Dark theme
 
         // Test model color application (should return colored strings, not color names)
-        let opus_output = theme.apply_model_color("[ Opus]", "Opus");
+        let opus_output = theme.apply_model_color("Opus", "Opus");
         assert!(opus_output.contains("Opus"));
 
-        let sonnet_output = theme.apply_model_color("[ Sonnet]", "Sonnet");
+        let sonnet_output = theme.apply_model_color("Sonnet", "Sonnet");
         assert!(sonnet_output.contains("Sonnet"));
 
-        let haiku_output = theme.apply_model_color("[ Haiku]", "Haiku");
+        let haiku_output = theme.apply_model_color("Haiku", "Haiku");
         assert!(haiku_output.contains("Haiku"));
 
         // Test case insensitive matching
@@ -509,24 +509,31 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
 
-        // Test different activities produce different icons
-        let activities = [
-            (Activity::Editing, ICON_EDITING),
-            (Activity::Coding, ICON_CODE),
-            (Activity::Configuring, ICON_GEAR),
-            (Activity::Navigating, ICON_FOLDER),
+        // Only these activities should have icons now
+        let activities_with_icons = [
+            (Activity::Executing, ICON_EXECUTING),
             (Activity::Reading, ICON_READING),
-            (Activity::Testing, ICON_TESTING),
-            (Activity::Building, ICON_BUILDING),
-            (Activity::Searching, ICON_SEARCHING),
+            (Activity::Idle, ICON_IDLE),
         ];
-
-        for (activity, expected_icon) in activities {
+        for (activity, expected_icon) in activities_with_icons {
             state.activity = activity.clone();
             let statusline = build_statusline(&state, "Claude", &prefs, None);
-
-            // The icon should be in the statusline (though we can't easily test positioning)
+            // The icon should be in the statusline
             assert!(statusline.contains(expected_icon));
+            assert!(statusline.contains(&activity.to_string()));
+        }
+
+        // Test activities without icons still show activity text
+        let activities_without_icons = [
+            Activity::Editing,
+            Activity::Coding,
+            Activity::Testing,
+            Activity::Building,
+        ];
+        for activity in activities_without_icons {
+            state.activity = activity.clone();
+            let statusline = build_statusline(&state, "Claude", &prefs, None);
+            // Should contain activity text but no icon
             assert!(statusline.contains(&activity.to_string()));
         }
     }
@@ -540,11 +547,10 @@ mod tests {
         // Should contain separators
         assert!(statusline.contains("•"));
 
-        // Should contain brackets for model
-        assert!(statusline.contains('['));
-        assert!(statusline.contains(']'));
+        // Should contain model name (no brackets now)
+        assert!(statusline.contains("TestModel"));
 
-        // Should be structured as: personality • activity job • [model]
+        // Should be structured as: personality • activity job • model
         // We can't test exact formatting due to ANSI codes, but can check basic structure
         let parts: Vec<&str> = statusline.split("•").collect();
         assert!(parts.len() >= 2); // At least personality and activity parts
@@ -632,7 +638,7 @@ mod tests {
 
         // Should contain personality, activity, model, and separators
         assert!(statusline_all.contains("Booting Up"));
-        assert!(statusline_all.contains("editing"));
+        assert!(statusline_all.contains("Editing"));
         assert!(statusline_all.contains("test.js"));
         assert!(statusline_all.contains("Opus"));
         assert!(statusline_all.contains("•")); // Separator
@@ -750,7 +756,7 @@ mod tests {
         assert!(!statusline_no_sep.contains("•"));
         // But should still have content
         assert!(statusline_no_sep.contains("Booting Up"));
-        assert!(statusline_no_sep.contains("coding"));
+        assert!(statusline_no_sep.contains("Coding"));
         assert!(statusline_no_sep.contains("app.rs"));
         assert!(statusline_no_sep.contains("Haiku"));
     }
