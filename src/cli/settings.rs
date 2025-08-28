@@ -480,7 +480,10 @@ mod tests {
         settings.configure_statusline(&binary_path).unwrap();
 
         assert_eq!(settings.content["statusLine"]["type"], "command");
-        assert_eq!(settings.content["statusLine"]["command"], "/path/to/binary");
+        assert_eq!(
+            settings.content["statusLine"]["command"],
+            "/path/to/binary --statusline"
+        );
         assert_eq!(settings.content["statusLine"]["padding"], 0);
     }
 

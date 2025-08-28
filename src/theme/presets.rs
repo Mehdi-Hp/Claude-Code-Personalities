@@ -92,9 +92,9 @@ impl Theme {
     pub fn apply_model_color_with_context(&self, text: &str, model_name: &str) -> String {
         match self {
             Theme::Default => {
-                // Use context-aware coloring for Default theme
+                // Use context-aware coloring with dim background for Default theme
                 let color = get_context_aware_model_color(model_name);
-                color.apply(text).to_string()
+                color.apply_with_dim_background(text).to_string()
             }
             _ => {
                 // Use standard model color for other themes
@@ -114,7 +114,7 @@ mod tests {
 
         let personality = theme.apply_personality("Test");
         let error = theme.apply_error("Error");
-        let model = theme.apply_model_color("[Opus]", "Opus");
+        let model = theme.apply_model_color("Opus", "Opus");
 
         // Just verify we get colored strings back
         assert!(personality.contains("Test"));

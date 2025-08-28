@@ -1,87 +1,16 @@
-/// Context-aware color selection for the Default theme
+/// Simplified color selection for the Default theme
 ///
-/// This module handles dynamic color assignment based on Claude's current state,
-/// including personality mood, model type, and activity context.
+/// This module provides consistent coloring with a single color per section.
 use crate::theme::colors::Color;
 
-/// Map personality names to their mood-based color indices for Default theme
-pub fn get_personality_color_256(personality: &str) -> u8 {
-    // Special cases first (highest priority)
-    if personality.contains("Git Manager") {
-        return 33; // Dark cyan
-    }
-    if personality.contains("Documentation Writer") {
-        return 75; // Light blue
-    }
-
-    // Error/Frustrated personalities (red)
-    if personality.contains("Table Flipper")
-        || personality.contains("Error Warrior")
-        || personality.contains("Compilation Warrior")
-        || personality.contains("Security Analyst")
-        || personality.contains("Permission Police")
-        || personality.contains("Code Janitor")
-        || personality.contains("Task Assassin")
-        || personality.contains("Deployment Guard")
-    {
-        return 197; // Red
-    }
-
-    // Searching/Detective personalities (light yellow)
-    if personality.contains("Bug Hunter")
-        || personality.contains("Search Maestro")
-        || personality.contains("System Detective")
-        || personality.contains("Code Historian")
-        || personality.contains("Research King")
-    {
-        return 227; // Light yellow
-    }
-
-    // Thinking/Processing personalities (soft purple-pink)
-    if personality.contains("Gentle Refactorer")
-        || personality.contains("Quality Auditor")
-        || personality.contains("Test Taskmaster")
-        || personality.contains("Dependency Wrangler")
-        || personality.contains("Environment Enchanter")
-        || personality.contains("Compression Chef")
-        || personality.contains("String Surgeon")
-    {
-        return 183; // Soft purple-pink
-    }
-
-    // Hyperfocused personalities (light yellow/cream)
-    if personality.contains("Hyperfocused") {
-        return 222; // Light yellow/cream
-    }
-
-    // Happy/Success personalities (orange)
-    if personality.contains("Code Wizard")
-        || personality.contains("JS Master")
-        || personality.contains("UI Developer")
-        || personality.contains("Markup Wizard")
-        || personality.contains("Style Artist")
-        || personality.contains("Performance Tuner")
-        || personality.contains("Container Captain")
-        || personality.contains("Database Expert")
-        || personality.contains("Network Sentinel")
-        || personality.contains("Berserker")
-    {
-        return 202; // Orange
-    }
-
-    // Success/Complete personalities (bright green)
-    if personality.contains("Success") || personality.contains("Complete") {
-        return 82; // Bright green
-    }
-
-    // Base/Neutral personalities (very light gray) - default
-    254
+/// Get color for personalities in Default theme - always returns 254 (very light gray)
+pub fn get_personality_color_256(_personality: &str) -> u8 {
+    254 // Consistent color for all personalities
 }
 
-/// Create a context-aware color for personality based on mood
-pub fn get_context_aware_personality_color(personality: &str) -> Color {
-    let color_index = get_personality_color_256(personality);
-    Color::from_terminal_256(color_index)
+/// Create a consistent color for personality (always 254)
+pub fn get_context_aware_personality_color(_personality: &str) -> Color {
+    Color::from_terminal_256(254)
 }
 
 /// Get model-specific color for the Default theme
@@ -109,29 +38,21 @@ mod tests {
 
     #[test]
     fn test_personality_color_mapping() {
-        // Test special cases
-        assert_eq!(get_personality_color_256("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager"), 33);
+        // All personalities now return the same color (254)
+        assert_eq!(get_personality_color_256("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager"), 254);
         assert_eq!(
             get_personality_color_256("φ(．．) Documentation Writer"),
-            75
+            254
         );
-
-        // Test error personalities
         assert_eq!(
             get_personality_color_256("(╯°□°)╯︵ ┻━┻ Table Flipper"),
-            197
+            254
         );
-        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 197);
-
-        // Test searching personalities
-        assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 227);
-        assert_eq!(get_personality_color_256("Search Maestro"), 227);
-
-        // Test happy personalities
-        assert_eq!(get_personality_color_256("ʕ•ᴥ•ʔ Code Wizard"), 202);
-        assert_eq!(get_personality_color_256("JS Master"), 202);
-
-        // Test default (base/neutral)
+        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 254);
+        assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 254);
+        assert_eq!(get_personality_color_256("Search Maestro"), 254);
+        assert_eq!(get_personality_color_256("ʕ•ᴥ•ʔ Code Wizard"), 254);
+        assert_eq!(get_personality_color_256("JS Master"), 254);
         assert_eq!(get_personality_color_256("Booting Up"), 254);
         assert_eq!(get_personality_color_256("Editor User"), 254);
     }

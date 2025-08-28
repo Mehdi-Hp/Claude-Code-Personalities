@@ -10,20 +10,14 @@ set -euo pipefail
 get_theme_color_desc() {
     case $1 in
         32) echo "Haiku Model (Teal)" ;;
-        33) echo "Git Manager (Dark Cyan)" ;;
-        69) echo "Activity/Icons (Bright Blue-Cyan)" ;;
-        75) echo "Documentation Writer (Light Blue)" ;;
-        82) echo "Success/Complete (Bright Green)" ;;
+        69) echo "Activity (Bright Blue-Cyan)" ;;
+        82) echo "Success (Bright Green)" ;;
         121) echo "Sonnet Model (Light Purple)" ;;
-        197) echo "Error/Frustrated (Bright Red/Pink)" ;;
-        183) echo "Thinking/Processing (Soft Purple-Pink)" ;;
-        202) echo "Happy/Success (Orange)" ;;
-        222) echo "Hyperfocused (Light Yellow/Cream)" ;;
+        208) echo "Warning (Orange)" ;;
         226) echo "Opus Model (Yellow)" ;;
-        227) echo "Searching/Detective (Light Yellow)" ;;
         231) echo "Directory/File (Bright White)" ;;
         234) echo "Separators (Dark Gray)" ;;
-        254) echo "Base/Neutral (Very Light Gray)" ;;
+        254) echo "All Personalities (Very Light Gray)" ;;
         *) echo "" ;;
     esac
 }
@@ -173,16 +167,17 @@ show_theme_colors() {
     echo -e "${BOLD}=== Current Default Theme Colors ===${RESET}\n"
     
     # Show theme colors in order
-    local theme_colors=(32 33 69 75 82 121 197 183 202 222 226 227 231 234 254)
+    local theme_colors=(32 69 82 121 208 226 231 234 254)
     for index in "${theme_colors[@]}"; do
         show_color "$index"
     done
     
     echo -e "\n${BOLD}Color Categories:${RESET}"
-    echo "• Mood Colors: 254(Neutral), 202(Happy), 222(Hyperfocused), 227(Searching), 183(Thinking), 197(Error), 82(Success)"
-    echo "• Model Colors: 226(Opus), 121(Sonnet), 32(Haiku)"  
-    echo "• Special Colors: 33(Git), 75(Documentation)"
-    echo "• UI Colors: 69(Activity), 231(Text), 234(Separators)"
+    echo "• Personalities: 254(All personalities use same color)"
+    echo "• Activity: 69(Bright blue-cyan)"
+    echo "• Models: 226(Opus), 121(Sonnet), 32(Haiku)"
+    echo "• Status: 82(Success), 208(Warning)"
+    echo "• UI: 231(Files/Directory), 234(Separators)"
 }
 
 # Function to show usage
