@@ -15,7 +15,14 @@ use crate::theme::Theme;
 pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
     match subcommand {
         Some("display") => configure_display().await,
-        Some("theme") => configure_theme().await,
+        Some("theme") => {
+            println!(
+                "{} Theme configuration is temporarily disabled while the new Default theme is being finalized.",
+                ICON_WARNING.yellow()
+            );
+            println!("The Default theme with context-aware colors is now active by default.");
+            Ok(())
+        }
         Some("reset") => reset_configuration().await,
         None => interactive_config_menu().await,
         Some(unknown) => {
@@ -40,7 +47,8 @@ async fn interactive_config_menu() -> Result<()> {
             "Display Options",
             "What appears in the statusline",
         )
-        .item("theme", "Theme", "Change colors and visual style")
+        // Theme temporarily hidden while Default theme is being finalized
+        // .item("theme", "Theme", "Change colors and visual style")
         .item("reset", "Reset to Defaults", "Reset all settings")
         .interact()
         .with_context(
@@ -49,7 +57,7 @@ async fn interactive_config_menu() -> Result<()> {
 
     match selection.as_ref() {
         "display" => configure_display().await,
-        "theme" => configure_theme().await,
+        "theme" => configure_theme().await, // Keep handler in case called directly
         "reset" => reset_configuration().await,
         _ => Ok(()),
     }
