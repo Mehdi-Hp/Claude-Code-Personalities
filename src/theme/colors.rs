@@ -32,17 +32,20 @@ impl Color {
             19 => (0, 0, 95),       // Deep blue
             32 => (0, 135, 175),    // Teal
             33 => (0, 135, 215),    // Dark cyan
+            69 => (95, 175, 255),   // Bright blue-cyan
             75 => (95, 175, 255),   // Light blue
             82 => (95, 255, 0),     // Bright green
             121 => (135, 255, 175), // Light purple
-            124 => (175, 0, 0),     // Red
+            197 => (255, 0, 95),    // Bright red/pink
             139 => (175, 95, 175),  // Purple
+            183 => (215, 175, 255), // Soft purple-pink
             202 => (255, 135, 0),   // Orange
+            222 => (255, 215, 175), // Light yellow/cream
             226 => (255, 255, 0),   // Yellow
             227 => (255, 255, 95),  // Light yellow
             231 => (255, 255, 255), // Bright white
             234 => (28, 28, 28),    // Dark gray
-            253 => (218, 218, 218), // Very light gray
+            254 => (228, 228, 228), // Very light gray
             _ => (128, 128, 128),   // Default gray
         }
     }
@@ -217,11 +220,11 @@ impl ThemeColors {
     /// Default terminal theme using 256-color palette
     pub fn default_terminal() -> Self {
         Self {
-            personality: Color::from_terminal_256(253), // Base neutral (very light gray)
-            activity: Color::from_terminal_256(19),     // Deep blue
+            personality: Color::from_terminal_256(254), // Base neutral (very light gray)
+            activity: Color::from_terminal_256(69),     // Bright blue-cyan
             directory: Color::from_terminal_256(231),   // Bright white
             file: Color::from_terminal_256(231),        // Bright white
-            error: Color::from_terminal_256(124),       // Red
+            error: Color::from_terminal_256(197),       // Bright red/pink
             warning: Color::from_terminal_256(208),     // Orange warning
             success: Color::from_terminal_256(82),      // Bright green
             info: Color::from_terminal_256(75),         // Light blue
@@ -288,7 +291,7 @@ mod tests {
         let colors = ThemeColors::default_terminal();
         // Verify it returns Terminal256 colors
         if let Color::Terminal256(index) = colors.personality {
-            assert_eq!(index, 253);
+            assert_eq!(index, 254);
         } else {
             panic!("Expected Terminal256 personality color");
         }

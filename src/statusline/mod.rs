@@ -418,23 +418,25 @@ mod tests {
 
     #[test]
     fn test_get_activity_icon() {
-        // Test all known activity types
-        assert_eq!(get_activity_icon(&Activity::Editing), ICON_EDITING);
-        assert_eq!(get_activity_icon(&Activity::Coding), ICON_CODE);
-        assert_eq!(get_activity_icon(&Activity::Configuring), ICON_GEAR);
-        assert_eq!(get_activity_icon(&Activity::Navigating), ICON_FOLDER);
-        assert_eq!(get_activity_icon(&Activity::Writing), ICON_WRITING);
+        // Activities that should have icons
         assert_eq!(get_activity_icon(&Activity::Executing), ICON_EXECUTING);
         assert_eq!(get_activity_icon(&Activity::Reading), ICON_READING);
-        assert_eq!(get_activity_icon(&Activity::Searching), ICON_SEARCHING);
-        assert_eq!(get_activity_icon(&Activity::Debugging), ICON_DEBUGGING);
-        assert_eq!(get_activity_icon(&Activity::Testing), ICON_TESTING);
-        assert_eq!(get_activity_icon(&Activity::Reviewing), ICON_REVIEWING);
-        assert_eq!(get_activity_icon(&Activity::Thinking), ICON_THINKING);
-        assert_eq!(get_activity_icon(&Activity::Building), ICON_BUILDING);
-        assert_eq!(get_activity_icon(&Activity::Installing), ICON_INSTALLING);
         assert_eq!(get_activity_icon(&Activity::Idle), ICON_IDLE);
-        assert_eq!(get_activity_icon(&Activity::Working), ICON_WORKING);
+
+        // Activities that should have no icon (empty string)
+        assert_eq!(get_activity_icon(&Activity::Editing), "");
+        assert_eq!(get_activity_icon(&Activity::Coding), "");
+        assert_eq!(get_activity_icon(&Activity::Configuring), "");
+        assert_eq!(get_activity_icon(&Activity::Navigating), "");
+        assert_eq!(get_activity_icon(&Activity::Writing), "");
+        assert_eq!(get_activity_icon(&Activity::Searching), "");
+        assert_eq!(get_activity_icon(&Activity::Debugging), "");
+        assert_eq!(get_activity_icon(&Activity::Testing), "");
+        assert_eq!(get_activity_icon(&Activity::Reviewing), "");
+        assert_eq!(get_activity_icon(&Activity::Thinking), "");
+        assert_eq!(get_activity_icon(&Activity::Building), "");
+        assert_eq!(get_activity_icon(&Activity::Installing), "");
+        assert_eq!(get_activity_icon(&Activity::Working), "");
     }
 
     #[test]
