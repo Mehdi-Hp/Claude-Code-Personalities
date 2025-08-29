@@ -154,7 +154,7 @@ MAPPED_PLATFORM=$(map_platform_to_binary_name "$PLATFORM")
 BINARY_NAME="claude-code-personalities-${MAPPED_PLATFORM}"
 DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$LATEST_VERSION/$BINARY_NAME"
 
-if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DIR/claude-code-personalities"; then
+if ! curl -sfL "$DOWNLOAD_URL" -o "$TEMP_DIR/claude-code-personalities"; then
     print_error "Failed to download binary from GitHub releases"
     echo
     echo "Expected URL: $DOWNLOAD_URL"
@@ -168,8 +168,19 @@ fi
 print_success "Binary downloaded"
 
 # Verify downloaded binary
-if [[ ! -f "$TEMP_DIR/claude-code-personalities" ]] || [[ ! -s "$TEMP_DIR/claude-code-personalities" ]]; then
-    print_error "Downloaded binary is missing or empty"
+if [[ ! -f "$TEMP_DIR/claude-code-personalities" ]]; then
+    print_error "Downloaded binary file is missing"
+    echo "This indicates a download failure. Please try again or check network connectivity."
+    exit 1
+elif [[ ! -s "$TEMP_DIR/claude-code-personalities" ]]; then
+    print_error "Downloaded binary is empty (0 bytes)"
+    echo "This indicates:"
+    echo "  - Server returned empty response (possibly 404 or network error)"
+    echo "  - GitHub release is corrupted or still building"
+    echo "  - CDN caching issue"
+    echo
+    echo "Expected URL: $DOWNLOAD_URL"
+    echo "Try again in a few minutes or download manually from GitHub releases."
     exit 1
 fi
 
@@ -182,12 +193,40 @@ fi
 cp "$TEMP_DIR/claude-code-personalities" "$BIN_PATH"
 chmod +x "$BIN_PATH"
 
+# Verify the copy was successful
+if [[ ! -f "$BIN_PATH" ]] || [[ ! -s "$BIN_PATH" ]]; then
+    print_error "Binary copy verification failed"
+    echo "The binary was not copied correctly to $BIN_PATH"
+    exit 1
+fi
+
+# Verify sizes match
+SOURCE_SIZE=$(stat -f%z "$TEMP_DIR/claude-code-personalities" 2>/dev/null || stat -c%s "$TEMP_DIR/claude-code-personalities" 2>/dev/null || echo "0")
+TARGET_SIZE=$(stat -f%z "$BIN_PATH" 2>/dev/null || stat -c%s "$BIN_PATH" 2>/dev/null || echo "0")
+
+if [[ "$SOURCE_SIZE" != "$TARGET_SIZE" ]] || [[ "$SOURCE_SIZE" == "0" ]]; then
+    print_error "Binary copy verification failed"
+    echo "Source size: $SOURCE_SIZE bytes"
+    echo "Target size: $TARGET_SIZE bytes"
+    echo "The copy operation may have been incomplete or corrupted."
+    exit 1
+fi
+
 print_success "Binary installed to $BIN_PATH"
 
 # Verify installation
 if ! "$BIN_PATH" --version &> /dev/null; then
-    print_warning "Binary installed but version check failed"
-    echo "This might indicate a platform compatibility issue"
+    print_error "Binary installed but execution failed"
+    echo "This indicates:"
+    echo "  - Platform compatibility issue (wrong architecture)"
+    echo "  - Missing system dependencies"
+    echo "  - Corrupted binary during copy operation"
+    echo
+    echo "Binary location: $BIN_PATH"
+    echo "Binary size: $(ls -lh "$BIN_PATH" | awk '{print $5}') bytes"
+    echo
+    echo "Please try downloading a fresh copy from GitHub releases."
+    exit 1
 else
     VERSION_OUTPUT=$("$BIN_PATH" --version 2>/dev/null || echo "unknown")
     print_success "Installation verified: $VERSION_OUTPUT"
