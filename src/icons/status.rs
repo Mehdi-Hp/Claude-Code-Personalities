@@ -4,7 +4,10 @@
 //! used throughout the application for user feedback.
 
 /// Success/completion - Check mark icon
-pub const ICON_CHECK: &str = "\u{f00c}"; // ✓
+pub const ICON_CHECK: &str = "\u{f444}"; // Updated checkmark
+
+/// Final success - Star icon for major completions
+pub const ICON_SUCCESS: &str = "\u{f4f5}"; // 
 
 /// Informational message - Info circle icon
 pub const ICON_INFO: &str = "\u{f129}"; // 

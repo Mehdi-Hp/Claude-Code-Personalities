@@ -40,7 +40,7 @@ impl Default for InstallationOptions {
 /// - File permissions cannot be set correctly
 /// - Configuration validation fails
 pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
-    intro("Installing Claude Code Personalities")?;
+    intro("Claude Code Personalities - Configuration")?;
 
     // Step 1: Check if Claude directory exists
     let claude_dir = get_claude_dir()?;
@@ -60,7 +60,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
             }
         }
 
-        print_info("Creating Claude directory...");
         fs::create_dir_all(&claude_dir).await.with_context(|| {
             format!(
                 "Failed to create Claude directory: {}",
@@ -71,7 +70,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
     }
 
     // Step 2: Check for existing installations
-    print_info("Checking for existing installations...");
     let existing_binary = find_existing_binary().await?;
 
     if let Some(ref existing_path) = existing_binary {
@@ -86,12 +84,11 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
             print_info("Consider using 'migrate' command to move to ~/.local/bin for PATH access");
         }
     } else {
-        print_info("No existing installation found");
+        print_success("Ready for new installation");
     }
 
     // Step 3: Get current binary location
     let current_binary = get_current_binary_path()?;
-    print_info(&format!("Current binary: {}", current_binary.display()));
 
     // Step 4: Determine target binary location - always use ~/.local/bin for new installations
     let target_binary = if let Some(existing_path) = &existing_binary {
@@ -115,7 +112,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
     };
 
     // Step 5: Load Claude settings first to check configuration
-    print_info("Loading Claude settings...");
     let mut settings = ClaudeSettings::load()
         .await
         .with_context(|| "Failed to load Claude settings")?;
@@ -144,7 +140,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
     }
 
     // Step 7: Copy binary to target location
-    print_info("Installing binary...");
     copy_binary(&current_binary, &target_binary)
         .await
         .with_context(|| "Failed to install binary to target directory")?;
@@ -152,7 +147,6 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
 
     // Step 8: Create backup if requested and settings exist
     if options.backup_existing && settings.settings_path.exists() {
-        print_info("Creating settings backup...");
         let backup_path = settings
             .create_backup()
             .await
@@ -163,21 +157,18 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
     // Step 9: Configure Claude Code settings (if needed)
     if !settings_configured || options.force_reinstall {
         // Step 10: Configure statusline
-        print_info("Configuring statusline...");
         settings
             .configure_statusline(&target_binary)
             .with_context(|| "Failed to configure statusline in settings")?;
         print_success("Statusline configured");
 
         // Step 11: Configure hooks
-        print_info("Configuring hooks...");
         settings
             .configure_hooks(&target_binary)
             .with_context(|| "Failed to configure hooks in settings")?;
         print_success("Hooks configured");
 
         // Step 12: Save settings
-        print_info("Saving settings...");
         settings
             .save()
             .await
@@ -187,11 +178,10 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
             settings.settings_path.display()
         ));
     } else {
-        print_info("Claude Code already configured, skipping settings update.");
+        print_success("Claude Code already configured");
     }
 
     // Step 13: Verify installation
-    print_info("Verifying installation...");
     let final_summary = settings.get_configuration_summary();
     if final_summary.is_fully_configured() {
         print_success("Installation verified successfully");
@@ -275,12 +265,12 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
     );
     println!();
 
-    println!("{}", "Next Steps:".bold().cyan());
+    println!("{}", "Next Steps:".bold().yellow());
     println!("  1. Restart any running Claude Code sessions");
     println!("  2. Your statusline will now show dynamic personalities!");
     println!(
         "  3. Customize settings with: {}",
-        "claude-code-personalities config".cyan()
+        "claude-code-personalities config".white()
     );
     println!();
 
@@ -294,22 +284,22 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
     println!("  {} Session cleanup", ICON_CHECK.green());
     println!();
 
-    println!("{}", "Available Commands:".bold().magenta());
+    println!("{}", "Available Commands:".bold().yellow());
     println!(
         "  {} Check installation status",
-        "claude-code-personalities status".cyan()
+        "claude-code-personalities status".white()
     );
     println!(
         "  {} Customize appearance",
-        "claude-code-personalities config".cyan()
+        "claude-code-personalities config".white()
     );
     println!(
-        "  {} Check for updates",
-        "claude-code-personalities check-update".cyan()
+        "  {} - Check for updates",
+        "claude-code-personalities check-update".white()
     );
     println!(
-        "  {} View all commands",
-        "claude-code-personalities help".cyan()
+        "  {} - View all commands",
+        "claude-code-personalities help".white()
     );
     println!();
 
@@ -370,11 +360,11 @@ async fn find_existing_binary() -> Result<Option<PathBuf>> {
 
 /// Helper functions for status output
 fn print_info(message: &str) {
-    println!("  {} {}", ICON_INFO.cyan(), message);
+    println!("  {} {}", ICON_INFO.white(), message);
 }
 
 fn print_success(message: &str) {
-    println!("  {} {}", ICON_CHECK.green(), message);
+    println!("  {} {}", ICON_CHECK.white(), message);
 }
 
 fn print_warning(message: &str) {
