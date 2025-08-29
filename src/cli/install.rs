@@ -201,6 +201,32 @@ pub async fn install_personalities(options: InstallationOptions) -> Result<()> {
 
 /// Copy the current binary to the target location
 async fn copy_binary(source: &PathBuf, target: &PathBuf) -> Result<()> {
+    // Validate source binary exists and has reasonable size
+    let source_metadata = fs::metadata(source).await.with_context(|| {
+        format!(
+            "Failed to get metadata for source binary: {}",
+            source.display()
+        )
+    })?;
+
+    let source_size = source_metadata.len();
+    if source_size == 0 {
+        return Err(anyhow!(
+            "Source binary is empty (0 bytes): {}. This indicates a corrupted installation. \
+            Please download and install a fresh copy from GitHub releases.",
+            source.display()
+        ));
+    }
+
+    if source_size < 1024 {
+        // Less than 1KB is suspicious for a Rust binary
+        return Err(anyhow!(
+            "Source binary is suspiciously small ({} bytes): {}. This may indicate corruption.",
+            source_size,
+            source.display()
+        ));
+    }
+
     // Ensure target directory exists
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)
@@ -217,14 +243,25 @@ async fn copy_binary(source: &PathBuf, target: &PathBuf) -> Result<()> {
         )
     })?;
 
+    // Verify the copy was successful
+    let target_metadata = fs::metadata(target)
+        .await
+        .with_context(|| format!("Failed to verify copied binary: {}", target.display()))?;
+
+    let target_size = target_metadata.len();
+    if target_size != source_size {
+        return Err(anyhow!(
+            "Binary copy verification failed: source size {} bytes != target size {} bytes",
+            source_size,
+            target_size
+        ));
+    }
+
     // Make sure it's executable
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut permissions = fs::metadata(target)
-            .await
-            .with_context(|| format!("Failed to get metadata for {}", target.display()))?
-            .permissions();
+        let mut permissions = target_metadata.permissions();
         permissions.set_mode(0o755); // rwxr-xr-x
         fs::set_permissions(target, permissions)
             .await
