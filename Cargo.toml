@@ -1,6 +1,6 @@
 [package]
 name = "claude-code-personalities"
-version = "0.0.13"
+version = "0.0.14"
 edition = "2024"
 description = "Dynamic text-face personalities for Claude Code's statusline"
 license = "WTFPL"
