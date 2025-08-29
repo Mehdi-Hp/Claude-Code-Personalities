@@ -75,26 +75,28 @@ async fn configure_display() -> Result<()> {
     // Get all display options with their current states
     let options = prefs.get_display_options();
 
-    // Build multiselect with items and initial selections
-    let mut selector = multiselect("Select which elements to show in the statusline");
+    // Build list of initially selected values (currently enabled options)
+    let initial_selections: Vec<&str> = options
+        .iter()
+        .filter_map(|(name, enabled)| if *enabled { Some(*name) } else { None })
+        .collect();
 
-    // Add each option with its current state
-    // Note: cliclack doesn't support initial selections in multiselect,
-    // so we'll show current state in the hint
-    for (name, enabled) in &options {
-        let hint = if *enabled { "(currently enabled)" } else { "" };
-        selector = selector.item(name, name, hint);
+    // Build multiselect with items and initial selections
+    let mut selector = multiselect("Select which elements to show in the statusline")
+        .initial_values(initial_selections);
+
+    // Add each option
+    for (name, _enabled) in &options {
+        selector = selector.item(name, name, "");
     }
 
     // Show interactive multi-select prompt
-    let selected: Vec<&&str> = selector.interact().with_context(
+    let selected: Vec<&str> = selector.interact().with_context(
         || "Failed to get user preferences selection. Interactive prompt was cancelled or failed.",
     )?;
 
-    // Convert selected to owned strings first, then to refs
-    let selected_strings: Vec<String> = selected.iter().map(|s| s.to_string()).collect();
-    let selected_refs: Vec<&str> = selected_strings.iter().map(|s| s.as_str()).collect();
-    prefs.update_from_selections(&selected_refs);
+    // Update preferences with selected options
+    prefs.update_from_selections(&selected);
 
     // Save updated preferences
     prefs
@@ -107,15 +109,15 @@ async fn configure_display() -> Result<()> {
 
     // Show what was enabled/disabled before outro
     println!("\nEnabled features:");
-    for feature in &selected_strings {
+    for feature in &selected {
         println!("  {} {}", ICON_CHECK.green(), feature);
     }
 
     // Check if any options were disabled
     let all_options: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
-    let disabled_options: Vec<&&str> = all_options
-        .iter()
-        .filter(|opt| !selected_refs.contains(opt))
+    let disabled_options: Vec<&str> = all_options
+        .into_iter()
+        .filter(|opt| !selected.contains(opt))
         .collect();
 
     if !disabled_options.is_empty() {
