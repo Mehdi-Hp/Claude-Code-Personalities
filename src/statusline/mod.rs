@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::io::{self, Read};
 
 use crate::config::PersonalityPreferences;
-use crate::icons::{ICON_ERROR, ICON_FOLDER, ICON_WARNING, get_activity_icon, get_model_icon};
+use crate::icons::{ICON_FOLDER, get_activity_icon, get_model_icon};
 use crate::state::SessionState;
 
 #[derive(Debug, Deserialize)]
@@ -197,24 +197,7 @@ pub fn build_statusline(
         }
     }
 
-    // Error indicators
-    if prefs.show_error_indicators {
-        if state.error_count >= 3 {
-            let error_icon = if prefs.use_colors {
-                prefs.theme.apply_error(ICON_ERROR)
-            } else {
-                ICON_ERROR.to_string()
-            };
-            parts.push(format!(" {error_icon}"));
-        } else if state.error_count > 0 {
-            let warning_icon = if prefs.use_colors {
-                prefs.theme.apply_warning(ICON_WARNING)
-            } else {
-                ICON_WARNING.to_string()
-            };
-            parts.push(format!(" {warning_icon}"));
-        }
-    }
+    // Error indicators removed - no longer showing warning/error icons
 
     // Model indicator
     if prefs.show_model {
@@ -371,26 +354,24 @@ mod tests {
         // Should contain model info
         assert!(statusline.contains("Opus"));
 
-        // Should not contain error indicators for 0 errors
-        assert!(!statusline.contains(ICON_ERROR));
-        assert!(!statusline.contains(ICON_WARNING));
+        // Error indicators have been completely removed
     }
 
     #[test]
     fn test_build_statusline_with_errors() {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
+
+        // Error indicators have been removed - statusline should not contain error icons
         state.error_count = 1;
         let statusline = build_statusline(&state, "Sonnet", &prefs, None);
 
-        // Should contain warning for 1 error
-        assert!(statusline.contains(ICON_WARNING));
-        assert!(!statusline.contains(ICON_ERROR));
-
-        // Test with many errors
+        // Test with many errors - should still not show any error icons
         state.error_count = 5;
         let statusline = build_statusline(&state, "Sonnet", &prefs, None);
-        assert!(statusline.contains(ICON_ERROR));
+
+        // Just verify the statusline is not empty
+        assert!(!statusline.trim().is_empty());
     }
 
     #[test]
@@ -593,33 +574,19 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
 
-        // No errors
+        // Error indicators have been completely removed
+        // Statusline should work normally regardless of error count
         state.error_count = 0;
         let statusline = build_statusline(&state, "Claude", &prefs, None);
-        assert!(!statusline.contains(ICON_ERROR));
-        assert!(!statusline.contains(ICON_WARNING));
+        assert!(!statusline.trim().is_empty());
 
-        // Low errors (warning)
         state.error_count = 1;
         let statusline = build_statusline(&state, "Claude", &prefs, None);
-        assert!(!statusline.contains(ICON_ERROR));
-        assert!(statusline.contains(ICON_WARNING));
-
-        state.error_count = 2;
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
-        assert!(!statusline.contains(ICON_ERROR));
-        assert!(statusline.contains(ICON_WARNING));
-
-        // High errors (error icon)
-        state.error_count = 3;
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
-        assert!(statusline.contains(ICON_ERROR));
-        assert!(!statusline.contains(ICON_WARNING));
+        assert!(!statusline.trim().is_empty());
 
         state.error_count = 10;
         let statusline = build_statusline(&state, "Claude", &prefs, None);
-        assert!(statusline.contains(ICON_ERROR));
-        assert!(!statusline.contains(ICON_WARNING));
+        assert!(!statusline.trim().is_empty());
     }
 
     #[test]
@@ -648,7 +615,6 @@ mod tests {
             show_personality: false,
             show_activity: false,
             show_model: false,
-            show_error_indicators: false, // Also disable error indicators
             use_icons: false,
             use_colors: false,
             display: DisplayConfig {
