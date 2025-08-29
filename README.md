@@ -56,7 +56,7 @@ claude-code-personalities config              # Interactive configuration menu
 claude-code-personalities status              # Check installation status
 claude-code-personalities update              # Update to latest version
 claude-code-personalities check-update        # Check for available updates
-claude-code-personalities uninstall           # Remove personalities
+claude-code-personalities uninstall           # Remove personalities (restart Claude required)
 claude-code-personalities help                # Show help with all options
 ```
 
