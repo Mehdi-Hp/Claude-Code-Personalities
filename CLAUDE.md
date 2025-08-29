@@ -166,7 +166,7 @@ The `claude-code-personalities install` command:
 claude-code-personalities config
 ```
 
-Opens a multi-select menu to toggle:
+Opens a multi-select menu to toggle. The menu displays your current configuration with checkboxes pre-selected for enabled options, so you can immediately see what's active and make changes as needed:
 - Show Personality (text faces)
 - Show Activity (current action)
 - Show Current File
