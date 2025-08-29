@@ -93,7 +93,7 @@ clear
 echo
 echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}૮ ․ ․ ྀིა ${MAGENTA}Claude Code Personalities${NC}             ${BOLD}${CYAN}║${NC}"
+echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}૮ ․ ․ ྀིა ${MAGENTA}Claude Code Personalities${NC}              ${BOLD}${CYAN}║${NC}"
 echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
 echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
