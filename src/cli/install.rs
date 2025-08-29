@@ -255,12 +255,12 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
 
     println!(
         "{} {}",
-        format!("{}Installed to:", "\u{f07b} ").bold(),
+        format!("{}Installed to:", "\u{f07b} ").bold().yellow(),
         binary_path.display()
     );
     println!(
         "{} {}",
-        format!("{}Settings:   ", "\u{f013} ").bold(),
+        format!("{}Settings:   ", "\u{f013} ").bold().yellow(),
         settings_path.display()
     );
     println!();
