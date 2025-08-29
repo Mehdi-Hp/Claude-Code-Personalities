@@ -37,7 +37,6 @@ pub struct PersonalityPreferences {
     pub show_current_job: bool,
     pub show_current_dir: bool,
     pub show_model: bool,
-    pub show_error_indicators: bool,
     pub use_icons: bool,
     pub use_colors: bool,
 
@@ -58,7 +57,6 @@ impl Default for PersonalityPreferences {
             show_current_job: true,
             show_current_dir: false, // Hidden by default per user request
             show_model: true,
-            show_error_indicators: true,
             use_icons: true,
             use_colors: true,
             display: DisplayConfig::default(),
@@ -167,7 +165,6 @@ impl PersonalityPreferences {
             ("Show Current Job/File", self.show_current_job),
             ("Show Current Directory", self.show_current_dir),
             ("Show Model Indicator", self.show_model),
-            ("Show Error Indicators", self.show_error_indicators),
             ("Use Icons", self.use_icons),
             ("Use Colors", self.use_colors),
             ("Show Separators", self.display.show_separators),
@@ -184,7 +181,6 @@ impl PersonalityPreferences {
         self.show_current_job = false;
         self.show_current_dir = false;
         self.show_model = false;
-        self.show_error_indicators = false;
         self.use_icons = false;
         self.use_colors = false;
         self.display.show_separators = false;
@@ -199,7 +195,6 @@ impl PersonalityPreferences {
                 "Show Current Job/File" => self.show_current_job = true,
                 "Show Current Directory" => self.show_current_dir = true,
                 "Show Model Indicator" => self.show_model = true,
-                "Show Error Indicators" => self.show_error_indicators = true,
                 "Use Icons" => self.use_icons = true,
                 "Use Colors" => self.use_colors = true,
                 "Show Separators" => self.display.show_separators = true,
@@ -224,7 +219,6 @@ mod tests {
         assert!(prefs.show_current_job);
         assert!(!prefs.show_current_dir); // Should be false by default
         assert!(prefs.show_model);
-        assert!(prefs.show_error_indicators);
         assert!(prefs.use_icons);
         assert!(prefs.use_colors);
     }
@@ -234,7 +228,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 11); // Updated count for new display options
+        assert_eq!(options.len(), 10); // Updated count after removing error indicators
         assert!(options.iter().any(|(name, _)| *name == "Show Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Show Activity"));
         assert!(
@@ -251,11 +245,6 @@ mod tests {
             options
                 .iter()
                 .any(|(name, _)| *name == "Show Model Indicator")
-        );
-        assert!(
-            options
-                .iter()
-                .any(|(name, _)| *name == "Show Error Indicators")
         );
         assert!(options.iter().any(|(name, _)| *name == "Use Icons"));
         assert!(options.iter().any(|(name, _)| *name == "Use Colors"));
@@ -277,7 +266,6 @@ mod tests {
         assert!(!prefs.show_current_job);
         assert!(!prefs.show_current_dir);
         assert!(!prefs.show_model);
-        assert!(!prefs.show_error_indicators);
         assert!(prefs.use_icons);
         assert!(!prefs.use_colors);
     }

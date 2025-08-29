@@ -87,7 +87,7 @@ Customize what appears in your statusline using the interactive configuration:
 claude-code-personalities config
 ```
 
-This opens a multi-select menu where you can toggle:
+This opens a multi-select menu where you can toggle. When you open the configuration menu, your current settings are pre-selected with checkboxes, making it easy to see what's currently enabled versus disabled:
 - **Show Personality** - Text-face emoticons (ʕ•ᴥ•ʔ, (╯°□°)╯, etc.)
 - **Show Activity** - Current activity (editing, coding, debugging, etc.)
 - **Show Current Job/File** - Current file being worked on
