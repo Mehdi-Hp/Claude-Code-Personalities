@@ -83,7 +83,7 @@ pub async fn run_statusline() -> Result<()> {
     // Use static renderer
     let statusline = build_statusline(&state, &model_name, &prefs, claude_input.workspace.as_ref());
 
-    println!("{statusline}");
+    print!("{statusline}");
 
     Ok(())
 }
