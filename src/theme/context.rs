@@ -3,14 +3,14 @@
 /// This module provides consistent coloring with a single color per section.
 use crate::theme::colors::Color;
 
-/// Get color for personalities in Default theme - always returns 254 (very light gray)
+/// Get color for personalities in Default theme - always returns 231 (bright white)
 pub fn get_personality_color_256(_personality: &str) -> u8 {
-    254 // Consistent color for all personalities
+    231 // Consistent bright white for all personalities
 }
 
-/// Create a consistent color for personality (always 254)
+/// Create a consistent color for personality (always 231 - bright white)
 pub fn get_context_aware_personality_color(_personality: &str) -> Color {
-    Color::from_terminal_256(254)
+    Color::from_terminal_256(231)
 }
 
 /// Get model-specific color for the Default theme
@@ -38,23 +38,23 @@ mod tests {
 
     #[test]
     fn test_personality_color_mapping() {
-        // All personalities now return the same color (254)
-        assert_eq!(get_personality_color_256("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager"), 254);
+        // All personalities now return the same color (231 - bright white)
+        assert_eq!(get_personality_color_256("┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager"), 231);
         assert_eq!(
             get_personality_color_256("φ(．．) Documentation Writer"),
-            254
+            231
         );
         assert_eq!(
             get_personality_color_256("(╯°□°)╯︵ ┻━┻ Table Flipper"),
-            254
+            231
         );
-        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 254);
-        assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 254);
-        assert_eq!(get_personality_color_256("Search Maestro"), 254);
-        assert_eq!(get_personality_color_256("ʕ•ᴥ•ʔ Code Wizard"), 254);
-        assert_eq!(get_personality_color_256("JS Master"), 254);
-        assert_eq!(get_personality_color_256("Booting Up"), 254);
-        assert_eq!(get_personality_color_256("Editor User"), 254);
+        assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 231);
+        assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 231);
+        assert_eq!(get_personality_color_256("Search Maestro"), 231);
+        assert_eq!(get_personality_color_256("ʕ•ᴥ•ʔ Code Wizard"), 231);
+        assert_eq!(get_personality_color_256("JS Master"), 231);
+        assert_eq!(get_personality_color_256("Booting Up"), 231);
+        assert_eq!(get_personality_color_256("Editor User"), 231);
     }
 
     #[test]

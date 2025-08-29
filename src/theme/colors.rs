@@ -68,21 +68,59 @@ impl Color {
     pub fn apply_with_dim_background<T: AsRef<str>>(&self, text: T) -> ColoredString {
         match self {
             Self::Rgb { r, g, b } => {
-                let bg_r = ((*r as f32) * 0.15) as u8;
-                let bg_g = ((*g as f32) * 0.15) as u8;
-                let bg_b = ((*b as f32) * 0.15) as u8;
+                let bg_r = ((*r as f32) * 0.25) as u8;
+                let bg_g = ((*g as f32) * 0.25) as u8;
+                let bg_b = ((*b as f32) * 0.25) as u8;
                 text.as_ref()
                     .truecolor(*r, *g, *b)
                     .on_truecolor(bg_r, bg_g, bg_b)
             }
             Self::Terminal256(index) => {
                 let (r, g, b) = Self::terminal_256_to_rgb(*index);
-                let bg_r = ((r as f32) * 0.15) as u8;
-                let bg_g = ((g as f32) * 0.15) as u8;
-                let bg_b = ((b as f32) * 0.15) as u8;
+                let bg_r = ((r as f32) * 0.25) as u8;
+                let bg_g = ((g as f32) * 0.25) as u8;
+                let bg_b = ((b as f32) * 0.25) as u8;
                 text.as_ref()
                     .truecolor(r, g, b)
                     .on_truecolor(bg_r, bg_g, bg_b)
+            }
+        }
+    }
+
+    /// Apply this color with dim background using background-only reset
+    pub fn apply_with_inverse<T: AsRef<str>>(&self, text: T) -> String {
+        match self {
+            Self::Rgb { r, g, b } => {
+                // Use dim background with bright foreground and background-only reset
+                let bg_r = ((*r as f32) * 0.25) as u8;
+                let bg_g = ((*g as f32) * 0.25) as u8;
+                let bg_b = ((*b as f32) * 0.25) as u8;
+                format!(
+                    "\x1b[48;2;{};{};{};38;2;{};{};{}m{}\x1b[49m",
+                    bg_r,
+                    bg_g,
+                    bg_b,
+                    r,
+                    g,
+                    b,
+                    text.as_ref()
+                )
+            }
+            Self::Terminal256(index) => {
+                let (r, g, b) = Self::terminal_256_to_rgb(*index);
+                let bg_r = ((r as f32) * 0.25) as u8;
+                let bg_g = ((g as f32) * 0.25) as u8;
+                let bg_b = ((b as f32) * 0.25) as u8;
+                format!(
+                    "\x1b[48;2;{};{};{};38;2;{};{};{}m{}\x1b[49m",
+                    bg_r,
+                    bg_g,
+                    bg_b,
+                    r,
+                    g,
+                    b,
+                    text.as_ref()
+                )
             }
         }
     }
@@ -235,7 +273,7 @@ impl ThemeColors {
     /// Default terminal theme using 256-color palette
     pub fn default_terminal() -> Self {
         Self {
-            personality: Color::from_terminal_256(254), // Base neutral (very light gray)
+            personality: Color::from_terminal_256(231), // Bright white
             activity: Color::from_terminal_256(69),     // Bright blue-cyan
             directory: Color::from_terminal_256(231),   // Bright white
             file: Color::from_terminal_256(231),        // Bright white
@@ -306,7 +344,7 @@ mod tests {
         let colors = ThemeColors::default_terminal();
         // Verify it returns Terminal256 colors
         if let Color::Terminal256(index) = colors.personality {
-            assert_eq!(index, 254);
+            assert_eq!(index, 231);
         } else {
             panic!("Expected Terminal256 personality color");
         }

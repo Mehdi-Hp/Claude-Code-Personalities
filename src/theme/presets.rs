@@ -77,7 +77,7 @@ impl Theme {
     pub fn apply_personality_with_context(&self, text: &str, state: &SessionState) -> String {
         match self {
             Theme::Default => {
-                // Use context-aware coloring for Default theme
+                // Use context-aware coloring with bold for Default theme
                 let color = get_context_aware_personality_color(&state.personality);
                 color.apply_bold(text).to_string()
             }
@@ -92,9 +92,9 @@ impl Theme {
     pub fn apply_model_color_with_context(&self, text: &str, model_name: &str) -> String {
         match self {
             Theme::Default => {
-                // Use context-aware coloring with dim background for Default theme
+                // Use context-aware coloring with foreground-only (no background) for Default theme
                 let color = get_context_aware_model_color(model_name);
-                color.apply_with_dim_background(text).to_string()
+                color.apply(text).to_string()
             }
             _ => {
                 // Use standard model color for other themes
