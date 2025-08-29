@@ -12,7 +12,8 @@ TEMP_DIR=$(mktemp -d)
 
 # Icons
 ICON_ROCKET=$(printf '\xef\x84\xb5')
-ICON_CHECK=$(printf '\xef\x80\x8c')
+ICON_CHECK=$(printf '\xef\x91\x84')
+ICON_SUCCESS=$(printf '\xef\x93\xb5')
 ICON_DOWNLOAD=$(printf '\xef\x80\x99')
 ICON_GEAR=$(printf '\xef\x80\x93')
 ICON_ERROR=$(printf '\xef\x81\x97')
@@ -91,26 +92,17 @@ map_platform_to_binary_name() {
 # Header
 clear
 echo
-echo -e "${BOLD}${CYAN}   ╔═══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ║           ${NC}${BOLD}૮ ․ ․ ྀིა ${MAGENTA}Claude Code Personalities${NC}               ${BOLD}${CYAN}║${NC}"
-echo -e "${BOLD}${CYAN}   ║                                                           ║${NC}"
-echo -e "${BOLD}${CYAN}   ╚═══════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BOLD}${YELLOW}   ╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${YELLOW}   ║                                                           ║${NC}"
+echo -e "${BOLD}${YELLOW}   ║           ${BOLD}${NC}૮ ․ ․ ྀིა  Claude Code Personalities              ║"
+echo -e "${BOLD}${YELLOW}   ║                                                           ║${NC}"
+echo -e "${BOLD}${YELLOW}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "   ${ICON_ROCKET} ${ITALIC}Lightning-fast Rust binary (~1ms statusline generation)${NC}"
-echo -e "   ${ITALIC}with zero dependencies and intelligent activity tracking${NC}"
+echo -e "   ${ICON_ROCKET} ${ITALIC}Lightning-fast Claude Code statusline with intelligent activity tracking${NC}"
 echo
-echo
-
-# Dim gray divider
-divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
-echo -e "  $divider"
-echo -e "  ${BOLD}${BLUE}Installing${NC} ${BOLD}Rust Binary${NC}"
-echo -e "  $divider"
 echo
 
 # Detect platform
-print_info "Detecting platform..."
 PLATFORM=$(detect_platform)
 
 if [[ "$PLATFORM" == "unsupported" ]]; then
@@ -122,10 +114,9 @@ if [[ "$PLATFORM" == "unsupported" ]]; then
     exit 1
 fi
 
-print_success "Detected platform: $PLATFORM"
+print_success "Platform detected: $PLATFORM"
 
 # Check dependencies
-print_info "Checking dependencies..."
 if ! command -v curl &> /dev/null; then
     print_error "curl is required but not installed"
     echo "Install with: brew install curl"
@@ -141,8 +132,6 @@ print_success "Dependencies verified"
 
 # Download latest release
 echo
-print_info "Downloading latest version..."
-
 RELEASE_INFO=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 LATEST_VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' | sed 's/^v//')
 
@@ -151,14 +140,20 @@ if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
     exit 1
 fi
 
-echo -e "    ${CYAN}Latest version: ${BOLD}v$LATEST_VERSION${NC}"
+# Show section header with version
+echo
+# Dim gray divider
+divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
+echo -e "  $divider"
+echo -e "  ${BOLD}${NC}${YELLOW}Installing the Binary v$LATEST_VERSION${NC}"
+echo -e "  $divider"
+echo
 
 # Construct binary name and download URL
 MAPPED_PLATFORM=$(map_platform_to_binary_name "$PLATFORM")
 BINARY_NAME="claude-code-personalities-${MAPPED_PLATFORM}"
 DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$LATEST_VERSION/$BINARY_NAME"
 
-print_info "Downloading binary..."
 if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DIR/claude-code-personalities"; then
     print_error "Failed to download binary from GitHub releases"
     echo
@@ -180,19 +175,16 @@ fi
 
 # Create local bin directory if needed
 if [[ ! -d "$LOCAL_BIN" ]]; then
-    print_info "Creating $LOCAL_BIN directory..."
     mkdir -p "$LOCAL_BIN"
 fi
 
 # Install the binary
-print_info "Installing binary..."
 cp "$TEMP_DIR/claude-code-personalities" "$BIN_PATH"
 chmod +x "$BIN_PATH"
 
 print_success "Binary installed to $BIN_PATH"
 
 # Verify installation
-print_info "Verifying installation..."
 if ! "$BIN_PATH" --version &> /dev/null; then
     print_warning "Binary installed but version check failed"
     echo "This might indicate a platform compatibility issue"
@@ -207,29 +199,29 @@ if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     print_warning "$LOCAL_BIN is not in your PATH"
     echo
     echo "    Add this to your shell config (.bashrc, .zshrc, etc.):"
-    echo -e "    ${CYAN}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
+    echo -e "    ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
     echo
     echo "    Then reload your shell:"
-    echo -e "    ${CYAN}source ~/.zshrc${NC}  # or source ~/.bashrc"
+    echo -e "    ${YELLOW}source ~/.zshrc${NC}  # or source ~/.bashrc"
     echo
 fi
 
 # Success message with next steps
 echo
 echo -e "  $divider"
-echo -e "  ${ICON_CHECK} ${BOLD}${GREEN}Claude Code Personalities Installed${NC}"
+echo -e "  ${ICON_SUCCESS} ${BOLD}${NC} Claude Code Personalities Installed${NC}"
 echo -e "  $divider"
 echo
 echo
 
-echo -e "  ${BOLD}${GREEN}Next Steps${NC}"
+echo -e "  ${BOLD}${YELLOW}Next Steps${NC}"
 
-echo -e "    ${CYAN}claude-code-personalities install${NC}"
+echo -e "    ${NC}claude-code-personalities install${NC}"
 echo
 echo
 
-echo -e "  ${BOLD}Available Commands:${NC}"
-echo -e "    ${CYAN}claude-code-personalities install${NC}       - Configure Claude Code"
-echo -e "    ${CYAN}claude-code-personalities status${NC}        - Check installation status"  
-echo -e "    ${CYAN}claude-code-personalities --help${NC}        - Show all commands"
+echo -e "  ${BOLD}${YELLOW}Available Commands:${NC}"
+echo -e "    ${NC}claude-code-personalities install${NC}       ${DIM}- Configure Claude Code${NC}"
+echo -e "    ${NC}claude-code-personalities status${NC}        ${DIM}- Check installation status${NC}"  
+echo -e "    ${NC}claude-code-personalities --help${NC}        ${DIM}- Show all commands${NC}"
 echo
