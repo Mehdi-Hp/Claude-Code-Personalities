@@ -312,8 +312,24 @@ fn print_uninstall_success(
         println!();
     }
 
+    // Critical restart warning
+    println!();
+    println!("{}", "⚠️  IMPORTANT - RESTART REQUIRED ⚠️".bold().red());
+    println!(
+        "{}",
+        "You MUST restart Claude Code to complete the uninstall!".red()
+    );
+    println!(
+        "{}",
+        "Until you restart, you may see 'No such file or directory' errors".red()
+    );
+    println!();
+
     println!("{}", "Next Steps:".bold().magenta());
-    println!("  1. Restart any running Claude Code sessions");
+    println!(
+        "  1. {} Restart any running Claude Code sessions",
+        ICON_WARNING.red()
+    );
     println!("  2. Your statusline will return to default behavior");
     if kept_backups {
         println!("  3. You can restore settings from backup if needed");
