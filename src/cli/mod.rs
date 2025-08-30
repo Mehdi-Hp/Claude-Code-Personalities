@@ -8,20 +8,23 @@ use crate::version::CURRENT_VERSION;
 
 // Sub-modules
 pub mod config;
-pub mod install;
+pub mod init;
 pub mod settings;
 pub mod uninstall;
 pub mod update;
 
-/// Install Claude Code Personalities with default options.
+/// Initialize Claude Code settings for personalities.
 ///
 /// # Errors
 ///
-/// This function will return an error if the installation process fails.
-/// See [`install::install_personalities`] for detailed error conditions.
-pub async fn install() -> Result<()> {
-    let options = install::InstallationOptions::default();
-    install::install_personalities(options).await
+/// This function will return an error if the initialization process fails.
+/// See [`init::init_claude_code`] for detailed error conditions.
+pub async fn init(non_interactive: bool, backup: bool) -> Result<()> {
+    let options = init::InitOptions {
+        non_interactive,
+        backup,
+    };
+    init::init_claude_code(options).await
 }
 
 /// Update Claude Code Personalities to the latest version with default options.
@@ -220,12 +223,12 @@ pub fn help() -> Result<()> {
     println!("Usage: claude-code-personalities [COMMAND]");
     println!();
     println!("Commands:");
-    println!("  install       Install Claude Code Personalities");
-    println!("  update        Update to the latest version");
-    println!("  uninstall     Remove Claude Code Personalities");
-    println!("  status        Check installation status");
+    println!("  init          Initialize Claude Code settings for personalities");
+    println!("  config        Customize statusline appearance and colors");
+    println!("  status        Check installation and configuration status");
+    println!("  update        Check for and install updates");
     println!("  check-update  Check for available updates");
-    println!("  config        Configure display options");
+    println!("  uninstall     Remove personalities from Claude Code");
     println!("  help          Show this help message");
     println!();
     println!("Modes (called by Claude Code):");
