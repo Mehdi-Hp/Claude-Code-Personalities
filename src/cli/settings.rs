@@ -279,18 +279,49 @@ impl ClaudeSettings {
             self.content.as_object_mut().unwrap().remove("statusLine");
         }
 
-        // Remove our hooks
+        // Remove our hooks surgically - only remove personality commands, preserve others
         if let Some(Value::Object(hooks)) = self.content.get_mut("hooks") {
-            // Remove hooks that contain our binary
+            let mut hook_types_to_remove = Vec::new();
+
             for hook_type in ["PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop"] {
                 if let Some(Value::Array(hook_array)) = hooks.get_mut(hook_type) {
-                    hook_array.retain(|hook_entry| !hook_contains_personality_command(hook_entry));
+                    // Instead of removing entire entries, filter out personality commands
+                    let mut entries_to_remove = Vec::new();
 
-                    // Remove the hook type entirely if no hooks remain
+                    for (entry_idx, hook_entry) in hook_array.iter_mut().enumerate() {
+                        if let Some(Value::Array(entry_hooks)) = hook_entry.get_mut("hooks") {
+                            // Remove only personality commands from this entry's hooks array
+                            entry_hooks.retain(|hook| {
+                                if let Some(command) = hook.get("command") {
+                                    if let Some(cmd_str) = command.as_str() {
+                                        return !cmd_str.contains("claude-code-personalities");
+                                    }
+                                }
+                                true
+                            });
+
+                            // If the entry has no hooks left, mark it for removal
+                            if entry_hooks.is_empty() {
+                                entries_to_remove.push(entry_idx);
+                            }
+                        }
+                    }
+
+                    // Remove empty entries (in reverse order to maintain indices)
+                    for &entry_idx in entries_to_remove.iter().rev() {
+                        hook_array.remove(entry_idx);
+                    }
+
+                    // Remove the hook type entirely if no entries remain
                     if hook_array.is_empty() {
-                        hooks.remove(hook_type);
+                        hook_types_to_remove.push(hook_type);
                     }
                 }
+            }
+
+            // Remove empty hook types
+            for hook_type in hook_types_to_remove {
+                hooks.remove(hook_type);
             }
 
             // Remove hooks object if empty
@@ -742,6 +773,174 @@ mod tests {
         // Remove configuration
         settings.remove_personality_config();
         assert!(!settings.is_personality_configured());
+    }
+
+    #[tokio::test]
+    async fn test_remove_personality_config_preserves_other_hooks() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+        let binary_path = PathBuf::from("/path/to/claude-code-personalities");
+
+        // Start with a complex existing hooks configuration that includes non-personality hooks
+        let existing_config = serde_json::json!({
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "*.py",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "pylint"
+                    }, {
+                        "type": "command",
+                        "command": "black --check"
+                    }]
+                }],
+                "PostToolUse": [{
+                    "matcher": "build*",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "notify-send Build complete"
+                    }]
+                }],
+                "UserPromptSubmit": [{
+                    "hooks": [{
+                        "type": "command",
+                        "command": "custom-logger"
+                    }, {
+                        "type": "command",
+                        "command": "analytics-tracker"
+                    }]
+                }]
+            }
+        });
+
+        let mut settings = ClaudeSettings {
+            settings_path,
+            content: existing_config,
+        };
+
+        // Add personality hooks to the existing configuration
+        settings.configure_statusline(&binary_path).unwrap();
+        settings.configure_hooks(&binary_path).unwrap();
+        assert!(settings.is_personality_configured());
+
+        // Verify we have the expected number of hooks after adding personalities
+        let pre_tool_hooks = settings.content["hooks"]["PreToolUse"].as_array().unwrap();
+        let post_tool_hooks = settings.content["hooks"]["PostToolUse"].as_array().unwrap();
+        let prompt_submit_hooks = settings.content["hooks"]["UserPromptSubmit"]
+            .as_array()
+            .unwrap();
+
+        assert_eq!(pre_tool_hooks.len(), 2); // Original + personality
+        assert_eq!(post_tool_hooks.len(), 2); // Original + personality  
+        assert_eq!(prompt_submit_hooks.len(), 2); // Original + personality
+
+        // Remove personality configuration surgically
+        settings.remove_personality_config();
+        assert!(!settings.is_personality_configured());
+
+        // Verify statusline is removed since it was ours (personalities overwrite existing statuslines)
+        assert!(settings.content.get("statusLine").is_none());
+
+        // Verify other hooks are preserved
+        let hooks_obj = settings.content["hooks"].as_object().unwrap();
+        assert!(!hooks_obj.is_empty(), "Hooks object should not be empty");
+
+        // Check PreToolUse - should still have the original pylint/black hooks
+        let pre_tool_hooks = hooks_obj["PreToolUse"].as_array().unwrap();
+        assert_eq!(pre_tool_hooks.len(), 1);
+        let first_entry_hooks = pre_tool_hooks[0]["hooks"].as_array().unwrap();
+        assert_eq!(first_entry_hooks.len(), 2); // pylint + black
+
+        let commands: Vec<_> = first_entry_hooks
+            .iter()
+            .map(|h| h["command"].as_str().unwrap())
+            .collect();
+        assert!(commands.contains(&"pylint"));
+        assert!(commands.contains(&"black --check"));
+
+        // Check PostToolUse - should still have notify-send
+        let post_tool_hooks = hooks_obj["PostToolUse"].as_array().unwrap();
+        assert_eq!(post_tool_hooks.len(), 1);
+        let post_hook_cmd = post_tool_hooks[0]["hooks"][0]["command"].as_str().unwrap();
+        assert_eq!(post_hook_cmd, "notify-send Build complete");
+
+        // Check UserPromptSubmit - should still have custom-logger and analytics-tracker
+        let prompt_submit_hooks = hooks_obj["UserPromptSubmit"].as_array().unwrap();
+        assert_eq!(prompt_submit_hooks.len(), 1);
+        let prompt_entry_hooks = prompt_submit_hooks[0]["hooks"].as_array().unwrap();
+        assert_eq!(prompt_entry_hooks.len(), 2);
+
+        let prompt_commands: Vec<_> = prompt_entry_hooks
+            .iter()
+            .map(|h| h["command"].as_str().unwrap())
+            .collect();
+        assert!(prompt_commands.contains(&"custom-logger"));
+        assert!(prompt_commands.contains(&"analytics-tracker"));
+
+        // Verify no personality-related commands remain
+        let all_content = serde_json::to_string(&settings.content).unwrap();
+        assert!(!all_content.contains("claude-code-personalities"));
+    }
+
+    #[tokio::test]
+    async fn test_remove_personality_config_mixed_commands_in_entry() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+        let binary_path = PathBuf::from("/path/to/claude-code-personalities");
+
+        // Create a scenario where personality and non-personality commands exist in the same hook entry
+        let mixed_config = serde_json::json!({
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "*.rs",
+                    "hooks": [{
+                        "type": "command",
+                        "command": "rustfmt --check"
+                    }, {
+                        "type": "command",
+                        "command": "/path/to/claude-code-personalities --hook pre-tool"
+                    }, {
+                        "type": "command",
+                        "command": "clippy --all-targets"
+                    }]
+                }]
+            }
+        });
+
+        let mut settings = ClaudeSettings {
+            settings_path,
+            content: mixed_config,
+        };
+
+        // Verify we have mixed commands initially
+        let pre_tool_hooks = settings.content["hooks"]["PreToolUse"][0]["hooks"]
+            .as_array()
+            .unwrap();
+        assert_eq!(pre_tool_hooks.len(), 3);
+        assert!(settings.is_personality_configured());
+
+        // Remove personality configuration surgically
+        settings.remove_personality_config();
+        assert!(!settings.is_personality_configured());
+
+        // Verify the hook entry still exists but only has non-personality commands
+        let hooks_obj = settings.content["hooks"].as_object().unwrap();
+        let pre_tool_hooks = hooks_obj["PreToolUse"].as_array().unwrap();
+        assert_eq!(pre_tool_hooks.len(), 1);
+
+        let remaining_hooks = pre_tool_hooks[0]["hooks"].as_array().unwrap();
+        assert_eq!(remaining_hooks.len(), 2); // Only rustfmt and clippy should remain
+
+        let commands: Vec<_> = remaining_hooks
+            .iter()
+            .map(|h| h["command"].as_str().unwrap())
+            .collect();
+        assert!(commands.contains(&"rustfmt --check"));
+        assert!(commands.contains(&"clippy --all-targets"));
+
+        // Verify personality command was removed
+        let all_content = serde_json::to_string(&settings.content).unwrap();
+        assert!(!all_content.contains("claude-code-personalities"));
     }
 
     #[tokio::test]
