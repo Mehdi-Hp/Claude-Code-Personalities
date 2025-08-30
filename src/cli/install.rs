@@ -451,11 +451,13 @@ mod tests {
     async fn test_copy_binary() {
         let temp_dir = TempDir::new().unwrap();
 
-        // Create a source "binary" file
+        // Create a source "binary" file (make it large enough to pass validation)
         let mut source_file = NamedTempFile::new().unwrap();
-        source_file
-            .write_all(b"#!/bin/bash\necho 'test binary'")
-            .unwrap();
+        let large_content = format!(
+            "#!/bin/bash\necho 'test binary'\n# Padding to make file large enough:\n{}",
+            "# ".repeat(500) // This creates ~1500 bytes total, well above our 1024 byte threshold
+        );
+        source_file.write_all(large_content.as_bytes()).unwrap();
         source_file.flush().unwrap();
 
         let source_path = source_file.path().to_path_buf();
