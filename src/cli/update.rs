@@ -171,7 +171,7 @@ async fn perform_update(
         })?;
 
     // Step 2: Set up paths and verify current installation
-    let paths = setup_update_paths()?;
+    let paths = setup_update_paths().await?;
 
     // Step 3: Download and verify the new binary
     download_and_verify_binary(version_manager, asset, &paths.temp_binary).await?;
@@ -196,20 +196,67 @@ struct UpdatePaths {
     claude_dir: PathBuf,
 }
 
-fn setup_update_paths() -> Result<UpdatePaths> {
+/// Find existing claude-code-personalities binary installation.
+///
+/// This function searches for an existing binary installation in order of preference:
+/// 1. PATH (using `which` command) - highest priority since it's accessible
+/// 2. ~/.local/bin/claude-code-personalities - standard user binary location
+/// 3. ~/.claude/claude-code-personalities - legacy installation location
+///
+/// # Returns
+/// `Some(PathBuf)` if an existing binary is found, `None` if no binary exists.
+///
+/// # Errors
+/// Returns an error if command execution fails or directory traversal fails
+async fn find_existing_binary() -> Result<Option<PathBuf>> {
+    // 1. Check PATH using `which` command (highest priority)
+    if let Ok(output) = tokio::process::Command::new("which")
+        .arg("claude-code-personalities")
+        .output()
+        .await
+        && output.status.success()
+    {
+        let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path_str.is_empty() {
+            let path_binary = PathBuf::from(path_str);
+            if path_binary.exists() {
+                return Ok(Some(path_binary));
+            }
+        }
+    }
+
+    // 2. Check ~/.local/bin/claude-code-personalities
+    if let Some(home_dir) = dirs::home_dir() {
+        let local_bin = home_dir.join(".local/bin/claude-code-personalities");
+        if local_bin.exists() {
+            return Ok(Some(local_bin));
+        }
+    }
+
+    // 3. Check ~/.claude/claude-code-personalities (legacy location)
+    let claude_dir = get_claude_dir()?;
+    let claude_binary = claude_dir.join("claude-code-personalities");
+    if claude_binary.exists() {
+        return Ok(Some(claude_binary));
+    }
+
+    Ok(None)
+}
+
+async fn setup_update_paths() -> Result<UpdatePaths> {
     let claude_dir = get_claude_dir().with_context(|| "Failed to determine Claude directory")?;
-    let current_binary = claude_dir.join("claude-code-personalities");
+
+    // Find the existing binary location
+    let current_binary = find_existing_binary().await?
+        .ok_or_else(|| anyhow!(
+            "No claude-code-personalities binary found in PATH, ~/.local/bin, or ~/.claude/. \
+            Please install the binary first using the install.sh script or download from GitHub releases."
+        ))?;
+
     let backup_binary = claude_dir.join(format!(
         "claude-code-personalities.backup.{CURRENT_VERSION}"
     ));
     let temp_binary = claude_dir.join("claude-code-personalities.tmp");
-
-    if !current_binary.exists() {
-        return Err(anyhow!(
-            "Claude Code Personalities is not installed in the expected location: {}",
-            current_binary.display()
-        ));
-    }
 
     Ok(UpdatePaths {
         current_binary,
