@@ -292,17 +292,32 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
 
     println!(
         "{} {}",
-        format!("{}Installed to:", "\u{f07b} ").bold().yellow(),
+        "Installed to:".bold().color(colored::Color::TrueColor {
+            r: 255,
+            g: 165,
+            b: 0
+        }),
         binary_path.display()
     );
     println!(
         "{} {}",
-        format!("{}Settings:   ", "\u{f013} ").bold().yellow(),
+        "Settings:   ".bold().color(colored::Color::TrueColor {
+            r: 255,
+            g: 165,
+            b: 0
+        }),
         settings_path.display()
     );
     println!();
 
-    println!("{}", "Next Steps:".bold().yellow());
+    println!(
+        "{}",
+        "Next Steps:".bold().color(colored::Color::TrueColor {
+            r: 255,
+            g: 165,
+            b: 0
+        })
+    );
     println!("  1. Restart any running Claude Code sessions");
     println!("  2. Your statusline will now show dynamic personalities!");
     println!(
@@ -311,7 +326,16 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
     );
     println!();
 
-    println!("{}", "What's Configured:".bold().yellow());
+    println!(
+        "{}",
+        "What's Configured:"
+            .bold()
+            .color(colored::Color::TrueColor {
+                r: 255,
+                g: 165,
+                b: 0
+            })
+    );
     println!(
         "  {} Dynamic statusline with personality faces",
         ICON_CHECK.green()
@@ -321,7 +345,16 @@ fn print_installation_success(binary_path: &Path, settings_path: &Path) -> Resul
     println!("  {} Session cleanup", ICON_CHECK.green());
     println!();
 
-    println!("{}", "Available Commands:".bold().yellow());
+    println!(
+        "{}",
+        "Available Commands:"
+            .bold()
+            .color(colored::Color::TrueColor {
+                r: 255,
+                g: 165,
+                b: 0
+            })
+    );
     println!(
         "  {} Check installation status",
         "claude-code-personalities status".white()
