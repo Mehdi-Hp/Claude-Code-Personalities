@@ -33,7 +33,22 @@ async fn run() -> Result<()> {
     let matches = Command::new("claude-code-personalities")
         .version(version::CURRENT_VERSION)
         .about("Dynamic text-face personalities for Claude Code's statusline")
-        .subcommand(Command::new("install").about("Install Claude Code Personalities"))
+        .subcommand(
+            Command::new("init")
+                .about("Initialize Claude Code settings for personalities")
+                .arg(
+                    Arg::new("non_interactive")
+                        .long("non-interactive")
+                        .help("Skip all prompts (for automated setup)")
+                        .action(clap::ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("backup")
+                        .long("backup")
+                        .help("Create backup of existing settings")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
         .subcommand(Command::new("update").about("Update to the latest version"))
         .subcommand(Command::new("uninstall").about("Remove Claude Code Personalities"))
         .subcommand(Command::new("status").about("Check installation status"))
@@ -80,7 +95,11 @@ async fn run() -> Result<()> {
     } else {
         // CLI commands
         match matches.subcommand() {
-            Some(("install", _)) => cli::install().await,
+            Some(("init", sub_matches)) => {
+                let non_interactive = sub_matches.get_flag("non_interactive");
+                let backup = sub_matches.get_flag("backup");
+                cli::init(non_interactive, backup).await
+            }
             Some(("update", _)) => cli::update().await,
             Some(("uninstall", _)) => cli::uninstall().await,
             Some(("status", _)) => cli::status().await,
