@@ -238,7 +238,7 @@ pub fn get_default_tool_kaomoji(tool_name: &str, consecutive_actions: u32) -> &'
                 &RESEARCH_KING
             }
         }
-        _ => &CODE_WIZARD,
+        _ => &BOOTING_UP,
     }
 }
 
