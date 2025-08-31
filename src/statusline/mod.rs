@@ -325,7 +325,7 @@ mod tests {
             session_id: "test".to_string(),
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
-            personality: "ʕ•ᴥ•ʔ Code Wizard".to_string(),
+            personality: "ლ(╹◡╹ლ) Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 1,
             error_count: 0,
@@ -345,7 +345,7 @@ mod tests {
         let statusline = build_statusline(&state, "Opus", &prefs, None);
 
         // Should contain personality (bold formatting is applied but we can't easily test ANSI codes)
-        assert!(statusline.contains("ʕ•ᴥ•ʔ Code Wizard"));
+        assert!(statusline.contains("ლ(╹◡╹ლ) Cowder"));
 
         // Should contain activity and job
         assert!(statusline.contains("Editing"));
@@ -556,7 +556,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         let personalities = [
-            "ʕ•ᴥ•ʔ Code Wizard",
+            "ლ(╹◡╹ლ) Cowder",
             "(╯°□°)╯︵ ┻━┻ Table Flipper",
             "┗(▀̿Ĺ̯▀̿ ̿)┓ Git Manager",
             "φ(．．) Documentation Writer",
@@ -604,7 +604,7 @@ mod tests {
         let statusline_all = build_statusline(&state, "Opus", &prefs_all, None);
 
         // Should contain personality, activity, model, and separators
-        assert!(statusline_all.contains("Booting Up"));
+        assert!(statusline_all.contains("Chillin"));
         assert!(statusline_all.contains("Editing"));
         assert!(statusline_all.contains("test.js"));
         assert!(statusline_all.contains("Opus"));
@@ -721,7 +721,7 @@ mod tests {
         let statusline_no_sep = build_statusline(&state, "Haiku", &prefs_no_sep, None);
         assert!(!statusline_no_sep.contains("•"));
         // But should still have content
-        assert!(statusline_no_sep.contains("Booting Up"));
+        assert!(statusline_no_sep.contains("Chillin"));
         assert!(statusline_no_sep.contains("Coding"));
         assert!(statusline_no_sep.contains("app.rs"));
         assert!(statusline_no_sep.contains("Haiku"));
