@@ -3,16 +3,24 @@ use std::process::{Command, Stdio};
 
 #[tokio::test]
 async fn test_statusline_end_to_end() {
-    let input_json = r#"{
-        "session_id": "integration_test",
-        "model": {
+    // Use a unique session ID each time to avoid cached state
+    let unique_id = format!(
+        "integration_test_{}",
+        std::time::UNIX_EPOCH.elapsed().unwrap().as_nanos()
+    );
+    let input_json = format!(
+        r#"{{
+        "session_id": "{}",
+        "model": {{
             "display_name": "Opus"
-        },
-        "workspace": {
+        }},
+        "workspace": {{
             "current_dir": "/test/project",
             "project_dir": "/test/project"
-        }
-    }"#;
+        }}
+    }}"#,
+        unique_id
+    );
 
     // Build the binary first
     let output = Command::new("cargo")
@@ -58,7 +66,7 @@ async fn test_statusline_end_to_end() {
     // Should contain a valid statusline
     assert!(!stdout.is_empty(), "No statusline output");
     assert!(
-        stdout.contains("Booting Up"),
+        stdout.contains("Chillin"),
         "Should contain default personality"
     );
     assert!(stdout.contains("Opus"), "Should contain model name");
@@ -144,7 +152,7 @@ async fn test_hook_mode() {
     // Should show the personality that was set by the hook
     assert!(!stdout.is_empty(), "No statusline output after hook");
     assert!(
-        stdout.contains("JS Master") || stdout.contains("Code Wizard"),
+        stdout.contains("JS Master") || stdout.contains("Cowder"),
         "Should contain JS or Code personality for .js file. Got: {stdout}"
     );
 
