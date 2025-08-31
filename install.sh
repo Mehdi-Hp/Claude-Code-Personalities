@@ -23,6 +23,7 @@ ICON_WARNING=$(printf '\xef\x81\xb1')
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+ORANGE='\033[38;2;255;165;0m'  # RGB(255, 165, 0)
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
@@ -145,7 +146,7 @@ echo
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
 echo -e "  $divider"
-echo -e "  ${BOLD}${NC}${YELLOW}Installing the Binary v$LATEST_VERSION${NC}"
+echo -e "  ${BOLD}${ORANGE}Installing the Binary v$LATEST_VERSION${NC}"
 echo -e "  $divider"
 echo
 
@@ -255,29 +256,24 @@ echo
 
 # Auto-initialize Claude Code if possible
 echo
-echo -e "  $divider"
-echo -e "  ${ICON_GEAR} ${BOLD}${NC} Initializing Claude Code Configuration${NC}"
-echo -e "  $divider"
-echo
 
 if command -v claude &> /dev/null; then
-    print_info "Claude Code detected - setting up personalities..."
+    echo -e "  • Claude Code detected - setting up personalities..."
     
     if "$BIN_PATH" init --non-interactive 2>/dev/null; then
-        print_success "Claude Code Personalities configured automatically!"
+        print_success "Configuration completed"
         echo
-        echo -e "  ${BOLD}${YELLOW}Ready to Use!${NC}"
-        echo -e "    Start a new Claude Code session to see your personalities in action!"
+        echo -e "  ${BOLD}${ORANGE}Ready to Use!${NC}"
     else
         print_warning "Auto-configuration failed"
         echo
-        echo -e "  ${BOLD}${YELLOW}Manual Setup Required${NC}"
+        echo -e "  ${BOLD}${ORANGE}Manual Setup Required${NC}"
         echo -e "    Run: ${NC}claude-code-personalities init${NC}"
     fi
 else
     print_info "Claude Code not detected in PATH"
     echo
-    echo -e "  ${BOLD}${YELLOW}Next Steps${NC}"
+    echo -e "  ${BOLD}${ORANGE}Next Steps${NC}"
     echo -e "    1. Install Claude Code if you haven't already"
     echo -e "    2. Run: ${NC}claude-code-personalities init${NC}"
 fi
@@ -285,7 +281,7 @@ fi
 echo
 echo
 
-echo -e "  ${BOLD}${YELLOW}Available Commands:${NC}"
+echo -e "  ${BOLD}${ORANGE}Available Commands:${NC}"
 echo -e "    ${NC}claude-code-personalities init${NC}          ${DIM}- Configure Claude Code${NC}"
 echo -e "    ${NC}claude-code-personalities status${NC}        ${DIM}- Check installation status${NC}"  
 echo -e "    ${NC}claude-code-personalities --help${NC}        ${DIM}- Show all commands${NC}"
