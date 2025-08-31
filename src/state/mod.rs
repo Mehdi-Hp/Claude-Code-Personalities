@@ -286,7 +286,7 @@ mod tests {
         let state = SessionState::default();
         assert_eq!(state.session_id, "unknown");
         assert_eq!(state.activity, Activity::Idle);
-        assert_eq!(state.personality, "( ˘ ³˘) Booting Up");
+        assert_eq!(state.personality, "( ˘ ³˘) Chillin");
         assert!(state.previous_personality.is_none());
         assert_eq!(state.consecutive_actions, 0);
         assert_eq!(state.error_count, 0);
@@ -301,7 +301,7 @@ mod tests {
         // Should create default state with correct session_id
         assert_eq!(state.session_id, session_id);
         assert_eq!(state.activity, Activity::Idle);
-        assert_eq!(state.personality, "( ˘ ³˘) Booting Up");
+        assert_eq!(state.personality, "( ˘ ³˘) Chillin");
         assert_eq!(state.consecutive_actions, 0);
         assert_eq!(state.error_count, 0);
     }
@@ -315,7 +315,7 @@ mod tests {
             session_id: session_id.clone(),
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
-            personality: "Code Wizard".to_string(),
+            personality: "Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 5,
             error_count: 2,
@@ -331,7 +331,7 @@ mod tests {
         assert_eq!(loaded_state.session_id, session_id);
         assert_eq!(loaded_state.activity, Activity::Editing);
         assert_eq!(loaded_state.current_job, Some("test.js".to_string()));
-        assert_eq!(loaded_state.personality, "Code Wizard");
+        assert_eq!(loaded_state.personality, "Cowder");
         assert_eq!(loaded_state.consecutive_actions, 5);
         assert_eq!(loaded_state.error_count, 2);
 

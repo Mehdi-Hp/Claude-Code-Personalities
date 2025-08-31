@@ -51,9 +51,9 @@ mod tests {
         assert_eq!(get_personality_color_256("(ノಠ益ಠ)ノ Error Warrior"), 231);
         assert_eq!(get_personality_color_256("(つ◉益◉)つ Bug Hunter"), 231);
         assert_eq!(get_personality_color_256("Search Maestro"), 231);
-        assert_eq!(get_personality_color_256("ʕ•ᴥ•ʔ Code Wizard"), 231);
+        assert_eq!(get_personality_color_256("ლ(╹◡╹ლ) Cowder"), 231);
         assert_eq!(get_personality_color_256("JS Master"), 231);
-        assert_eq!(get_personality_color_256("Booting Up"), 231);
+        assert_eq!(get_personality_color_256("Chillin"), 231);
         assert_eq!(get_personality_color_256("Editor User"), 231);
     }
 

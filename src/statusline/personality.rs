@@ -99,7 +99,7 @@ mod tests {
 
         let state = create_test_state(2, 0);
         let personality = determine_personality(&state, "Edit", None, None);
-        assert_eq!(personality, "(⌐■_■) Code Wizard");
+        assert_eq!(personality, "ლ(╹◡╹ლ) Cowder");
     }
 
     #[test]

@@ -6,11 +6,11 @@
 use super::Kaomoji;
 
 // Initial state
-pub const BOOTING_UP: Kaomoji = Kaomoji::new("( ˘ ³˘)", "Booting Up");
+pub const BOOTING_UP: Kaomoji = Kaomoji::new("( ˘ ³˘)", "Chillin");
 
 // Basic tool operations
-pub const CODE_WIZARD: Kaomoji = Kaomoji::new("ʕ•ᴥ•ʔ", "Code Wizard");
-pub const CODE_WIZARD_ALT: Kaomoji = Kaomoji::new("(⌐■_■)", "Code Wizard");
+pub const CODE_WIZARD: Kaomoji = Kaomoji::new("ლ(╹◡╹ლ)", "Cowder");
+pub const CODE_WIZARD_ALT: Kaomoji = Kaomoji::new("ლ(╹◡╹ლ)", "Cowder");
 pub const GENTLE_REFACTORER: Kaomoji = Kaomoji::new("(• ε •)", "Gentle Refactorer");
 pub const CODE_JANITOR: Kaomoji = Kaomoji::new("(ง'̀-'́)ง", "Code Janitor");
 pub const CASUAL_CODE_REVIEWER: Kaomoji = Kaomoji::new("¯\\_(ツ)_/¯", "Casual Code Reviewer");

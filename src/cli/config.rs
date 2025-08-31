@@ -221,7 +221,7 @@ async fn configure_theme() -> Result<()> {
 fn preview_theme(theme: &Theme) {
     println!(
         "  Personality: {}",
-        theme.apply_personality("ʕ•ᴥ•ʔ Code Wizard")
+        theme.apply_personality("ლ(╹◡╹ლ) Cowder")
     );
     println!("  Activity: {}", theme.apply_activity("editing"));
     println!("  Directory: {}", theme.apply_directory("my-project"));
