@@ -197,25 +197,6 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
 
     println!(
         "{}",
-        "What's Configured:"
-            .bold()
-            .color(colored::Color::TrueColor {
-                r: 255,
-                g: 165,
-                b: 0
-            })
-    );
-    println!(
-        "  {} Dynamic statusline with personality faces",
-        ICON_CHECK.green()
-    );
-    println!("  {} Activity tracking hooks", ICON_CHECK.green());
-    println!("  {} Error state management", ICON_CHECK.green());
-    println!("  {} Session cleanup", ICON_CHECK.green());
-    println!();
-
-    println!(
-        "{}",
         "Available Commands:"
             .bold()
             .color(colored::Color::TrueColor {
