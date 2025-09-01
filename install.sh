@@ -79,16 +79,6 @@ detect_platform() {
     esac
 }
 
-# Map detected platform to release binary name format
-map_platform_to_binary_name() {
-    case "$1" in
-        x86_64-apple-darwin) echo "macos-x86_64" ;;
-        aarch64-apple-darwin) echo "macos-aarch64" ;;
-        x86_64-linux) echo "linux-x86_64" ;;
-        aarch64-linux) echo "linux-aarch64" ;;
-        *) echo "$1" ;;
-    esac
-}
 
 # Header
 clear
@@ -151,8 +141,7 @@ echo -e "  $divider"
 echo
 
 # Construct binary name and download URL
-MAPPED_PLATFORM=$(map_platform_to_binary_name "$PLATFORM")
-BINARY_NAME="claude-code-personalities-${MAPPED_PLATFORM}"
+BINARY_NAME="claude-code-personalities-${PLATFORM}"
 DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$LATEST_VERSION/$BINARY_NAME"
 
 if ! curl -sfL "$DOWNLOAD_URL" -o "$TEMP_DIR/claude-code-personalities"; then
