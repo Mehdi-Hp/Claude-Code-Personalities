@@ -223,10 +223,7 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
     );
     println!();
 
-    println!(
-        "{} Start a new Claude Code session to see your personalities in action!",
-        "\u{f135}".yellow()
-    );
+    println!("Start a new Claude Code session to see your personalities in action!");
 
     Ok(())
 }
