@@ -1,125 +1,91 @@
-# Claude Code Personalities - Build Automation with Just
+# Claude Code Personalities - Build Automation
 
 # Variables
 build_dir := "build"
 
-# Default recipe
-default: help
-
-# Show available tasks
-help:
-    @printf " Claude Code Personalities - Build System\n"
-    @echo ""
+# Default: show available commands
+default:
     @just --list
 
-# Check dependencies
-check-deps:
-    @printf "$(printf '\xef\x80\x93') Checking dependencies...\n"
-    @command -v rustc >/dev/null || (printf "$(printf '\xef\x81\x97') Rust not installed\n" && exit 1)
-    @command -v cargo >/dev/null || (printf "$(printf '\xef\x81\x97') Cargo not installed\n" && exit 1) 
-    @command -v jq >/dev/null || (printf "$(printf '\xef\x81\x97') jq not installed\n" && exit 1)
-    @printf "$(printf '\xef\x80\x8c') All dependencies available\n"
-
-# Development build and run
-dev:
-    @printf "$(printf '\xef\x84\xb5') Development build\n"
-    cargo run -- --statusline
-
-# Build release binary for current platform  
+# Build release binary for current platform
 build:
-    @printf "$(printf '\xef\x84\xb5') Building release binary\n"
+    @printf "Building release binary...\n"
     cargo build --release
-    @printf "$(printf '\xef\x80\x8c') Built target/release/claude-code-personalities\n"
+    @printf "✅ Built target/release/claude-code-personalities\n"
 
-# Build for all platforms using a script
-build-all: check-deps
+# Build for all platforms
+build-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Check dependencies
+    command -v rustc >/dev/null || (echo "❌ Rust not installed" && exit 1)
+    command -v cargo >/dev/null || (echo "❌ Cargo not installed" && exit 1)
+    command -v jq >/dev/null || (echo "❌ jq not installed" && exit 1)
+    echo "✅ Dependencies verified"
+    # Run build script
     ./build-cross.sh
 
 # Run tests
 test:
-    @printf "$(printf '\xef\x80\x93') Running tests...\n"
+    @printf "Running tests...\n"
     cargo test
-    @printf "$(printf '\xef\x80\x8c') All tests passed\n"
+    @printf "✅ All tests passed\n"
 
-# Format code
-fmt:
-    @printf "$(printf '\xef\x80\x93') Formatting code...\n"
-    cargo fmt
-    @printf "$(printf '\xef\x80\x8c') Code formatted\n"
-
-# Run clippy
+# Run clippy linter
 lint:
-    @printf "$(printf '\xef\x80\x93') Running clippy...\n"
+    @printf "Running clippy...\n"
     cargo clippy -- -D warnings
-    @printf "$(printf '\xef\x80\x8c') No lint issues\n"
-
-# Run tests and lints
-check: test lint
-    @printf "$(printf '\xef\x80\x8c') All checks passed\n"
+    @printf "✅ No lint issues\n"
 
 # Clean build artifacts
 clean:
-    @printf "$(printf '\xef\x80\x93') Cleaning...\n"
+    @printf "Cleaning build artifacts...\n"
     cargo clean
     rm -rf {{build_dir}}
-    @printf "$(printf '\xef\x80\x8c') Cleaned\n"
+    @printf "✅ Cleaned\n"
 
-# Install binary locally
-install: build
-    @printf "$(printf '\xef\x84\xb5') Installing to ~/.local/bin\n"
-    @mkdir -p ~/.local/bin
-    @cp target/release/claude-code-personalities ~/.local/bin/
-    @chmod +x ~/.local/bin/claude-code-personalities
-    @printf "$(printf '\xef\x80\x8c') Installed to ~/.local/bin/claude-code-personalities\n"
+# Debug build with logging
+debug:
+    @printf "Debug build with logging...\n"
+    RUST_LOG=debug cargo run -- --statusline
 
-# Test statusline output
-statusline: build
-    @printf "$(printf '\xef\x80\x93') Testing statusline...\n"
-    @echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'$(pwd)'"}}' | target/release/claude-code-personalities --statusline
-
-# Test hook functionality  
-test-hook: build
-    @printf "$(printf '\xef\x80\x93') Testing hook...\n"
-    @echo '{"session_id":"test123","tool_name":"Edit","tool_input":{"file_path":"test.js"}}' | target/release/claude-code-personalities --hook pre-tool
-    @printf "$(printf '\xef\x80\x8c') Hook test completed\n"
-
-# Bump version
-bump-version version:
-    @printf "$(printf '\xef\x80\x93') Bumping version to {{version}}\n"
-    @sed -i '' 's/^version = .*/version = "{{version}}"/' Cargo.toml
-    @echo "{{version}}" > .version
-    @printf "$(printf '\xef\x80\x8c') Version updated to {{version}}\n"
-
-# Create git tag
-tag-release:
+# Full release workflow
+release version:
     #!/usr/bin/env bash
     set -euo pipefail
-    VERSION=$(cat .version)
-    echo "🚀 Creating release tag v$VERSION"
+
+    echo "🚀 Starting release v{{version}}"
+
+    # Update version in Cargo.toml
+    echo "📝 Updating version to {{version}}"
+    sed -i '' 's/^version = .*/version = "{{version}}"/' Cargo.toml
+    echo "{{version}}" > .version
+
+    # Build for all platforms
+    echo "🔨 Building for all platforms..."
+    ./build-cross.sh
+
+    # Commit version bump
+    echo "📦 Committing version bump..."
     git add .
-    git commit -m "chore: bump version to $VERSION" || true
-    # Check if tag exists locally and delete it if it does
+    git commit -m "chore: bump version to {{version}}" || true
+
+    # Handle existing tag
+    VERSION={{version}}
     if git rev-parse "v$VERSION" >/dev/null 2>&1; then
         echo "⚠️  Tag v$VERSION already exists locally. Deleting and recreating..."
         git tag -d "v$VERSION"
     fi
+
+    # Create and push tag
+    echo "🏷️  Creating tag v$VERSION..."
     git tag -a "v$VERSION" -m "Release v$VERSION"
+
+    # Push to origin
+    echo "⬆️  Pushing to GitHub..."
     git push origin main
     git push origin "v$VERSION"
-    echo "✅ Tagged and pushed v$VERSION"
 
-# Full release workflow
-release version: (bump-version version) build-all tag-release
-    @echo "✅ Release v{{version}} complete!"
-    @echo ""
-    @echo "GitHub Actions will build and publish automatically."
-
-# Development server with file watching
-watch:
-    @echo "⚙️ Watching for changes..."
-    cargo watch -x "run -- --statusline"
-
-# Debug build and run
-debug:
-    @echo "⚙️ Debug build with logging..."
-    RUST_LOG=debug cargo run -- --statusline
+    echo "✅ Release v{{version}} complete!"
+    echo ""
+    echo "GitHub Actions will build and publish the release automatically."
