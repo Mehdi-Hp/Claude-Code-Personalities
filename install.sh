@@ -56,20 +56,20 @@ trap "rm -rf $TEMP_DIR" EXIT
 detect_platform() {
     local os=$(uname -s)
     local arch=$(uname -m)
-    
+
     case "$os" in
         Darwin)
             case "$arch" in
-                x86_64) echo "x86_64-apple-darwin" ;;
-                arm64) echo "aarch64-apple-darwin" ;;
+                x86_64) echo "macos-x86_64" ;;
+                arm64) echo "macos-aarch64" ;;
                 *) echo "unsupported" ;;
             esac
             ;;
         Linux)
             case "$arch" in
-                x86_64) echo "x86_64-linux" ;;
-                aarch64) echo "aarch64-linux" ;;
-                arm64) echo "aarch64-linux" ;;
+                x86_64) echo "linux-x86_64" ;;
+                aarch64) echo "linux-aarch64" ;;
+                arm64) echo "linux-aarch64" ;;
                 *) echo "unsupported" ;;
             esac
             ;;
