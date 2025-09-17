@@ -98,6 +98,11 @@ tag-release:
     echo "🚀 Creating release tag v$VERSION"
     git add .
     git commit -m "chore: bump version to $VERSION" || true
+    # Check if tag exists locally and delete it if it does
+    if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+        echo "⚠️  Tag v$VERSION already exists locally. Deleting and recreating..."
+        git tag -d "v$VERSION"
+    fi
     git tag -a "v$VERSION" -m "Release v$VERSION"
     git push origin main
     git push origin "v$VERSION"
