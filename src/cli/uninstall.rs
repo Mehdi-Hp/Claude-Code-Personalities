@@ -326,11 +326,7 @@ fn print_uninstall_success(
     println!();
 
     println!("{}", "Next Steps:".bold().magenta());
-    println!(
-        "  1. {} Restart any running Claude Code sessions",
-        ICON_WARNING.red()
-    );
-    println!("  2. Your statusline will return to default behavior");
+    println!("  1. Your statusline will return to default behavior");
     if kept_backups {
         println!("  3. You can restore settings from backup if needed");
     }
