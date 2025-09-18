@@ -23,6 +23,7 @@ ICON_WARNING=$(printf '\xef\x81\xb1')
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+PRIMARY='\033[38;2;34;197;94m'  # RGB(34, 197, 94) - Nice green
 ORANGE='\033[38;2;255;165;0m'  # RGB(255, 165, 0)
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
@@ -83,11 +84,11 @@ detect_platform() {
 # Header
 clear
 echo
-echo -e "${BOLD}${YELLOW}   ╔═══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${YELLOW}   ║                                                           ║${NC}"
-echo -e "${BOLD}${YELLOW}   ║           ${BOLD}${NC}૮ ․ ․ ྀིა  Claude Code Personalities              ║"
-echo -e "${BOLD}${YELLOW}   ║                                                           ║${NC}"
-echo -e "${BOLD}${YELLOW}   ╚═══════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BOLD}${PRIMARY}   ╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${PRIMARY}   ║                                                           ║${NC}"
+echo -e "${BOLD}${PRIMARY}   ║           ${BOLD}${NC}૮ ․ ․ ྀིា  Claude Code Personalities              ║"
+echo -e "${BOLD}${PRIMARY}   ║                                                           ║${NC}"
+echo -e "${BOLD}${PRIMARY}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
 echo -e "   ${ICON_ROCKET} ${ITALIC}Lightning-fast Claude Code statusline with intelligent activity tracking${NC}"
 echo
@@ -136,7 +137,7 @@ echo
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
 echo -e "  $divider"
-echo -e "  ${BOLD}${ORANGE}Installing the Binary v$LATEST_VERSION${NC}"
+echo -e "  ${BOLD}${PRIMARY}Installing the Binary v$LATEST_VERSION${NC}"
 echo -e "  $divider"
 echo
 
@@ -228,10 +229,10 @@ if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
     print_warning "$LOCAL_BIN is not in your PATH"
     echo
     echo "    Add this to your shell config (.bashrc, .zshrc, etc.):"
-    echo -e "    ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
+    echo -e "    ${PRIMARY}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
     echo
     echo "    Then reload your shell:"
-    echo -e "    ${YELLOW}source ~/.zshrc${NC}  # or source ~/.bashrc"
+    echo -e "    ${PRIMARY}source ~/.zshrc${NC}  # or source ~/.bashrc"
     echo
 fi
 
@@ -252,17 +253,17 @@ if command -v claude &> /dev/null; then
     if "$BIN_PATH" init --non-interactive 2>/dev/null; then
         print_success "Configuration completed"
         echo
-        echo -e "  ${BOLD}${ORANGE}Ready to Use!${NC}"
+        echo -e "  ${BOLD}${PRIMARY}Ready to Use!${NC}"
     else
         print_warning "Auto-configuration failed"
         echo
-        echo -e "  ${BOLD}${ORANGE}Manual Setup Required${NC}"
+        echo -e "  ${BOLD}${PRIMARY}Manual Setup Required${NC}"
         echo -e "    Run: ${NC}claude-code-personalities init${NC}"
     fi
 else
     print_info "Claude Code not detected in PATH"
     echo
-    echo -e "  ${BOLD}${ORANGE}Next Steps${NC}"
+    echo -e "  ${BOLD}${PRIMARY}Next Steps${NC}"
     echo -e "    1. Install Claude Code if you haven't already"
     echo -e "    2. Run: ${NC}claude-code-personalities init${NC}"
 fi
@@ -270,7 +271,7 @@ fi
 echo
 echo
 
-echo -e "  ${BOLD}${ORANGE}Available Commands:${NC}"
+echo -e "  ${BOLD}${PRIMARY}Available Commands:${NC}"
 echo -e "    ${NC}claude-code-personalities init${NC}          ${DIM}- Configure Claude Code${NC}"
 echo -e "    ${NC}claude-code-personalities status${NC}        ${DIM}- Check installation status${NC}"  
 echo -e "    ${NC}claude-code-personalities --help${NC}        ${DIM}- Show all commands${NC}"
