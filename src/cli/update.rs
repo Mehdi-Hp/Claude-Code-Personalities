@@ -484,10 +484,9 @@ fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path
     println!();
 
     println!("{}", "What's Next:".bold().cyan());
-    println!("  1. Restart any running Claude Code sessions to use the new version");
-    println!("  2. Your personalities will continue working with new features!");
+    println!("  1. Your personalities will continue working with new features!");
     println!(
-        "  3. Check status with: {}",
+        "  2. Check status with: {}",
         "claude-code-personalities status".cyan()
     );
     println!();

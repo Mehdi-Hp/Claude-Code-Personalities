@@ -187,10 +187,9 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
             b: 0
         })
     );
-    println!("  1. Restart any running Claude Code sessions");
-    println!("  2. Your statusline will now show dynamic personalities!");
+    println!("  1. Your statusline will now show dynamic personalities!");
     println!(
-        "  3. Customize appearance with: {}",
+        "  2. Customize appearance with: {}",
         "claude-code-personalities config".white()
     );
     println!();
@@ -206,19 +205,19 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
             })
     );
     println!(
-        "  {} Check installation status",
+        "  {:35} - Check installation status",
         "claude-code-personalities status".white()
     );
     println!(
-        "  {} Customize appearance",
+        "  {:35} - Customize appearance",
         "claude-code-personalities config".white()
     );
     println!(
-        "  {} - Check for updates",
+        "  {:35} - Check for updates",
         "claude-code-personalities check-update".white()
     );
     println!(
-        "  {} - View all commands",
+        "  {:35} - View all commands",
         "claude-code-personalities help".white()
     );
     println!();
