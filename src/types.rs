@@ -43,6 +43,8 @@ pub enum Activity {
     Documenting,
     /// Deploying applications
     Deploying,
+    /// Version control operations
+    Committing,
 }
 
 impl Display for Activity {
@@ -67,6 +69,7 @@ impl Display for Activity {
             Activity::Refactoring => "Refactoring",
             Activity::Documenting => "Documenting",
             Activity::Deploying => "Deploying",
+            Activity::Committing => "Committing",
         };
         write!(f, "{s}")
     }
@@ -96,6 +99,7 @@ impl FromStr for Activity {
             "refactoring" => Activity::Refactoring,
             "documenting" => Activity::Documenting,
             "deploying" => Activity::Deploying,
+            "committing" => Activity::Committing,
             _ => Activity::Working,
         })
     }
