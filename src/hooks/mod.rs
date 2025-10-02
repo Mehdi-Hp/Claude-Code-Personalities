@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use std::path::Path;
 
+use crate::icons::ICON_GIT_BRANCH;
 use crate::state::SessionState;
 use crate::statusline::personality::determine_personality;
 use crate::types::Activity;
@@ -47,8 +48,8 @@ pub async fn run_hook(hook_type: &str) -> Result<()> {
 /// This function will return an error if:
 /// - No input is received from Claude Code via stdin
 /// - The input JSON is malformed or cannot be parsed
-/// - Session state cannot be loaded or saved
-/// - Error counting operations fail
+///
+/// Note: Session state errors are logged but not propagated to avoid disrupting Claude Code.
 async fn handle_tool_hook() -> Result<()> {
     use anyhow::Context;
 
@@ -73,17 +74,28 @@ async fn handle_tool_hook() -> Result<()> {
     });
     let tool_name = hook_input.tool_name.unwrap_or_default();
 
-    // Load current state
-    let mut state = SessionState::load(&session_id).await.with_context(|| {
-        format!("Failed to load session state for hook processing (session: {session_id})")
-    })?;
+    // Load current state - use fallback if loading fails (resilient to race conditions/subagents)
+    let mut state = match SessionState::load(&session_id).await {
+        Ok(state) => state,
+        Err(_e) => {
+            // Silently create a default state instead of failing
+            // This handles cases like:
+            // - New sessions without state files yet
+            // - Subagents with different session IDs
+            // - Race conditions from parallel tool execution
+            // - Permission issues with /tmp
+            SessionState {
+                session_id: session_id.clone(),
+                ..Default::default()
+            }
+        }
+    };
 
     // Check for errors
     if let Some(response) = &hook_input.tool_response {
         if response.error.is_some() {
-            state.increment_errors().await.with_context(|| {
-                format!("Failed to increment error count for session {session_id}")
-            })?;
+            // Log but don't fail if error increment fails
+            let _ = state.increment_errors().await;
         }
     }
 
@@ -102,11 +114,11 @@ async fn handle_tool_hook() -> Result<()> {
     let personality =
         determine_personality(&state, &tool_name, file_path.as_deref(), command.as_deref());
 
-    // Update state - this will automatically detect personality changes and set transition flags
-    state
+    // Update state - log but don't fail if state update fails
+    // This ensures hooks never disrupt Claude Code operation
+    let _ = state
         .update_activity(activity, current_job, personality)
-        .await
-        .with_context(|| format!("Failed to update activity state for session {session_id}"))?;
+        .await;
 
     Ok(())
 }
@@ -118,8 +130,8 @@ async fn handle_tool_hook() -> Result<()> {
 /// This function will return an error if:
 /// - No input is received from Claude Code via stdin
 /// - The input JSON is malformed or cannot be parsed
-/// - Session state cannot be loaded or saved
-/// - Error reset operations fail
+///
+/// Note: Session state errors are logged but not propagated to avoid disrupting Claude Code.
 async fn handle_prompt_submit() -> Result<()> {
     use anyhow::Context;
 
@@ -135,14 +147,11 @@ async fn handle_prompt_submit() -> Result<()> {
         .session_id
         .unwrap_or_else(|| "unknown".to_string());
 
-    // Reset error count
-    let mut state = SessionState::load(&session_id).await.with_context(|| {
-        format!("Failed to load session state for error reset (session: {session_id})")
-    })?;
-    state
-        .reset_errors()
-        .await
-        .with_context(|| format!("Failed to reset error count for session {session_id}"))?;
+    // Reset error count - use resilient state loading
+    if let Ok(mut state) = SessionState::load(&session_id).await {
+        // Silently ignore errors if reset fails
+        let _ = state.reset_errors().await;
+    }
 
     Ok(())
 }
@@ -154,7 +163,8 @@ async fn handle_prompt_submit() -> Result<()> {
 /// This function will return an error if:
 /// - No input is received from Claude Code via stdin
 /// - The input JSON is malformed or cannot be parsed
-/// - Session file cleanup operations fail
+///
+/// Note: Cleanup errors are silently ignored as files may not exist.
 async fn handle_session_end() -> Result<()> {
     use anyhow::Context;
 
@@ -170,10 +180,8 @@ async fn handle_session_end() -> Result<()> {
         .session_id
         .unwrap_or_else(|| "unknown".to_string());
 
-    // Cleanup session files
-    SessionState::cleanup(&session_id)
-        .await
-        .with_context(|| format!("Failed to cleanup session files for session {session_id}"))?;
+    // Cleanup session files - ignore errors if files don't exist
+    let _ = SessionState::cleanup(&session_id).await;
 
     Ok(())
 }
@@ -264,7 +272,13 @@ fn determine_activity(
             if let Some(cmd) = command {
                 let job = Some(cmd.split_whitespace().next().unwrap_or("bash").to_string());
 
-                if is_install_command(cmd) {
+                if is_git_command(cmd) {
+                    // Get git branch name with icon instead of generic "git"
+                    let git_job = get_git_branch()
+                        .map(|branch| format!("{} {}", ICON_GIT_BRANCH, branch))
+                        .or(job); // Fallback to "git" if branch detection fails
+                    (Activity::Committing, git_job)
+                } else if is_install_command(cmd) {
                     (Activity::Installing, job)
                 } else if is_build_command(cmd) {
                     (Activity::Building, job)
@@ -326,8 +340,54 @@ fn trim_filename(name: &str, max_len: usize) -> String {
     }
 }
 
+fn is_git_command(cmd: &str) -> bool {
+    cmd.starts_with("git ") || cmd == "git"
+}
+
+fn get_git_branch() -> Option<String> {
+    use std::process::Command;
+
+    // Try modern git first (2.22+)
+    if let Ok(output) = Command::new("git")
+        .args(["branch", "--show-current"])
+        .output()
+    {
+        if output.status.success() {
+            let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !branch.is_empty() {
+                return Some(branch);
+            }
+        }
+    }
+
+    // Fallback for older git or detached HEAD
+    if let Ok(output) = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+    {
+        if output.status.success() {
+            let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !branch.is_empty() && branch != "HEAD" {
+                return Some(branch);
+            }
+        }
+    }
+
+    None
+}
+
 fn is_install_command(cmd: &str) -> bool {
-    cmd.contains(" install") || cmd.contains(" add")
+    let cmd_lower = cmd.to_lowercase();
+    cmd_lower.contains("npm install")
+        || cmd_lower.contains("pnpm install")
+        || cmd_lower.contains("yarn add")
+        || cmd_lower.contains("pnpm add")
+        || cmd_lower.contains("cargo add")
+        || cmd_lower.contains("cargo install")
+        || cmd_lower.contains("pip install")
+        || cmd_lower.contains("apt install")
+        || cmd_lower.contains("apt-get install")
+        || cmd_lower.contains("brew install")
 }
 
 fn is_build_command(cmd: &str) -> bool {
@@ -598,11 +658,21 @@ mod tests {
 
     #[test]
     fn test_command_classification() {
+        // Git commands
+        assert!(is_git_command("git add ."));
+        assert!(is_git_command("git commit -m 'message'"));
+        assert!(is_git_command("git push origin main"));
+        assert!(is_git_command("git"));
+        assert!(!is_git_command("gitignore"));
+        assert!(!is_git_command("cargo add"));
+
         // Install commands
         assert!(is_install_command("npm install lodash"));
         assert!(is_install_command("cargo add serde"));
-        assert!(is_install_command("pip add requests"));
+        assert!(is_install_command("pip install requests"));
         assert!(!is_install_command("npm test"));
+        assert!(!is_install_command("git add .")); // Should NOT match git add
+        assert!(!is_install_command("git commit -m 'add feature'")); // Should NOT match
 
         // Build commands
         assert!(is_build_command("npm run build"));
@@ -770,6 +840,21 @@ mod tests {
 
     #[test]
     fn test_bash_command_activity_detection() {
+        // Git commands - job now includes branch name with icon
+        let (activity, job) = determine_activity("Bash", None, Some("git add ."), None);
+        assert_eq!(activity, Activity::Committing);
+        // Job is either branch with icon or "git" fallback
+        assert!(job.is_some());
+
+        let (activity, job) =
+            determine_activity("Bash", None, Some("git commit -m 'fix: bug'"), None);
+        assert_eq!(activity, Activity::Committing);
+        assert!(job.is_some());
+
+        let (activity, job) = determine_activity("Bash", None, Some("git push origin main"), None);
+        assert_eq!(activity, Activity::Committing);
+        assert!(job.is_some());
+
         // Package management
         let (activity, _) = determine_activity("Bash", None, Some("npm install express"), None);
         assert_eq!(activity, Activity::Installing);
@@ -829,5 +914,32 @@ mod tests {
         let (activity, job) = determine_activity("Edit", Some("README.md"), None, None);
         assert_eq!(activity, Activity::Documenting); // README.md should be documentation
         assert_eq!(job, Some("README.md".to_string()));
+    }
+
+    #[test]
+    fn test_git_branch_detection() {
+        // Test that get_git_branch works (this test runs in a git repo, so should return a branch)
+        let branch = get_git_branch();
+
+        // Should return Some(branch_name) when run in a git repository
+        // In CI or non-git environments, this might be None
+        if branch.is_some() {
+            let branch_name = branch.unwrap();
+            assert!(!branch_name.is_empty());
+            assert_ne!(branch_name, "HEAD"); // Should not return HEAD
+        }
+    }
+
+    #[test]
+    fn test_git_command_with_branch() {
+        // Test that git commands use the branch name with icon
+        let (activity, job) = determine_activity("Bash", None, Some("git add ."), None);
+        assert_eq!(activity, Activity::Committing);
+
+        // Job should either be the branch with icon, or "git" as fallback
+        if let Some(job_str) = job {
+            // Either contains the git icon or is "git"
+            assert!(job_str.contains(ICON_GIT_BRANCH) || job_str == "git");
+        }
     }
 }

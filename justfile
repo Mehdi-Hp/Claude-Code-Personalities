@@ -89,3 +89,21 @@ release version:
     echo "✅ Release v{{version}} complete!"
     echo ""
     echo "GitHub Actions will build and publish the release automatically."
+
+# Link dev binary for testing (builds release, backs up original, creates symlink)
+develop-link:
+    @printf "Building release binary...\n"
+    cargo build --release
+    @printf "Backing up original binary...\n"
+    mv ~/.local/bin/claude-code-personalities ~/.local/bin/claude-code-personalities.backup
+    @printf "Creating symlink to dev binary...\n"
+    ln -sf {{justfile_directory()}}/target/release/claude-code-personalities ~/.local/bin/claude-code-personalities
+    @printf "✅ Dev binary linked. Rebuild with 'cargo build --release' to update.\n"
+
+# Restore original binary (removes symlink, restores backup)
+develop-unlink:
+    @printf "Removing symlink...\n"
+    rm ~/.local/bin/claude-code-personalities
+    @printf "Restoring original binary...\n"
+    mv ~/.local/bin/claude-code-personalities.backup ~/.local/bin/claude-code-personalities
+    @printf "✅ Original binary restored.\n"
