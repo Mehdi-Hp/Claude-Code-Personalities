@@ -92,36 +92,38 @@ impl Default for SessionState {
 impl SessionState {
     /// Load session state from disk or create default state.
     ///
+    /// This function never fails - it returns a default state if:
+    /// - The state file doesn't exist (common for new sessions/subagents)
+    /// - The state file cannot be read
+    /// - The state file contains invalid JSON
+    ///
+    /// The default state will be saved on the next state update operation.
+    /// This design prevents race conditions when multiple hooks fire simultaneously.
+    ///
     /// # Errors
     ///
-    /// This function will return an error if:
-    /// - The state file cannot be read due to permissions or I/O errors
-    /// - The state file contains invalid JSON that cannot be parsed
-    /// - File system operations fail during read
+    /// This function currently does not return errors in practice, as all failure cases
+    /// fall back to creating a default state. It returns Result for API compatibility.
     pub async fn load(session_id: &str) -> Result<Self> {
-        use anyhow::Context;
-
         let path = Self::get_state_path(session_id);
 
         if path.exists() {
-            let content = fs::read_to_string(&path)
-                .await
-                .with_context(|| format!("Failed to read session state from {}", path.display()))?;
-            let state: SessionState = serde_json::from_str(&content).with_context(|| {
-                format!("Invalid session state format for session {session_id}")
-            })?;
-            Ok(state)
-        } else {
-            let state = Self {
-                session_id: session_id.to_string(),
-                ..Default::default()
-            };
-            // Save the default state so it persists across calls
-            state.save().await.with_context(|| {
-                format!("Failed to save initial session state for session {session_id}")
-            })?;
-            Ok(state)
+            // Try to read existing state
+            if let Ok(content) = fs::read_to_string(&path).await {
+                if let Ok(state) = serde_json::from_str::<SessionState>(&content) {
+                    return Ok(state);
+                }
+            }
+            // If read or parse fails, fall through to create default state
         }
+
+        // Return default state without saving
+        // This avoids race conditions when multiple hooks fire simultaneously
+        // The state will be saved on the first update operation
+        Ok(Self {
+            session_id: session_id.to_string(),
+            ..Default::default()
+        })
     }
 
     /// Save the current session state to disk.
@@ -512,9 +514,14 @@ mod tests {
         // Write invalid JSON
         fs::write(&state_path, "invalid json").await.unwrap();
 
-        // Should return error for invalid JSON
+        // Should fall back to default state instead of failing
         let result = SessionState::load(&session_id).await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
+
+        let state = result.unwrap();
+        assert_eq!(state.session_id, session_id);
+        assert_eq!(state.activity, Activity::Idle);
+        assert_eq!(state.error_count, 0);
 
         // Cleanup
         if state_path.exists() {

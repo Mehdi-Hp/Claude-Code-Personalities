@@ -4,10 +4,13 @@
 //! used in the application display.
 
 /// Folder/directory icon
-pub const ICON_FOLDER: &str = "\u{f07b}"; // 
+pub const ICON_FOLDER: &str = "\u{f07b}"; //
 
 /// Code/programming icon
-pub const ICON_CODE: &str = "\u{f121}"; // 
+pub const ICON_CODE: &str = "\u{f121}"; //
 
 /// Configuration/settings gear icon
 pub const ICON_GEAR: &str = "\u{f013}"; // ⚙
+
+/// Git branch icon
+pub const ICON_GIT_BRANCH: &str = "\u{e725}"; //
