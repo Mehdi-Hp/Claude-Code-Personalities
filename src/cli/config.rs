@@ -278,7 +278,7 @@ fn create_preview_state() -> SessionState {
         current_job: None,
         current_file: Some("main.rs".to_string()),
         git_branch: Some("main".to_string()),
-        personality: "ʕ•ᴥ•ʔ Code Wizard".to_string(),
+        personality: "ლ(╹◡╹ლ) Cowder".to_string(),
         previous_personality: None,
         consecutive_actions: 5,
         error_count: 1,
