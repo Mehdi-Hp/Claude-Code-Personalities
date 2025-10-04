@@ -78,6 +78,8 @@ mod tests {
             session_id: "test".to_string(),
             activity: Activity::Idle,
             current_job: None,
+            current_file: None,
+            git_branch: None,
             personality: "Test".to_string(),
             previous_personality: None,
             consecutive_actions,
