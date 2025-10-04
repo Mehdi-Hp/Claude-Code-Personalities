@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use std::path::Path;
 
-use crate::icons::ICON_GIT_BRANCH;
 use crate::state::SessionState;
 use crate::statusline::personality::determine_personality;
 use crate::types::Activity;
@@ -102,8 +101,8 @@ async fn handle_tool_hook() -> Result<()> {
     // Extract tool parameters
     let (file_path, command, pattern) = extract_tool_params(hook_input.tool_input.as_ref());
 
-    // Determine activity and current job
-    let (activity, current_job) = determine_activity(
+    // Determine activity and current job/file/git branch
+    let (activity, current_job, current_file, git_branch) = determine_activity(
         &tool_name,
         file_path.as_deref(),
         command.as_deref(),
@@ -117,7 +116,7 @@ async fn handle_tool_hook() -> Result<()> {
     // Update state - log but don't fail if state update fails
     // This ensures hooks never disrupt Claude Code operation
     let _ = state
-        .update_activity(activity, current_job, personality)
+        .update_activity(activity, current_job, current_file, git_branch, personality)
         .await;
 
     Ok(())
@@ -229,75 +228,74 @@ fn determine_activity(
     file_path: Option<&str>,
     command: Option<&str>,
     pattern: Option<&str>,
-) -> (Activity, Option<String>) {
+) -> (Activity, Option<String>, Option<String>, Option<String>) {
+    // Returns (activity, job, file, git_branch)
     match tool_name {
         "Edit" | "MultiEdit" => {
-            let job = file_path.map(|f| trim_filename(f, 20));
+            let file = file_path.map(|f| trim_filename(f, 20));
 
             // Detect refactoring: MultiEdit usually indicates mass changes
             if tool_name == "MultiEdit" {
-                return (Activity::Refactoring, job);
+                return (Activity::Refactoring, None, file, None);
             }
 
             // Check file type for specific activities
             if let Some(path) = file_path {
                 if is_documentation_file(path) {
-                    return (Activity::Documenting, job);
+                    return (Activity::Documenting, None, file, None);
                 } else if is_config_file(path) {
-                    return (Activity::Configuring, job);
+                    return (Activity::Configuring, None, file, None);
                 } else if is_code_file(path) {
-                    return (Activity::Coding, job);
+                    return (Activity::Coding, None, file, None);
                 }
             }
 
-            (Activity::Editing, job)
+            (Activity::Editing, None, file, None)
         }
         "Write" => {
-            let job = file_path.map(|f| trim_filename(f, 20));
+            let file = file_path.map(|f| trim_filename(f, 20));
 
             // Check file type for specific activities
             if let Some(path) = file_path {
                 if is_documentation_file(path) {
-                    return (Activity::Documenting, job);
+                    return (Activity::Documenting, None, file, None);
                 } else if is_config_file(path) {
-                    return (Activity::Configuring, job);
+                    return (Activity::Configuring, None, file, None);
                 } else if is_code_file(path) {
-                    return (Activity::Coding, job);
+                    return (Activity::Coding, None, file, None);
                 }
             }
 
-            (Activity::Writing, job)
+            (Activity::Writing, None, file, None)
         }
         "Bash" => {
             if let Some(cmd) = command {
                 let job = Some(cmd.split_whitespace().next().unwrap_or("bash").to_string());
 
                 if is_git_command(cmd) {
-                    // Get git branch name with icon instead of generic "git"
-                    let git_job = get_git_branch()
-                        .map(|branch| format!("{} {}", ICON_GIT_BRANCH, branch))
-                        .or(job); // Fallback to "git" if branch detection fails
-                    (Activity::Committing, git_job)
+                    // Get git branch name (icon added in statusline based on preferences)
+                    let git_branch = get_git_branch();
+                    (Activity::Committing, job, None, git_branch)
                 } else if is_install_command(cmd) {
-                    (Activity::Installing, job)
+                    (Activity::Installing, job, None, None)
                 } else if is_build_command(cmd) {
-                    (Activity::Building, job)
+                    (Activity::Building, job, None, None)
                 } else if is_test_command(cmd) {
-                    (Activity::Testing, job)
+                    (Activity::Testing, job, None, None)
                 } else if is_deploy_command(cmd) {
-                    (Activity::Deploying, job)
+                    (Activity::Deploying, job, None, None)
                 } else if is_file_navigation_command(cmd) {
-                    (Activity::Navigating, job)
+                    (Activity::Navigating, job, None, None)
                 } else {
-                    (Activity::Executing, job)
+                    (Activity::Executing, job, None, None)
                 }
             } else {
-                (Activity::Executing, None)
+                (Activity::Executing, None, None, None)
             }
         }
         "Read" => {
-            let job = file_path.map(|f| trim_filename(f, 20));
-            (Activity::Reading, job)
+            let file = file_path.map(|f| trim_filename(f, 20));
+            (Activity::Reading, None, file, None)
         }
         "Grep" => {
             let job = pattern.map(|p| {
@@ -307,9 +305,9 @@ fn determine_activity(
                     p.to_string()
                 }
             });
-            (Activity::Searching, job)
+            (Activity::Searching, job, None, None)
         }
-        _ => (Activity::Idle, None),
+        _ => (Activity::Idle, None, None, None),
     }
 }
 
@@ -574,49 +572,55 @@ mod tests {
     #[test]
     fn test_determine_activity() {
         // Edit operations
-        let (activity, job) = determine_activity(
+        let (activity, _job, file, _branch) = determine_activity(
             "Edit",
             Some("/very/long/path/to/some/deeply/nested/file.js"),
             None,
             None,
         );
         assert_eq!(activity, Activity::Coding); // .js files should be detected as coding
-        assert!(job.is_some());
-        let job = job.unwrap();
-        assert!(job.len() <= 20); // Should be trimmed
-        assert!(job.contains("file.js"));
+        assert!(file.is_some());
+        let file = file.unwrap();
+        assert!(file.len() <= 20); // Should be trimmed
+        assert!(file.contains("file.js"));
 
         // Write operations
-        let (activity, job) = determine_activity("Write", Some("README.md"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Write", Some("README.md"), None, None);
         assert_eq!(activity, Activity::Documenting); // README.md should be detected as documentation
-        assert_eq!(job, Some("README.md".to_string()));
+        assert_eq!(file, Some("README.md".to_string()));
 
         // Bash operations
-        let (activity, job) = determine_activity("Bash", None, Some("npm install express"), None);
+        let (activity, job, _file, _branch) =
+            determine_activity("Bash", None, Some("npm install express"), None);
         assert_eq!(activity, Activity::Installing);
         assert_eq!(job, Some("npm".to_string()));
 
-        let (activity, job) = determine_activity("Bash", None, Some("cargo build --release"), None);
+        let (activity, job, _file, _branch) =
+            determine_activity("Bash", None, Some("cargo build --release"), None);
         assert_eq!(activity, Activity::Building);
         assert_eq!(job, Some("cargo".to_string()));
 
-        let (activity, job) = determine_activity("Bash", None, Some("pytest tests/"), None);
+        let (activity, job, _file, _branch) =
+            determine_activity("Bash", None, Some("pytest tests/"), None);
         assert_eq!(activity, Activity::Testing);
         assert_eq!(job, Some("pytest".to_string()));
 
         // Read operations
-        let (activity, job) = determine_activity("Read", Some("config.yaml"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Read", Some("config.yaml"), None, None);
         assert_eq!(activity, Activity::Reading);
-        assert_eq!(job, Some("config.yaml".to_string()));
+        assert_eq!(file, Some("config.yaml".to_string()));
 
         // Grep operations
-        let (activity, job) = determine_activity("Grep", None, None, Some("function handleClick"));
+        let (activity, job, _file, _branch) =
+            determine_activity("Grep", None, None, Some("function handleClick"));
         assert_eq!(activity, Activity::Searching);
         assert_eq!(job, Some("function handleClick".to_string()));
 
         // Long pattern should be truncated
         let long_pattern = "this is a very long search pattern that should be truncated";
-        let (activity, job) =
+        let (activity, job, _file, _branch) =
             determine_activity("Grep", None, None, Some(long_pattern.to_string().as_ref()));
         assert_eq!(activity, Activity::Searching);
         let job = job.unwrap();
@@ -624,9 +628,11 @@ mod tests {
         assert!(job.ends_with("..."));
 
         // Unknown tool
-        let (activity, job) = determine_activity("UnknownTool", None, None, None);
+        let (activity, job, file, branch) = determine_activity("UnknownTool", None, None, None);
         assert_eq!(activity, Activity::Idle);
         assert_eq!(job, None);
+        assert_eq!(file, None);
+        assert_eq!(branch, None);
     }
 
     #[test]
@@ -737,7 +743,7 @@ mod tests {
 
         // Simulate the logic from handle_tool_hook
         let (file_path, command, pattern) = extract_tool_params(hook_input.tool_input.as_ref());
-        let (activity, current_job) = determine_activity(
+        let (activity, current_job, current_file, _git_branch) = determine_activity(
             &hook_input.tool_name.unwrap(),
             file_path.as_deref(),
             command.as_deref(),
@@ -745,7 +751,7 @@ mod tests {
         );
 
         assert_eq!(activity, Activity::Coding); // main.js should be detected as coding
-        assert_eq!(current_job, Some("main.js".to_string()));
+        assert_eq!(current_file, Some("main.js".to_string()));
 
         // Cleanup
         SessionState::cleanup(&session_id).await.unwrap();
@@ -840,80 +846,91 @@ mod tests {
 
     #[test]
     fn test_bash_command_activity_detection() {
-        // Git commands - job now includes branch name with icon
-        let (activity, job) = determine_activity("Bash", None, Some("git add ."), None);
+        // Git commands - branch is separate field now
+        let (activity, job, _file, branch) =
+            determine_activity("Bash", None, Some("git add ."), None);
         assert_eq!(activity, Activity::Committing);
-        // Job is either branch with icon or "git" fallback
-        assert!(job.is_some());
+        assert_eq!(job, Some("git".to_string())); // Job is the command name
+        // Branch might be Some if in a git repo, or None if not
+        // We can't assert specific values since it depends on test environment
 
-        let (activity, job) =
+        let (activity, job, _file, _branch) =
             determine_activity("Bash", None, Some("git commit -m 'fix: bug'"), None);
         assert_eq!(activity, Activity::Committing);
-        assert!(job.is_some());
+        assert_eq!(job, Some("git".to_string()));
 
-        let (activity, job) = determine_activity("Bash", None, Some("git push origin main"), None);
+        let (activity, job, _file, _branch) =
+            determine_activity("Bash", None, Some("git push origin main"), None);
         assert_eq!(activity, Activity::Committing);
-        assert!(job.is_some());
+        assert_eq!(job, Some("git".to_string()));
 
         // Package management
-        let (activity, _) = determine_activity("Bash", None, Some("npm install express"), None);
+        let (activity, _, _, _) =
+            determine_activity("Bash", None, Some("npm install express"), None);
         assert_eq!(activity, Activity::Installing);
 
-        let (activity, _) = determine_activity("Bash", None, Some("pnpm add typescript"), None);
+        let (activity, _, _, _) =
+            determine_activity("Bash", None, Some("pnpm add typescript"), None);
         assert_eq!(activity, Activity::Installing);
 
         // Build commands
-        let (activity, _) = determine_activity("Bash", None, Some("npm run build"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("npm run build"), None);
         assert_eq!(activity, Activity::Building);
 
-        let (activity, _) = determine_activity("Bash", None, Some("cargo build --release"), None);
+        let (activity, _, _, _) =
+            determine_activity("Bash", None, Some("cargo build --release"), None);
         assert_eq!(activity, Activity::Building);
 
         // Test commands
-        let (activity, _) = determine_activity("Bash", None, Some("npm test"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("npm test"), None);
         assert_eq!(activity, Activity::Testing);
 
-        let (activity, _) = determine_activity("Bash", None, Some("pytest spec/"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("pytest spec/"), None);
         assert_eq!(activity, Activity::Testing);
 
         // File navigation
-        let (activity, _) = determine_activity("Bash", None, Some("ls -la"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("ls -la"), None);
         assert_eq!(activity, Activity::Navigating);
 
-        let (activity, _) = determine_activity("Bash", None, Some("cd /path/to/dir"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("cd /path/to/dir"), None);
         assert_eq!(activity, Activity::Navigating);
 
         // Generic execution
-        let (activity, _) = determine_activity("Bash", None, Some("echo hello"), None);
+        let (activity, _, _, _) = determine_activity("Bash", None, Some("echo hello"), None);
         assert_eq!(activity, Activity::Executing);
     }
 
     #[test]
     fn test_activity_detection_with_file_types() {
         // Test config file editing
-        let (activity, job) = determine_activity("Edit", Some("package.json"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Edit", Some("package.json"), None, None);
         assert_eq!(activity, Activity::Configuring);
-        assert_eq!(job, Some("package.json".to_string()));
+        assert_eq!(file, Some("package.json".to_string()));
 
         // Test code file editing
-        let (activity, job) = determine_activity("Edit", Some("main.rs"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Edit", Some("main.rs"), None, None);
         assert_eq!(activity, Activity::Coding);
-        assert_eq!(job, Some("main.rs".to_string()));
+        assert_eq!(file, Some("main.rs".to_string()));
 
         // Test writing config files
-        let (activity, job) = determine_activity("Write", Some("Cargo.toml"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Write", Some("Cargo.toml"), None, None);
         assert_eq!(activity, Activity::Configuring);
-        assert_eq!(job, Some("Cargo.toml".to_string()));
+        assert_eq!(file, Some("Cargo.toml".to_string()));
 
         // Test writing code files
-        let (activity, job) = determine_activity("Write", Some("component.tsx"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Write", Some("component.tsx"), None, None);
         assert_eq!(activity, Activity::Coding);
-        assert_eq!(job, Some("component.tsx".to_string()));
+        assert_eq!(file, Some("component.tsx".to_string()));
 
         // Test markdown file (should be detected as documenting)
-        let (activity, job) = determine_activity("Edit", Some("README.md"), None, None);
+        let (activity, _job, file, _branch) =
+            determine_activity("Edit", Some("README.md"), None, None);
         assert_eq!(activity, Activity::Documenting); // README.md should be documentation
-        assert_eq!(job, Some("README.md".to_string()));
+        assert_eq!(file, Some("README.md".to_string()));
     }
 
     #[test]
@@ -932,14 +949,17 @@ mod tests {
 
     #[test]
     fn test_git_command_with_branch() {
-        // Test that git commands use the branch name with icon
-        let (activity, job) = determine_activity("Bash", None, Some("git add ."), None);
+        // Test that git commands populate job and branch separately
+        let (activity, job, _file, branch) =
+            determine_activity("Bash", None, Some("git add ."), None);
         assert_eq!(activity, Activity::Committing);
 
-        // Job should either be the branch with icon, or "git" as fallback
-        if let Some(job_str) = job {
-            // Either contains the git icon or is "git"
-            assert!(job_str.contains(ICON_GIT_BRANCH) || job_str == "git");
+        // Job should be the command name
+        assert_eq!(job, Some("git".to_string()));
+
+        // Branch should be populated if in a git repo (icon added later in statusline)
+        if let Some(branch_str) = branch {
+            assert!(!branch_str.is_empty());
         }
     }
 }

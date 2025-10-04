@@ -63,6 +63,10 @@ pub struct SessionState {
     pub session_id: String,
     pub activity: Activity,
     pub current_job: Option<String>,
+    #[serde(default)]
+    pub current_file: Option<String>,
+    #[serde(default)]
+    pub git_branch: Option<String>,
     pub personality: String,
     pub previous_personality: Option<String>,
     pub consecutive_actions: u32,
@@ -79,6 +83,8 @@ impl Default for SessionState {
             session_id: "unknown".to_string(),
             activity: Activity::Idle,
             current_job: None,
+            current_file: None,
+            git_branch: None,
             personality: BOOTING_UP.personality(),
             previous_personality: None,
             consecutive_actions: 0,
@@ -162,6 +168,8 @@ impl SessionState {
         &mut self,
         activity: Activity,
         current_job: Option<String>,
+        current_file: Option<String>,
+        git_branch: Option<String>,
         personality: String,
     ) -> Result<()> {
         use anyhow::Context;
@@ -180,6 +188,8 @@ impl SessionState {
 
         self.activity = activity;
         self.current_job = current_job;
+        self.current_file = current_file;
+        self.git_branch = git_branch;
         self.personality = personality;
 
         // Update mood for successful activity (no error)
@@ -317,6 +327,8 @@ mod tests {
             session_id: session_id.clone(),
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
+            current_file: None,
+            git_branch: None,
             personality: "Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 5,
@@ -350,14 +362,16 @@ mod tests {
         state
             .update_activity(
                 Activity::Editing,
+                None,
                 Some("main.js".to_string()),
+                None,
                 "JS Master".to_string(),
             )
             .await
             .unwrap();
 
         assert_eq!(state.activity, Activity::Editing);
-        assert_eq!(state.current_job, Some("main.js".to_string()));
+        assert_eq!(state.current_file, Some("main.js".to_string()));
         assert_eq!(state.personality, "JS Master");
         assert_eq!(state.consecutive_actions, 1);
 
@@ -365,7 +379,9 @@ mod tests {
         state
             .update_activity(
                 Activity::Editing,
+                None,
                 Some("utils.js".to_string()),
+                None,
                 "JS Master".to_string(),
             )
             .await
@@ -377,7 +393,9 @@ mod tests {
         state
             .update_activity(
                 Activity::Reading,
+                None,
                 Some("README.md".to_string()),
+                None,
                 "Documentation Writer".to_string(),
             )
             .await
@@ -420,7 +438,13 @@ mod tests {
         {
             let mut state = SessionState::load(&session_id).await.unwrap();
             state
-                .update_activity(Activity::Testing, None, "Test Engineer".to_string())
+                .update_activity(
+                    Activity::Testing,
+                    None,
+                    None,
+                    None,
+                    "Test Engineer".to_string(),
+                )
                 .await
                 .unwrap();
             state.increment_errors().await.unwrap();
@@ -480,7 +504,9 @@ mod tests {
                     state
                         .update_activity(
                             Activity::parse_activity(&format!("activity_{i}")),
+                            None,
                             Some(format!("file_{i}.js")),
+                            None,
                             format!("Personality {i}"),
                         )
                         .await
