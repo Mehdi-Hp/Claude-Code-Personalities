@@ -4,12 +4,16 @@
 //! display preferences, mood settings, and advanced options.
 
 use anyhow::{Context, Result};
-use cliclack::{confirm, intro, multiselect, outro, select};
+use cliclack::{confirm, intro, outro, select};
 use colored::Colorize;
 
+use crate::cli::interactive_config;
 use crate::config::PersonalityPreferences;
 use crate::icons::{ICON_CHECK, ICON_ERROR, ICON_INFO, ICON_WARNING};
+use crate::state::SessionState;
+use crate::statusline::{WorkspaceInfo, build_statusline};
 use crate::theme::Theme;
+use crate::types::Activity;
 
 /// Handle configuration subcommands
 pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
@@ -41,6 +45,13 @@ pub async fn handle_config_command(subcommand: Option<&str>) -> Result<()> {
 async fn interactive_config_menu() -> Result<()> {
     intro("Configure Claude Code Personalities")?;
 
+    // Show current statusline preview
+    let current_prefs = PersonalityPreferences::load_or_default()
+        .await
+        .with_context(|| "Failed to load current personality preferences")?;
+
+    show_statusline_preview(&current_prefs);
+
     let selection = select("Select a configuration category")
         .item(
             "display",
@@ -63,43 +74,22 @@ async fn interactive_config_menu() -> Result<()> {
     }
 }
 
-/// Configure display preferences (replaces the old configure function)
+/// Configure display preferences with live-updating preview
 async fn configure_display() -> Result<()> {
     intro("Configure Display Options")?;
 
     // Load current preferences or defaults
-    let mut prefs = PersonalityPreferences::load_or_default()
+    let prefs = PersonalityPreferences::load_or_default()
         .await
         .with_context(|| "Failed to load current personality preferences")?;
 
-    // Get all display options with their current states
-    let options = prefs.get_display_options();
-
-    // Build list of initially selected values (currently enabled options)
-    let initial_selections: Vec<&str> = options
-        .iter()
-        .filter_map(|(name, enabled)| if *enabled { Some(*name) } else { None })
-        .collect();
-
-    // Build multiselect with items and initial selections
-    let mut selector = multiselect("Select which elements to show in the statusline")
-        .initial_values(initial_selections);
-
-    // Add each option
-    for (name, _enabled) in &options {
-        selector = selector.item(name, name, "");
-    }
-
-    // Show interactive multi-select prompt
-    let selected: Vec<&str> = selector.interact().with_context(
-        || "Failed to get user preferences selection. Interactive prompt was cancelled or failed.",
-    )?;
-
-    // Update preferences with selected options
-    prefs.update_from_selections(&selected);
+    // Launch interactive TUI
+    let updated_prefs = interactive_config::run_config_ui(prefs)
+        .await
+        .with_context(|| "Failed to run interactive configuration UI")?;
 
     // Save updated preferences
-    prefs
+    updated_prefs
         .save()
         .await
         .with_context(|| "Failed to save updated personality preferences")?;
@@ -107,23 +97,28 @@ async fn configure_display() -> Result<()> {
     let prefs_path = PersonalityPreferences::get_preferences_path()
         .with_context(|| "Failed to get preferences file path for display")?;
 
-    // Show what was enabled/disabled before outro
+    // Get final state for summary
+    let final_options = updated_prefs.get_display_options();
+    let enabled_features: Vec<&str> = final_options
+        .iter()
+        .filter_map(|(name, enabled)| if *enabled { Some(*name) } else { None })
+        .collect();
+
+    let disabled_features: Vec<&str> = final_options
+        .iter()
+        .filter_map(|(name, enabled)| if !enabled { Some(*name) } else { None })
+        .collect();
+
+    // Show summary
     println!("\nEnabled features:");
-    for feature in &selected {
+    for feature in &enabled_features {
         println!("  {} {}", ICON_CHECK.green(), feature);
     }
 
-    // Check if any options were disabled
-    let all_options: Vec<&str> = options.iter().map(|(name, _)| *name).collect();
-    let disabled_options: Vec<&str> = all_options
-        .into_iter()
-        .filter(|opt| !selected.contains(opt))
-        .collect();
-
-    if !disabled_options.is_empty() {
+    if !disabled_features.is_empty() {
         println!("\nDisabled features:");
-        for option in disabled_options {
-            println!("  {} {}", ICON_WARNING.yellow(), option);
+        for feature in disabled_features {
+            println!("  {} {}", ICON_WARNING.yellow(), feature);
         }
     }
 
@@ -273,6 +268,45 @@ async fn reset_configuration() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Create a sample session state for preview purposes
+fn create_preview_state() -> SessionState {
+    SessionState {
+        session_id: "preview".to_string(),
+        activity: Activity::Coding,
+        current_job: None,
+        current_file: Some("main.rs".to_string()),
+        git_branch: Some("main".to_string()),
+        personality: "ʕ•ᴥ•ʔ Code Wizard".to_string(),
+        previous_personality: None,
+        consecutive_actions: 5,
+        error_count: 1,
+        recent_activities: vec![Activity::Editing, Activity::Reading],
+        mood: crate::state::MoodState::default(),
+    }
+}
+
+/// Create a sample workspace for preview purposes
+fn create_preview_workspace() -> WorkspaceInfo {
+    WorkspaceInfo {
+        current_dir: Some("/home/user/projects/claude-code-personalities".to_string()),
+        project_dir: Some("/home/user/projects/claude-code-personalities".to_string()),
+    }
+}
+
+/// Display a preview of what the statusline will look like
+fn show_statusline_preview(prefs: &PersonalityPreferences) {
+    use colored::Colorize;
+
+    println!("{}", "━".repeat(60).bright_black());
+
+    let state = create_preview_state();
+    let workspace = create_preview_workspace();
+    let statusline = build_statusline(&state, "Sonnet", prefs, Some(&workspace));
+
+    println!("  {}", statusline);
+    println!("{}", "━".repeat(60).bright_black());
 }
 
 /// Print help for config subcommands
