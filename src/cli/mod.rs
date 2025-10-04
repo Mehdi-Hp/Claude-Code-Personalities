@@ -9,6 +9,7 @@ use crate::version::CURRENT_VERSION;
 // Sub-modules
 pub mod config;
 pub mod init;
+pub mod interactive_config;
 pub mod settings;
 pub mod uninstall;
 pub mod update;

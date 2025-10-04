@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::io::{self, Read};
 
 use crate::config::PersonalityPreferences;
-use crate::icons::{ICON_FOLDER, get_activity_icon, get_model_icon};
+use crate::icons::{ICON_FOLDER, ICON_GIT_BRANCH, get_activity_icon, get_model_icon};
 use crate::state::SessionState;
 
 #[derive(Debug, Deserialize)]
@@ -137,6 +137,46 @@ pub fn build_statusline(
         }
     }
 
+    // Git branch (separate section)
+    if prefs.show_git_branch {
+        if let Some(branch) = &state.git_branch {
+            if !branch.is_empty() {
+                // Add icon based on preference
+                let branch_with_icon = if prefs.use_icons {
+                    format!("{} {}", ICON_GIT_BRANCH, branch)
+                } else {
+                    branch.clone()
+                };
+
+                let branch_text = if prefs.use_colors {
+                    prefs.theme.apply_file(&branch_with_icon)
+                } else {
+                    branch_with_icon
+                };
+
+                let separator = if prefs.display.show_separators {
+                    if prefs.use_colors {
+                        prefs.theme.apply_separator("•")
+                    } else {
+                        "•".to_string()
+                    }
+                } else {
+                    String::new()
+                };
+
+                let spacing = if prefs.display.compact_mode { "" } else { " " };
+
+                if parts.is_empty() {
+                    parts.push(branch_text);
+                } else if prefs.display.show_separators {
+                    parts.push(format!("{spacing}{separator}{spacing}{branch_text}"));
+                } else {
+                    parts.push(format!("{spacing}{branch_text}"));
+                }
+            }
+        }
+    }
+
     // Activity with icon
     if prefs.show_activity {
         let activity_icon = if prefs.use_icons {
@@ -161,8 +201,9 @@ pub fn build_statusline(
         };
         activity_parts.push(activity_str);
 
-        // Current job/file
-        if prefs.show_current_job {
+        // Context (shows command name OR file depending on activity)
+        if prefs.show_context {
+            // Check for command name first (for bash operations)
             if let Some(job) = &state.current_job {
                 if !job.is_empty() {
                     let job_text = if prefs.use_colors {
@@ -171,6 +212,17 @@ pub fn build_statusline(
                         job.clone()
                     };
                     activity_parts.push(job_text);
+                }
+            }
+            // Otherwise check for file (for edit/read operations)
+            else if let Some(file) = &state.current_file {
+                if !file.is_empty() {
+                    let file_text = if prefs.use_colors {
+                        prefs.theme.apply_file(file)
+                    } else {
+                        file.clone()
+                    };
+                    activity_parts.push(file_text);
                 }
             }
         }
@@ -325,6 +377,8 @@ mod tests {
             session_id: "test".to_string(),
             activity: Activity::Editing,
             current_job: Some("test.js".to_string()),
+            current_file: None,
+            git_branch: None,
             personality: "ლ(╹◡╹ლ) Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 1,

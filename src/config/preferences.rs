@@ -34,7 +34,19 @@ pub struct PersonalityPreferences {
     // Basic display toggles
     pub show_personality: bool,
     pub show_activity: bool,
+
+    // Unified context field (replaces show_current_job + show_current_file)
+    #[serde(default = "default_true")]
+    pub show_context: bool,
+
+    // Deprecated fields (kept for backward compatibility, not shown in UI)
+    #[serde(default)]
     pub show_current_job: bool,
+    #[serde(default)]
+    pub show_current_file: bool,
+
+    #[serde(default = "default_true")]
+    pub show_git_branch: bool,
     pub show_current_dir: bool,
     pub show_model: bool,
     pub use_icons: bool,
@@ -49,12 +61,19 @@ pub struct PersonalityPreferences {
     pub theme: Theme,
 }
 
+fn default_true() -> bool {
+    true
+}
+
 impl Default for PersonalityPreferences {
     fn default() -> Self {
         Self {
             show_personality: true,
             show_activity: true,
-            show_current_job: true,
+            show_context: true,
+            show_current_job: false,  // Deprecated
+            show_current_file: false, // Deprecated
+            show_git_branch: true,
             show_current_dir: false, // Hidden by default per user request
             show_model: true,
             use_icons: true,
@@ -160,16 +179,17 @@ impl PersonalityPreferences {
     #[must_use]
     pub fn get_display_options(&self) -> Vec<(&'static str, bool)> {
         vec![
-            ("Show Personality", self.show_personality),
-            ("Show Activity", self.show_activity),
-            ("Show Current Job/File", self.show_current_job),
-            ("Show Current Directory", self.show_current_dir),
-            ("Show Model Indicator", self.show_model),
-            ("Use Icons", self.use_icons),
-            ("Use Colors", self.use_colors),
-            ("Show Separators", self.display.show_separators),
+            ("Personality", self.show_personality),
+            ("Activity", self.show_activity),
+            ("Activity Context", self.show_context), // Unified: shows files OR commands depending on activity
+            ("Git Branch", self.show_git_branch),
+            ("Current Directory", self.show_current_dir),
+            ("Model", self.show_model),
+            ("Icons", self.use_icons),
+            ("Colors", self.use_colors),
+            ("Separators", self.display.show_separators),
             ("Compact Mode", self.display.compact_mode),
-            ("Show Debug Info", self.display.show_debug_info),
+            ("Debug Info", self.display.show_debug_info),
         ]
     }
 
@@ -178,7 +198,8 @@ impl PersonalityPreferences {
         // Reset all to false first
         self.show_personality = false;
         self.show_activity = false;
-        self.show_current_job = false;
+        self.show_context = false;
+        self.show_git_branch = false;
         self.show_current_dir = false;
         self.show_model = false;
         self.use_icons = false;
@@ -190,16 +211,17 @@ impl PersonalityPreferences {
         // Set selected ones to true
         for selection in selections {
             match *selection {
-                "Show Personality" => self.show_personality = true,
-                "Show Activity" => self.show_activity = true,
-                "Show Current Job/File" => self.show_current_job = true,
-                "Show Current Directory" => self.show_current_dir = true,
-                "Show Model Indicator" => self.show_model = true,
-                "Use Icons" => self.use_icons = true,
-                "Use Colors" => self.use_colors = true,
-                "Show Separators" => self.display.show_separators = true,
+                "Personality" => self.show_personality = true,
+                "Activity" => self.show_activity = true,
+                "Activity Context" => self.show_context = true,
+                "Git Branch" => self.show_git_branch = true,
+                "Current Directory" => self.show_current_dir = true,
+                "Model" => self.show_model = true,
+                "Icons" => self.use_icons = true,
+                "Colors" => self.use_colors = true,
+                "Separators" => self.display.show_separators = true,
                 "Compact Mode" => self.display.compact_mode = true,
-                "Show Debug Info" => self.display.show_debug_info = true,
+                "Debug Info" => self.display.show_debug_info = true,
                 _ => {} // Ignore unknown options
             }
         }
@@ -216,7 +238,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         assert!(prefs.show_personality);
         assert!(prefs.show_activity);
-        assert!(prefs.show_current_job);
+        assert!(prefs.show_context); // Unified context field
         assert!(!prefs.show_current_dir); // Should be false by default
         assert!(prefs.show_model);
         assert!(prefs.use_icons);
@@ -228,29 +250,18 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 10); // Updated count after removing error indicators
-        assert!(options.iter().any(|(name, _)| *name == "Show Personality"));
-        assert!(options.iter().any(|(name, _)| *name == "Show Activity"));
-        assert!(
-            options
-                .iter()
-                .any(|(name, _)| *name == "Show Current Job/File")
-        );
-        assert!(
-            options
-                .iter()
-                .any(|(name, _)| *name == "Show Current Directory")
-        );
-        assert!(
-            options
-                .iter()
-                .any(|(name, _)| *name == "Show Model Indicator")
-        );
-        assert!(options.iter().any(|(name, _)| *name == "Use Icons"));
-        assert!(options.iter().any(|(name, _)| *name == "Use Colors"));
-        assert!(options.iter().any(|(name, _)| *name == "Show Separators"));
+        assert_eq!(options.len(), 11); // Merged context options into one
+        assert!(options.iter().any(|(name, _)| *name == "Personality"));
+        assert!(options.iter().any(|(name, _)| *name == "Activity"));
+        assert!(options.iter().any(|(name, _)| *name == "Activity Context")); // Unified context
+        assert!(options.iter().any(|(name, _)| *name == "Git Branch"));
+        assert!(options.iter().any(|(name, _)| *name == "Current Directory"));
+        assert!(options.iter().any(|(name, _)| *name == "Model"));
+        assert!(options.iter().any(|(name, _)| *name == "Icons"));
+        assert!(options.iter().any(|(name, _)| *name == "Colors"));
+        assert!(options.iter().any(|(name, _)| *name == "Separators"));
         assert!(options.iter().any(|(name, _)| *name == "Compact Mode"));
-        assert!(options.iter().any(|(name, _)| *name == "Show Debug Info"));
+        assert!(options.iter().any(|(name, _)| *name == "Debug Info"));
     }
 
     #[test]
@@ -258,12 +269,13 @@ mod tests {
         let mut prefs = PersonalityPreferences::default();
 
         // Select only a few options
-        let selections = vec!["Show Personality", "Use Icons"];
+        let selections = vec!["Personality", "Icons"];
         prefs.update_from_selections(&selections);
 
         assert!(prefs.show_personality);
         assert!(!prefs.show_activity);
-        assert!(!prefs.show_current_job);
+        assert!(!prefs.show_context); // Unified context field
+        assert!(!prefs.show_git_branch);
         assert!(!prefs.show_current_dir);
         assert!(!prefs.show_model);
         assert!(prefs.use_icons);
