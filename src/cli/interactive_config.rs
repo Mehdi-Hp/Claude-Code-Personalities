@@ -10,10 +10,10 @@ use crossterm::{
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, Padding, Paragraph, Wrap},
 };
 use std::io;
 
@@ -98,7 +98,7 @@ fn create_preview_state() -> SessionState {
         current_job: None,
         current_file: Some("main.rs".to_string()),
         git_branch: Some("main".to_string()),
-        personality: "ʕ•ᴥ•ʔ Code Wizard".to_string(),
+        personality: "ლ(╹◡╹ლ) Cowder".to_string(),
         previous_personality: None,
         consecutive_actions: 5,
         error_count: 1,
@@ -194,7 +194,7 @@ fn ui(f: &mut Frame, app: &ConfigApp) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(7), // Preview section (increased for wrapping)
+            Constraint::Length(5), // Preview section (compact)
             Constraint::Min(10),   // Options list
             Constraint::Length(3), // Help text
         ])
@@ -216,13 +216,24 @@ fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
     let workspace = create_preview_workspace();
     let statusline = build_statusline(&state, "Sonnet", &app.prefs, Some(&workspace));
 
+    // Fancy block with decorative title
     let block = Block::default()
-        .title("Preview")
+        .title(Line::from(vec![
+            Span::styled("✨ ", Style::default().fg(Color::Yellow)),
+            Span::styled(
+                "Statusline Preview",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" ✨", Style::default().fg(Color::Yellow)),
+        ]))
         .borders(Borders::ALL)
-        .style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(Color::Cyan))
+        .padding(Padding::horizontal(2)); // Horizontal padding only
 
     // Convert ANSI codes to ratatui Text
-    let text = statusline
+    let mut text = statusline
         .as_bytes()
         .to_vec()
         .into_text()
@@ -231,7 +242,13 @@ fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
             Text::raw(statusline.clone())
         });
 
-    let preview_widget = Paragraph::new(text).block(block).wrap(Wrap { trim: false });
+    // Add empty line before to vertically center the single-line statusline
+    text.lines.insert(0, Line::from(""));
+
+    let preview_widget = Paragraph::new(text)
+        .block(block)
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: false });
 
     f.render_widget(preview_widget, area);
 }
