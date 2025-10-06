@@ -230,27 +230,31 @@ fn determine_activity(
     pattern: Option<&str>,
 ) -> (Activity, Option<String>, Option<String>, Option<String>) {
     // Returns (activity, job, file, git_branch)
+
+    // Always detect git branch if in a git repository (shown for all activities)
+    let git_branch = get_git_branch();
+
     match tool_name {
         "Edit" | "MultiEdit" => {
             let file = file_path.map(|f| trim_filename(f, 20));
 
             // Detect refactoring: MultiEdit usually indicates mass changes
             if tool_name == "MultiEdit" {
-                return (Activity::Refactoring, None, file, None);
+                return (Activity::Refactoring, None, file, git_branch.clone());
             }
 
             // Check file type for specific activities
             if let Some(path) = file_path {
                 if is_documentation_file(path) {
-                    return (Activity::Documenting, None, file, None);
+                    return (Activity::Documenting, None, file, git_branch.clone());
                 } else if is_config_file(path) {
-                    return (Activity::Configuring, None, file, None);
+                    return (Activity::Configuring, None, file, git_branch.clone());
                 } else if is_code_file(path) {
-                    return (Activity::Coding, None, file, None);
+                    return (Activity::Coding, None, file, git_branch.clone());
                 }
             }
 
-            (Activity::Editing, None, file, None)
+            (Activity::Editing, None, file, git_branch.clone())
         }
         "Write" => {
             let file = file_path.map(|f| trim_filename(f, 20));
@@ -258,44 +262,42 @@ fn determine_activity(
             // Check file type for specific activities
             if let Some(path) = file_path {
                 if is_documentation_file(path) {
-                    return (Activity::Documenting, None, file, None);
+                    return (Activity::Documenting, None, file, git_branch.clone());
                 } else if is_config_file(path) {
-                    return (Activity::Configuring, None, file, None);
+                    return (Activity::Configuring, None, file, git_branch.clone());
                 } else if is_code_file(path) {
-                    return (Activity::Coding, None, file, None);
+                    return (Activity::Coding, None, file, git_branch.clone());
                 }
             }
 
-            (Activity::Writing, None, file, None)
+            (Activity::Writing, None, file, git_branch.clone())
         }
         "Bash" => {
             if let Some(cmd) = command {
                 let job = Some(cmd.split_whitespace().next().unwrap_or("bash").to_string());
 
                 if is_git_command(cmd) {
-                    // Get git branch name (icon added in statusline based on preferences)
-                    let git_branch = get_git_branch();
-                    (Activity::Committing, job, None, git_branch)
+                    (Activity::Committing, job, None, git_branch.clone())
                 } else if is_install_command(cmd) {
-                    (Activity::Installing, job, None, None)
+                    (Activity::Installing, job, None, git_branch.clone())
                 } else if is_build_command(cmd) {
-                    (Activity::Building, job, None, None)
+                    (Activity::Building, job, None, git_branch.clone())
                 } else if is_test_command(cmd) {
-                    (Activity::Testing, job, None, None)
+                    (Activity::Testing, job, None, git_branch.clone())
                 } else if is_deploy_command(cmd) {
-                    (Activity::Deploying, job, None, None)
+                    (Activity::Deploying, job, None, git_branch.clone())
                 } else if is_file_navigation_command(cmd) {
-                    (Activity::Navigating, job, None, None)
+                    (Activity::Navigating, job, None, git_branch.clone())
                 } else {
-                    (Activity::Executing, job, None, None)
+                    (Activity::Executing, job, None, git_branch.clone())
                 }
             } else {
-                (Activity::Executing, None, None, None)
+                (Activity::Executing, None, None, git_branch.clone())
             }
         }
         "Read" => {
             let file = file_path.map(|f| trim_filename(f, 20));
-            (Activity::Reading, None, file, None)
+            (Activity::Reading, None, file, git_branch.clone())
         }
         "Grep" => {
             let job = pattern.map(|p| {
@@ -305,9 +307,9 @@ fn determine_activity(
                     p.to_string()
                 }
             });
-            (Activity::Searching, job, None, None)
+            (Activity::Searching, job, None, git_branch.clone())
         }
-        _ => (Activity::Idle, None, None, None),
+        _ => (Activity::Idle, None, None, git_branch.clone()),
     }
 }
 
@@ -628,11 +630,11 @@ mod tests {
         assert!(job.ends_with("..."));
 
         // Unknown tool
-        let (activity, job, file, branch) = determine_activity("UnknownTool", None, None, None);
+        let (activity, job, file, _branch) = determine_activity("UnknownTool", None, None, None);
         assert_eq!(activity, Activity::Idle);
         assert_eq!(job, None);
         assert_eq!(file, None);
-        assert_eq!(branch, None);
+        // Branch should be populated if in git repo (which tests are)
     }
 
     #[test]
