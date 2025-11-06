@@ -67,6 +67,12 @@ pub struct SessionState {
     pub current_file: Option<String>,
     #[serde(default)]
     pub git_branch: Option<String>,
+    #[serde(default)]
+    pub git_dirty: Option<bool>, // None = unknown, Some(true) = dirty, Some(false) = clean
+    #[serde(default)]
+    pub git_dirty_count: Option<usize>, // Number of dirty files
+    #[serde(default)]
+    pub git_status_checked_at: Option<u64>, // Unix timestamp for cache invalidation
     pub personality: String,
     pub previous_personality: Option<String>,
     pub consecutive_actions: u32,
@@ -85,6 +91,9 @@ impl Default for SessionState {
             current_job: None,
             current_file: None,
             git_branch: None,
+            git_dirty: None,
+            git_dirty_count: None,
+            git_status_checked_at: None,
             personality: BOOTING_UP.personality(),
             previous_personality: None,
             consecutive_actions: 0,
@@ -244,6 +253,76 @@ impl SessionState {
         })
     }
 
+    /// Check if git status cache is stale (older than 2 seconds).
+    ///
+    /// Returns true if the cache should be refreshed, false if cached value is still valid.
+    #[must_use]
+    pub fn should_refresh_git_status(&self) -> bool {
+        match self.git_status_checked_at {
+            None => true, // No cache yet
+            Some(timestamp) => {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                now - timestamp > 2 // Refresh if older than 2 seconds
+            }
+        }
+    }
+
+    /// Check git working tree status and update the state with caching.
+    ///
+    /// This method runs `git status --porcelain` to determine if there are uncommitted changes.
+    /// Results are cached for 2 seconds to avoid performance overhead on every statusline render.
+    ///
+    /// # Errors
+    ///
+    /// This function silently handles errors by keeping the existing cached value.
+    /// It will not fail if:
+    /// - Not in a git repository
+    /// - Git command is not available
+    /// - Permission issues
+    pub async fn refresh_git_status(&mut self) {
+        // Use cached value if still fresh
+        if !self.should_refresh_git_status() {
+            return;
+        }
+
+        // Run git status --porcelain (exits with 0 and empty output if clean)
+        let output = tokio::process::Command::new("git")
+            .args(&["status", "--porcelain"])
+            .output()
+            .await;
+
+        if let Ok(output) = output {
+            if output.status.success() {
+                // Working tree is dirty if there's any output
+                let has_changes = !output.stdout.is_empty();
+                self.git_dirty = Some(has_changes);
+
+                // Count number of changed files (each line is a file)
+                if has_changes {
+                    let count = output
+                        .stdout
+                        .split(|&b| b == b'\n')
+                        .filter(|line| !line.is_empty())
+                        .count();
+                    self.git_dirty_count = Some(count);
+                } else {
+                    self.git_dirty_count = Some(0);
+                }
+
+                // Update cache timestamp
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                self.git_status_checked_at = Some(now);
+            }
+        }
+        // If git command fails, keep existing cached value (don't set to None)
+    }
+
     /// Clean up session state files for the given session ID.
     ///
     /// This function removes both the state file and error count file.
@@ -329,6 +408,9 @@ mod tests {
             current_job: Some("test.js".to_string()),
             current_file: None,
             git_branch: None,
+            git_dirty: None,
+            git_dirty_count: None,
+            git_status_checked_at: None,
             personality: "Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 5,
