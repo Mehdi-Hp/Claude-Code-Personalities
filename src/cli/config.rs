@@ -278,6 +278,9 @@ fn create_preview_state() -> SessionState {
         current_job: None,
         current_file: Some("main.rs".to_string()),
         git_branch: Some("main".to_string()),
+        git_dirty: Some(true),    // Show dirty state in preview
+        git_dirty_count: Some(3), // Show 3 dirty files in preview
+        git_status_checked_at: None,
         personality: "ლ(╹◡╹ლ) Cowder".to_string(),
         previous_personality: None,
         consecutive_actions: 5,
