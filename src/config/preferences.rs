@@ -47,6 +47,8 @@ pub struct PersonalityPreferences {
 
     #[serde(default = "default_true")]
     pub show_git_branch: bool,
+    #[serde(default = "default_true")]
+    pub show_git_status: bool,
     pub show_current_dir: bool,
     pub show_model: bool,
     pub use_icons: bool,
@@ -74,6 +76,7 @@ impl Default for PersonalityPreferences {
             show_current_job: false,  // Deprecated
             show_current_file: false, // Deprecated
             show_git_branch: true,
+            show_git_status: true,   // Enabled by default
             show_current_dir: false, // Hidden by default per user request
             show_model: true,
             use_icons: true,
@@ -183,6 +186,7 @@ impl PersonalityPreferences {
             ("Activity", self.show_activity),
             ("Activity Context", self.show_context), // Unified: shows files OR commands depending on activity
             ("Git Branch", self.show_git_branch),
+            ("Git Status", self.show_git_status),
             ("Current Directory", self.show_current_dir),
             ("Model", self.show_model),
             ("Icons", self.use_icons),
@@ -200,6 +204,7 @@ impl PersonalityPreferences {
         self.show_activity = false;
         self.show_context = false;
         self.show_git_branch = false;
+        self.show_git_status = false;
         self.show_current_dir = false;
         self.show_model = false;
         self.use_icons = false;
@@ -215,6 +220,7 @@ impl PersonalityPreferences {
                 "Activity" => self.show_activity = true,
                 "Activity Context" => self.show_context = true,
                 "Git Branch" => self.show_git_branch = true,
+                "Git Status" => self.show_git_status = true,
                 "Current Directory" => self.show_current_dir = true,
                 "Model" => self.show_model = true,
                 "Icons" => self.use_icons = true,
@@ -239,6 +245,8 @@ mod tests {
         assert!(prefs.show_personality);
         assert!(prefs.show_activity);
         assert!(prefs.show_context); // Unified context field
+        assert!(prefs.show_git_branch); // Should be true by default
+        assert!(prefs.show_git_status); // Should be true by default
         assert!(!prefs.show_current_dir); // Should be false by default
         assert!(prefs.show_model);
         assert!(prefs.use_icons);
@@ -250,11 +258,12 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 11); // Merged context options into one
+        assert_eq!(options.len(), 12); // Includes Git Status option
         assert!(options.iter().any(|(name, _)| *name == "Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Activity"));
         assert!(options.iter().any(|(name, _)| *name == "Activity Context")); // Unified context
         assert!(options.iter().any(|(name, _)| *name == "Git Branch"));
+        assert!(options.iter().any(|(name, _)| *name == "Git Status"));
         assert!(options.iter().any(|(name, _)| *name == "Current Directory"));
         assert!(options.iter().any(|(name, _)| *name == "Model"));
         assert!(options.iter().any(|(name, _)| *name == "Icons"));
@@ -276,6 +285,7 @@ mod tests {
         assert!(!prefs.show_activity);
         assert!(!prefs.show_context); // Unified context field
         assert!(!prefs.show_git_branch);
+        assert!(!prefs.show_git_status);
         assert!(!prefs.show_current_dir);
         assert!(!prefs.show_model);
         assert!(prefs.use_icons);

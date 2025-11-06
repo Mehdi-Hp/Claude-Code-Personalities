@@ -73,12 +73,17 @@ pub async fn run_statusline() -> Result<()> {
         .unwrap_or_else(|| "Claude".to_string());
 
     // Load session state and preferences
-    let state = SessionState::load(&session_id)
+    let mut state = SessionState::load(&session_id)
         .await
         .with_context(|| format!("Failed to load session state for session '{session_id}'"))?;
     let prefs = PersonalityPreferences::load_or_default()
         .await
         .with_context(|| "Failed to load personality preferences")?;
+
+    // Refresh git status if enabled (with caching to avoid performance overhead)
+    if prefs.show_git_status {
+        state.refresh_git_status().await;
+    }
 
     // Use static renderer
     let statusline = build_statusline(&state, &model_name, &prefs, claude_input.workspace.as_ref());
@@ -148,10 +153,56 @@ pub fn build_statusline(
                     branch.clone()
                 };
 
+                // Build branch text with status and colors
                 let branch_text = if prefs.use_colors {
-                    prefs.theme.apply_file(&branch_with_icon)
+                    // Apply color to branch part
+                    let base_colored = prefs.theme.apply_file(&branch_with_icon);
+
+                    // Add git status indicator if enabled
+                    if prefs.show_git_status {
+                        if let Some(is_dirty) = state.git_dirty {
+                            if is_dirty {
+                                // Show ± with file count for dirty state
+                                let count = state.git_dirty_count.unwrap_or(0);
+                                let status_text = if count > 0 {
+                                    format!(" ±{}", count)
+                                } else {
+                                    " ±".to_string()
+                                };
+                                let status_colored = prefs.theme.apply_warning(&status_text);
+                                format!("{base_colored}{status_colored}")
+                            } else {
+                                // Show ✓ for clean state (no count needed)
+                                let status_colored = prefs.theme.apply_success(" ✓");
+                                format!("{base_colored}{status_colored}")
+                            }
+                        } else {
+                            base_colored
+                        }
+                    } else {
+                        base_colored
+                    }
                 } else {
-                    branch_with_icon
+                    // No colors - simple concatenation
+                    if prefs.show_git_status {
+                        if let Some(is_dirty) = state.git_dirty {
+                            if is_dirty {
+                                let count = state.git_dirty_count.unwrap_or(0);
+                                let status_text = if count > 0 {
+                                    format!(" ±{}", count)
+                                } else {
+                                    " ±".to_string()
+                                };
+                                format!("{branch_with_icon}{status_text}")
+                            } else {
+                                format!("{branch_with_icon} ✓")
+                            }
+                        } else {
+                            branch_with_icon
+                        }
+                    } else {
+                        branch_with_icon
+                    }
                 };
 
                 let separator = if prefs.display.show_separators {
@@ -379,6 +430,9 @@ mod tests {
             current_job: Some("test.js".to_string()),
             current_file: None,
             git_branch: None,
+            git_dirty: None,
+            git_dirty_count: None,
+            git_status_checked_at: None,
             personality: "ლ(╹◡╹ლ) Cowder".to_string(),
             previous_personality: None,
             consecutive_actions: 1,
