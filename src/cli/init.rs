@@ -157,8 +157,6 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
         ICON_CHECK.green()
     ))?;
 
-    println!();
-
     println!(
         "{} {}",
         "Binary:  ".bold().color(colored::Color::TrueColor {
@@ -177,10 +175,9 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
         }),
         settings_path.display()
     );
-    println!();
 
     println!(
-        "{}",
+        "\n{}",
         "Next Steps:".bold().color(colored::Color::TrueColor {
             r: 171,
             g: 232,
@@ -192,10 +189,9 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
         "  2. Customize appearance with: {}",
         "claude-code-personalities config".white()
     );
-    println!();
 
     println!(
-        "{}",
+        "\n{}",
         "Available Commands:"
             .bold()
             .color(colored::Color::TrueColor {
