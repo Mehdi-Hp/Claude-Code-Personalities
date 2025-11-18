@@ -137,7 +137,7 @@ echo
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
 echo -e "  $divider"
-echo -e "  ${BOLD}${PRIMARY}Installing the Binary v$LATEST_VERSION${NC}"
+echo -e "  ${PRIMARY}Installing the Binary v$LATEST_VERSION${NC}"
 echo -e "  $divider"
 echo
 
