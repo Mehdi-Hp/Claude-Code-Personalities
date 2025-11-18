@@ -133,13 +133,15 @@ pub async fn status() -> Result<()> {
     let prefs = PersonalityPreferences::load_or_default()
         .await
         .with_context(|| "Failed to load preferences for status test")?;
-    let statusline = build_statusline(&state, &model_name, &prefs, None);
+    let statusline = build_statusline(&state, &model_name, &prefs, None, None);
     println!("  Output: {statusline}");
 
     Ok(())
 }
 
 /// Check for available updates and display version information.
+///
+/// Always fetches fresh data from GitHub (no caching).
 ///
 /// # Errors
 ///
@@ -148,7 +150,7 @@ pub async fn status() -> Result<()> {
 /// - GitHub API requests fail or return invalid responses
 /// - Network connectivity issues prevent update checking
 /// - Version parsing or comparison fails
-pub async fn check_update_with_force(force: bool) -> Result<()> {
+pub async fn check_update() -> Result<()> {
     use crate::version::{VersionManager, format_version_comparison};
     use anyhow::Context;
 
@@ -158,23 +160,12 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
     let version_manager =
         VersionManager::new().with_context(|| "Failed to initialize version manager")?;
 
-    if force {
-        print_info("Force refresh enabled - bypassing cache...");
-    } else {
-        print_info("Checking latest version...");
-    }
+    print_info("Fetching latest version from GitHub...");
 
-    let update_info = if force {
-        version_manager
-            .check_for_update_force()
-            .await
-            .with_context(|| "Failed to check for updates (forced refresh)")?
-    } else {
-        version_manager
-            .check_for_update()
-            .await
-            .with_context(|| "Failed to check for updates")?
-    };
+    let update_info = version_manager
+        .check_for_update_force()
+        .await
+        .with_context(|| "Failed to check for updates")?;
 
     if let Some(release) = update_info {
         let latest_version = release
@@ -201,11 +192,6 @@ pub async fn check_update_with_force(force: bool) -> Result<()> {
         println!();
         println!("{} You are running the latest version!", ICON_CHECK.green());
         println!("Current version: v{CURRENT_VERSION}");
-
-        if !force {
-            println!();
-            print_info("Tip: Use --force to bypass cache and check GitHub directly");
-        }
     }
 
     Ok(())

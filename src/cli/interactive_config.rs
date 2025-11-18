@@ -217,7 +217,7 @@ fn ui(f: &mut Frame, app: &ConfigApp) {
 fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
     let state = create_preview_state();
     let workspace = create_preview_workspace();
-    let statusline = build_statusline(&state, "Sonnet", &app.prefs, Some(&workspace));
+    let statusline = build_statusline(&state, "Sonnet", &app.prefs, Some(&workspace), None);
 
     // Fancy block with decorative title
     let block = Block::default()
