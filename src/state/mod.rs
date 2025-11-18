@@ -291,6 +291,7 @@ impl SessionState {
         // Run git status --porcelain (exits with 0 and empty output if clean)
         let output = tokio::process::Command::new("git")
             .args(&["status", "--porcelain"])
+            .env("GIT_OPTIONAL_LOCKS", "0")
             .output()
             .await;
 
