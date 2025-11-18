@@ -220,9 +220,6 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
         "  {:35} - View all commands",
         "claude-code-personalities help".white()
     );
-    println!();
-
-    println!("Start a new Claude Code session to see your personalities in action!");
 
     Ok(())
 }
