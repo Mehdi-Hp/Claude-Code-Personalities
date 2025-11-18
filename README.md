@@ -7,6 +7,16 @@ Watch Claude transform from `ʕ•ᴥ•ʔ Code Wizard` when coding to `(┛ಠ�
 
 **Powered by Rust** - Lightning fast performance (~1ms statusline generation), zero external dependencies, and interactive configuration!
 
+## Key Features
+
+- **30+ Dynamic Personalities** - Context-aware text faces that reflect Claude's current mood and activity
+- **Git Status Integration** - Real-time working tree status with file counts (`±5` for dirty, `✓` for clean)
+- **Activity Tracking** - See what Claude is doing: editing, reading, executing, debugging, etc.
+- **Nerd Font Icons** - Visual indicators for folders, git branches, activities, and models
+- **Performance Optimized** - 2-second caching for git status, ~1ms statusline rendering
+- **Interactive Configuration** - Easy-to-use TUI for customizing your statusline
+- **Model Indicators** - Know which Claude model you're using (Opus, Sonnet, Haiku)
+
 ![Claude Code Personalities Screenshot](screenshot.png)
 
 ## Installation
@@ -90,12 +100,16 @@ claude-code-personalities config
 This opens a multi-select menu where you can toggle. When you open the configuration menu, your current settings are pre-selected with checkboxes, making it easy to see what's currently enabled versus disabled:
 - **Show Personality** - Text-face emoticons (ʕ•ᴥ•ʔ, (╯°□°)╯, etc.)
 - **Show Activity** - Current activity (editing, coding, debugging, etc.)
-- **Show Current Job/File** - Current file being worked on
+- **Show Activity Context** - Current file or command being executed
+- **Show Git Branch** - Current git branch name
+- **Show Git Status** - Working tree status with file count (`±5` dirty, `✓` clean)
 - **Show Current Directory** - Working directory path
 - **Show Model Indicator** - Claude model (Opus, Sonnet, Haiku)
-- **Show Error Indicators** - Warning/error icons based on error count
 - **Use Icons** - Nerd Font icons for visual appeal
 - **Use Colors** - ANSI color formatting
+- **Show Separators** - Dot separators between elements
+- **Compact Mode** - Reduced spacing for tighter display
+- **Debug Info** - Show error counts and session info
 
 Settings are saved to `~/.claude/personalities_config.json` and take effect immediately.
 
