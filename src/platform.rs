@@ -18,7 +18,9 @@ impl Platform {
     pub fn detect() -> Result<Self> {
         let os = detect_os()?;
         let arch = detect_arch()?;
-        let target = format!("{arch}-{os}");
+        // Target format matches GitHub release asset naming: os-arch
+        // e.g., "macos-aarch64", "linux-x86_64"
+        let target = format!("{os}-{arch}");
 
         Ok(Platform { os, arch, target })
     }
@@ -28,7 +30,7 @@ impl Platform {
     pub fn is_supported(&self) -> bool {
         matches!(
             (self.os.as_str(), self.arch.as_str()),
-            ("apple-darwin" | "linux", "x86_64" | "aarch64")
+            ("macos" | "linux", "x86_64" | "aarch64")
         )
     }
 
@@ -36,8 +38,8 @@ impl Platform {
     #[must_use]
     pub fn description(&self) -> String {
         match (self.os.as_str(), self.arch.as_str()) {
-            ("apple-darwin", "x86_64") => "macOS (Intel)".to_string(),
-            ("apple-darwin", "aarch64") => "macOS (Apple Silicon)".to_string(),
+            ("macos", "x86_64") => "macOS (Intel)".to_string(),
+            ("macos", "aarch64") => "macOS (Apple Silicon)".to_string(),
             ("linux", "x86_64") => "Linux (x86_64)".to_string(),
             ("linux", "aarch64") => "Linux (ARM64)".to_string(),
             _ => format!("{} ({})", self.os, self.arch),
@@ -47,7 +49,7 @@ impl Platform {
 
 fn detect_os() -> Result<String> {
     match env::consts::OS {
-        "macos" => Ok("apple-darwin".to_string()),
+        "macos" => Ok("macos".to_string()),
         "linux" => Ok("linux".to_string()),
         "windows" => Err(anyhow!(
             "Windows is not supported - developer doesn't care about Windows development.\n\n\
@@ -89,24 +91,24 @@ mod tests {
     fn test_supported_platforms() {
         let platforms = vec![
             Platform {
-                os: "apple-darwin".to_string(),
+                os: "macos".to_string(),
                 arch: "x86_64".to_string(),
-                target: "x86_64-apple-darwin".to_string(),
+                target: "macos-x86_64".to_string(),
             },
             Platform {
-                os: "apple-darwin".to_string(),
+                os: "macos".to_string(),
                 arch: "aarch64".to_string(),
-                target: "aarch64-apple-darwin".to_string(),
+                target: "macos-aarch64".to_string(),
             },
             Platform {
                 os: "linux".to_string(),
                 arch: "x86_64".to_string(),
-                target: "x86_64-linux".to_string(),
+                target: "linux-x86_64".to_string(),
             },
             Platform {
                 os: "linux".to_string(),
                 arch: "aarch64".to_string(),
-                target: "aarch64-linux".to_string(),
+                target: "linux-aarch64".to_string(),
             },
         ];
 
@@ -134,17 +136,17 @@ mod tests {
         let test_cases = vec![
             (
                 Platform {
-                    os: "apple-darwin".to_string(),
+                    os: "macos".to_string(),
                     arch: "x86_64".to_string(),
-                    target: "x86_64-apple-darwin".to_string(),
+                    target: "macos-x86_64".to_string(),
                 },
                 "macOS (Intel)",
             ),
             (
                 Platform {
-                    os: "apple-darwin".to_string(),
+                    os: "macos".to_string(),
                     arch: "aarch64".to_string(),
-                    target: "aarch64-apple-darwin".to_string(),
+                    target: "macos-aarch64".to_string(),
                 },
                 "macOS (Apple Silicon)",
             ),
@@ -152,7 +154,7 @@ mod tests {
                 Platform {
                     os: "linux".to_string(),
                     arch: "x86_64".to_string(),
-                    target: "x86_64-linux".to_string(),
+                    target: "linux-x86_64".to_string(),
                 },
                 "Linux (x86_64)",
             ),
@@ -166,13 +168,13 @@ mod tests {
     #[test]
     fn test_target_format() {
         let platform = Platform {
-            os: "apple-darwin".to_string(),
+            os: "macos".to_string(),
             arch: "x86_64".to_string(),
-            target: "x86_64-apple-darwin".to_string(),
+            target: "macos-x86_64".to_string(),
         };
 
-        assert_eq!(platform.target, "x86_64-apple-darwin");
-        assert!(platform.target.starts_with("x86_64"));
-        assert!(platform.target.ends_with("apple-darwin"));
+        assert_eq!(platform.target, "macos-x86_64");
+        assert!(platform.target.starts_with("macos"));
+        assert!(platform.target.ends_with("x86_64"));
     }
 }
