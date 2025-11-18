@@ -162,18 +162,18 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
     println!(
         "{} {}",
         "Binary:  ".bold().color(colored::Color::TrueColor {
-            r: 255,
-            g: 165,
-            b: 0
+            r: 171,
+            g: 232,
+            b: 239
         }),
         binary_path.display()
     );
     println!(
         "{} {}",
         "Settings:".bold().color(colored::Color::TrueColor {
-            r: 255,
-            g: 165,
-            b: 0
+            r: 171,
+            g: 232,
+            b: 239
         }),
         settings_path.display()
     );
@@ -182,9 +182,9 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
     println!(
         "{}",
         "Next Steps:".bold().color(colored::Color::TrueColor {
-            r: 255,
-            g: 165,
-            b: 0
+            r: 171,
+            g: 232,
+            b: 239
         })
     );
     println!("  1. Your statusline will now show dynamic personalities!");
@@ -199,9 +199,9 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
         "Available Commands:"
             .bold()
             .color(colored::Color::TrueColor {
-                r: 255,
-                g: 165,
-                b: 0
+                r: 171,
+                g: 232,
+                b: 239
             })
     );
     println!(
