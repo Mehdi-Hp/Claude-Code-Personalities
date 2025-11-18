@@ -51,6 +51,8 @@ pub struct PersonalityPreferences {
     pub show_git_status: bool,
     pub show_current_dir: bool,
     pub show_model: bool,
+    #[serde(default = "default_true")]
+    pub show_update_available: bool,
     pub use_icons: bool,
     pub use_colors: bool,
 
@@ -79,6 +81,7 @@ impl Default for PersonalityPreferences {
             show_git_status: true,   // Enabled by default
             show_current_dir: false, // Hidden by default per user request
             show_model: true,
+            show_update_available: true, // Show update indicator by default
             use_icons: true,
             use_colors: true,
             display: DisplayConfig::default(),
@@ -189,6 +192,7 @@ impl PersonalityPreferences {
             ("Git Status", self.show_git_status),
             ("Current Directory", self.show_current_dir),
             ("Model", self.show_model),
+            ("Update Available", self.show_update_available),
             ("Icons", self.use_icons),
             ("Colors", self.use_colors),
             ("Separators", self.display.show_separators),
@@ -207,6 +211,7 @@ impl PersonalityPreferences {
         self.show_git_status = false;
         self.show_current_dir = false;
         self.show_model = false;
+        self.show_update_available = false;
         self.use_icons = false;
         self.use_colors = false;
         self.display.show_separators = false;
@@ -223,6 +228,7 @@ impl PersonalityPreferences {
                 "Git Status" => self.show_git_status = true,
                 "Current Directory" => self.show_current_dir = true,
                 "Model" => self.show_model = true,
+                "Update Available" => self.show_update_available = true,
                 "Icons" => self.use_icons = true,
                 "Colors" => self.use_colors = true,
                 "Separators" => self.display.show_separators = true,
@@ -249,6 +255,7 @@ mod tests {
         assert!(prefs.show_git_status); // Should be true by default
         assert!(!prefs.show_current_dir); // Should be false by default
         assert!(prefs.show_model);
+        assert!(prefs.show_update_available); // Should be true by default
         assert!(prefs.use_icons);
         assert!(prefs.use_colors);
     }
@@ -258,7 +265,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 12); // Includes Git Status option
+        assert_eq!(options.len(), 13); // Includes Update Available option
         assert!(options.iter().any(|(name, _)| *name == "Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Activity"));
         assert!(options.iter().any(|(name, _)| *name == "Activity Context")); // Unified context
@@ -266,6 +273,7 @@ mod tests {
         assert!(options.iter().any(|(name, _)| *name == "Git Status"));
         assert!(options.iter().any(|(name, _)| *name == "Current Directory"));
         assert!(options.iter().any(|(name, _)| *name == "Model"));
+        assert!(options.iter().any(|(name, _)| *name == "Update Available"));
         assert!(options.iter().any(|(name, _)| *name == "Icons"));
         assert!(options.iter().any(|(name, _)| *name == "Colors"));
         assert!(options.iter().any(|(name, _)| *name == "Separators"));
@@ -288,6 +296,7 @@ mod tests {
         assert!(!prefs.show_git_status);
         assert!(!prefs.show_current_dir);
         assert!(!prefs.show_model);
+        assert!(!prefs.show_update_available);
         assert!(prefs.use_icons);
         assert!(!prefs.use_colors);
     }

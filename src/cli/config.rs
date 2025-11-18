@@ -306,7 +306,7 @@ fn show_statusline_preview(prefs: &PersonalityPreferences) {
 
     let state = create_preview_state();
     let workspace = create_preview_workspace();
-    let statusline = build_statusline(&state, "Sonnet", prefs, Some(&workspace));
+    let statusline = build_statusline(&state, "Sonnet", prefs, Some(&workspace), None);
 
     println!("  {}", statusline);
     println!("{}", "━".repeat(60).bright_black());

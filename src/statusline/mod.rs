@@ -7,6 +7,7 @@ use std::io::{self, Read};
 use crate::config::PersonalityPreferences;
 use crate::icons::{ICON_FOLDER, ICON_GIT_BRANCH, get_activity_icon, get_model_icon};
 use crate::state::SessionState;
+use crate::version::VersionManager;
 
 #[derive(Debug, Deserialize)]
 pub struct ClaudeInput {
@@ -85,8 +86,36 @@ pub async fn run_statusline() -> Result<()> {
         state.refresh_git_status().await;
     }
 
+    // Check for updates if enabled (uses cache to avoid API rate limits)
+    let update_available = if prefs.show_update_available {
+        if let Ok(version_manager) = VersionManager::new() {
+            version_manager
+                .check_for_update()
+                .await
+                .ok()
+                .flatten()
+                .map(|release| {
+                    release
+                        .tag_name
+                        .strip_prefix('v')
+                        .unwrap_or(&release.tag_name)
+                        .to_string()
+                })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     // Use static renderer
-    let statusline = build_statusline(&state, &model_name, &prefs, claude_input.workspace.as_ref());
+    let statusline = build_statusline(
+        &state,
+        &model_name,
+        &prefs,
+        claude_input.workspace.as_ref(),
+        update_available.as_deref(),
+    );
 
     print!("{statusline}");
 
@@ -99,6 +128,7 @@ pub fn build_statusline(
     model_name: &str,
     prefs: &PersonalityPreferences,
     workspace: Option<&WorkspaceInfo>,
+    update_available: Option<&str>,
 ) -> String {
     let mut parts = Vec::new();
 
@@ -345,6 +375,42 @@ pub fn build_statusline(
         }
     }
 
+    // Update available indicator
+    if let Some(version) = update_available {
+        let update_icon = if prefs.use_icons { "\u{f062}" } else { "" }; // nf-fa-arrow_up
+        let update_text = if update_icon.is_empty() {
+            format!("v{version}")
+        } else {
+            format!("{update_icon} v{version}")
+        };
+
+        let colored_update = if prefs.use_colors {
+            prefs.theme.apply_success(&update_text)
+        } else {
+            update_text
+        };
+
+        let separator = if prefs.display.show_separators {
+            if prefs.use_colors {
+                prefs.theme.apply_separator("•")
+            } else {
+                "•".to_string()
+            }
+        } else {
+            String::new()
+        };
+
+        let spacing = if prefs.display.compact_mode { "" } else { " " };
+
+        if parts.is_empty() {
+            parts.push(colored_update);
+        } else if prefs.display.show_separators {
+            parts.push(format!("{spacing}{separator}{spacing}{colored_update}"));
+        } else {
+            parts.push(format!("{spacing}{colored_update}"));
+        }
+    }
+
     // Debug info (if enabled)
     if prefs.display.show_debug_info {
         let debug_info = format!(
@@ -450,7 +516,7 @@ mod tests {
     fn test_build_statusline_basic() {
         let state = create_test_state();
         let prefs = create_test_preferences();
-        let statusline = build_statusline(&state, "Opus", &prefs, None);
+        let statusline = build_statusline(&state, "Opus", &prefs, None, None);
 
         // Should contain personality (bold formatting is applied but we can't easily test ANSI codes)
         assert!(statusline.contains("ლ(╹◡╹ლ) Cowder"));
@@ -472,11 +538,11 @@ mod tests {
 
         // Error indicators have been removed - statusline should not contain error icons
         state.error_count = 1;
-        let statusline = build_statusline(&state, "Sonnet", &prefs, None);
+        let statusline = build_statusline(&state, "Sonnet", &prefs, None, None);
 
         // Test with many errors - should still not show any error icons
         state.error_count = 5;
-        let statusline = build_statusline(&state, "Sonnet", &prefs, None);
+        let statusline = build_statusline(&state, "Sonnet", &prefs, None, None);
 
         // Just verify the statusline is not empty
         assert!(!statusline.trim().is_empty());
@@ -487,7 +553,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         state.current_job = None;
-        let statusline = build_statusline(&state, "Haiku", &prefs, None);
+        let statusline = build_statusline(&state, "Haiku", &prefs, None, None);
 
         // Should contain activity but no job
         assert!(statusline.contains("Editing"));
@@ -499,7 +565,7 @@ mod tests {
         let mut state = create_test_state();
         let prefs = create_test_preferences();
         state.current_job = Some(String::new());
-        let statusline = build_statusline(&state, "Haiku", &prefs, None);
+        let statusline = build_statusline(&state, "Haiku", &prefs, None, None);
 
         // Should treat empty job same as no job
         assert!(statusline.contains("Editing"));
@@ -606,7 +672,7 @@ mod tests {
         ];
         for (activity, expected_icon) in activities_with_icons {
             state.activity = activity.clone();
-            let statusline = build_statusline(&state, "Claude", &prefs, None);
+            let statusline = build_statusline(&state, "Claude", &prefs, None, None);
             // The icon should be in the statusline
             assert!(statusline.contains(expected_icon));
             assert!(statusline.contains(&activity.to_string()));
@@ -621,7 +687,7 @@ mod tests {
         ];
         for activity in activities_without_icons {
             state.activity = activity.clone();
-            let statusline = build_statusline(&state, "Claude", &prefs, None);
+            let statusline = build_statusline(&state, "Claude", &prefs, None, None);
             // Should contain activity text but no icon
             assert!(statusline.contains(&activity.to_string()));
         }
@@ -631,7 +697,7 @@ mod tests {
     fn test_statusline_formatting_structure() {
         let state = create_test_state();
         let prefs = create_test_preferences();
-        let statusline = build_statusline(&state, "TestModel", &prefs, None);
+        let statusline = build_statusline(&state, "TestModel", &prefs, None, None);
 
         // Should contain separators
         assert!(statusline.contains("•"));
@@ -652,7 +718,7 @@ mod tests {
         state.current_job =
             Some("very_long_filename_that_might_cause_display_issues.js".to_string());
 
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
+        let statusline = build_statusline(&state, "Claude", &prefs, None, None);
 
         // Should handle long job names gracefully
         assert!(statusline.contains("very_long_filename_that_might_cause_display_issues.js"));
@@ -672,7 +738,7 @@ mod tests {
 
         for personality in personalities {
             state.personality = personality.to_string();
-            let statusline = build_statusline(&state, "Claude", &prefs, None);
+            let statusline = build_statusline(&state, "Claude", &prefs, None, None);
             assert!(statusline.contains(personality));
         }
     }
@@ -685,15 +751,15 @@ mod tests {
         // Error indicators have been completely removed
         // Statusline should work normally regardless of error count
         state.error_count = 0;
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
+        let statusline = build_statusline(&state, "Claude", &prefs, None, None);
         assert!(!statusline.trim().is_empty());
 
         state.error_count = 1;
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
+        let statusline = build_statusline(&state, "Claude", &prefs, None, None);
         assert!(!statusline.trim().is_empty());
 
         state.error_count = 10;
-        let statusline = build_statusline(&state, "Claude", &prefs, None);
+        let statusline = build_statusline(&state, "Claude", &prefs, None, None);
         assert!(!statusline.trim().is_empty());
     }
 
@@ -709,7 +775,7 @@ mod tests {
 
         // Test with all options enabled (default)
         let prefs_all = PersonalityPreferences::default();
-        let statusline_all = build_statusline(&state, "Opus", &prefs_all, None);
+        let statusline_all = build_statusline(&state, "Opus", &prefs_all, None, None);
 
         // Should contain personality, activity, model, and separators
         assert!(statusline_all.contains("Chillin"));
@@ -732,7 +798,7 @@ mod tests {
             ..Default::default()
         };
 
-        let statusline_minimal = build_statusline(&state, "Opus", &prefs_minimal, None);
+        let statusline_minimal = build_statusline(&state, "Opus", &prefs_minimal, None, None);
         // Should be empty since we disabled everything important
         assert!(statusline_minimal.is_empty());
     }
@@ -751,7 +817,7 @@ mod tests {
             use_colors: false, // Disable colors for easier testing
             ..Default::default()
         };
-        let statusline_normal = build_statusline(&state, "Opus", &prefs_normal, None);
+        let statusline_normal = build_statusline(&state, "Opus", &prefs_normal, None, None);
 
         // Compact mode
         let prefs_compact = PersonalityPreferences {
@@ -762,7 +828,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let statusline_compact = build_statusline(&state, "Opus", &prefs_compact, None);
+        let statusline_compact = build_statusline(&state, "Opus", &prefs_compact, None, None);
 
         // Compact mode should be shorter due to less spacing
         assert!(statusline_compact.len() < statusline_normal.len());
@@ -781,7 +847,7 @@ mod tests {
 
         // Without debug info
         let prefs_normal = PersonalityPreferences::default();
-        let statusline_normal = build_statusline(&state, "Sonnet", &prefs_normal, None);
+        let statusline_normal = build_statusline(&state, "Sonnet", &prefs_normal, None, None);
         assert!(!statusline_normal.contains("E:3"));
         assert!(!statusline_normal.contains("C:7"));
         assert!(!statusline_normal.contains("S:test123"));
@@ -794,7 +860,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let statusline_debug = build_statusline(&state, "Sonnet", &prefs_debug, None);
+        let statusline_debug = build_statusline(&state, "Sonnet", &prefs_debug, None, None);
         assert!(statusline_debug.contains("E:3"));
         assert!(statusline_debug.contains("C:7"));
         assert!(statusline_debug.contains("S:test123"));
@@ -814,7 +880,7 @@ mod tests {
             use_colors: false,
             ..Default::default()
         };
-        let statusline_with_sep = build_statusline(&state, "Haiku", &prefs_with_sep, None);
+        let statusline_with_sep = build_statusline(&state, "Haiku", &prefs_with_sep, None, None);
         assert!(statusline_with_sep.contains("•"));
 
         // Without separators
@@ -826,7 +892,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let statusline_no_sep = build_statusline(&state, "Haiku", &prefs_no_sep, None);
+        let statusline_no_sep = build_statusline(&state, "Haiku", &prefs_no_sep, None, None);
         assert!(!statusline_no_sep.contains("•"));
         // But should still have content
         assert!(statusline_no_sep.contains("Chillin"));
