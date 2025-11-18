@@ -350,6 +350,7 @@ fn get_git_branch() -> Option<String> {
     // Try modern git first (2.22+)
     if let Ok(output) = Command::new("git")
         .args(["branch", "--show-current"])
+        .env("GIT_OPTIONAL_LOCKS", "0")
         .output()
     {
         if output.status.success() {
@@ -363,6 +364,7 @@ fn get_git_branch() -> Option<String> {
     // Fallback for older git or detached HEAD
     if let Ok(output) = Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .env("GIT_OPTIONAL_LOCKS", "0")
         .output()
     {
         if output.status.success() {
