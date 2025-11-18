@@ -86,7 +86,7 @@ clear
 echo
 echo -e "${BOLD}${PRIMARY}   ╔═══════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BOLD}${PRIMARY}   ║                                                           ║${NC}"
-echo -e "${BOLD}${PRIMARY}   ║           ${NC}૮ ․ ․ ྀིა  Claude Code Personalities             ${BOLD}${PRIMARY}║${NC}"
+echo -e "${BOLD}${PRIMARY}   ║           ${NC}૮ ․ ․ ྀིა  Claude Code Personalities              ${BOLD}${PRIMARY}║${NC}"
 echo -e "${BOLD}${PRIMARY}   ║                                                           ║${NC}"
 echo -e "${BOLD}${PRIMARY}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
