@@ -205,20 +205,24 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
             })
     );
     println!(
-        "  {:35} - Check installation status",
-        "claude-code-personalities status".white()
+        "  {:35} {}",
+        "claude-code-personalities status".white(),
+        "- Check installation status".bright_black()
     );
     println!(
-        "  {:35} - Customize appearance",
-        "claude-code-personalities config".white()
+        "  {:35} {}",
+        "claude-code-personalities config".white(),
+        "- Customize appearance".bright_black()
     );
     println!(
-        "  {:35} - Check for updates",
-        "claude-code-personalities check-update".white()
+        "  {:35} {}",
+        "claude-code-personalities check-update".white(),
+        "- Check for updates".bright_black()
     );
     println!(
-        "  {:35} - View all commands",
-        "claude-code-personalities help".white()
+        "  {:35} {}",
+        "claude-code-personalities help".white(),
+        "- View all commands".bright_black()
     );
 
     Ok(())
