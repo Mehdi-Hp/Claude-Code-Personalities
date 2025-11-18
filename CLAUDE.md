@@ -17,6 +17,7 @@ Claude Code Personalities is a personality system that gives Claude Code a dynam
 
 - **30+ Text-Face Personalities**: From `ʕ•ᴥ•ʔ Code Wizard` to `(┛ಠДಠ)┛彡┻━┻ Frustrated Developer`
 - **Context-Aware**: Personalities change based on files being edited, commands run, and errors encountered
+- **Git Status Indicator**: Real-time display of working tree status with file counts (`±5` for dirty, `✓` for clean)
 - **Interactive Configuration**: Use `config` command to customize what appears in statusline
 - **Activity Tracking**: Monitors Claude's tool usage (Edit, Bash, Grep, etc.) via hooks
 - **Error State Management**: Claude gets progressively more frustrated with errors
@@ -169,12 +170,16 @@ claude-code-personalities config
 Opens a multi-select menu to toggle. The menu displays your current configuration with checkboxes pre-selected for enabled options, so you can immediately see what's active and make changes as needed:
 - Show Personality (text faces)
 - Show Activity (current action)
-- Show Current File
-- Show Current Directory  
+- Show Activity Context (files/commands)
+- Show Git Branch
+- Show Git Status (working tree changes with count)
+- Show Current Directory
 - Show Model Indicator
-- Show Error Indicators
 - Use Nerd Font Icons
 - Use ANSI Colors
+- Show Separators
+- Compact Mode
+- Debug Info
 - Theme Selection
 
 Settings saved to `~/.claude/personalities_config.json`:
@@ -182,15 +187,35 @@ Settings saved to `~/.claude/personalities_config.json`:
 ```json
 {
   "show_personality": true,
-  "show_activity": true, 
-  "show_current_file": false,
-  "show_directory": true,
+  "show_activity": true,
+  "show_context": true,
+  "show_git_branch": true,
+  "show_git_status": true,
+  "show_current_dir": false,
   "show_model": true,
-  "show_errors": true,
   "use_icons": true,
   "use_colors": true,
+  "display": {
+    "show_separators": true,
+    "compact_mode": false,
+    "show_debug_info": false
+  },
   "theme": "Dark"
 }
+```
+
+#### Git Status Display
+
+The git status feature shows real-time working tree status:
+
+- **Dirty state**: `±5` (orange/yellow) - Shows number of uncommitted files
+- **Clean state**: `✓` (green) - Indicates no uncommitted changes
+- **Performance**: 2-second caching to minimize git command overhead
+- **Smart**: Only updates when cache expires or state changes
+
+Example statusline with git status:
+```
+ʕ•ᴥ•ʔ Code Wizard •  main ±5 • Editing src/main.rs • Sonnet
 ```
 
 ### Custom Personalities
