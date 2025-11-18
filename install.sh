@@ -90,7 +90,7 @@ echo -e "${BOLD}${PRIMARY}   ║           ${BOLD}${NC}૮ ․ ․ ྀིា  Cl
 echo -e "${BOLD}${PRIMARY}   ║                                                           ║${NC}"
 echo -e "${BOLD}${PRIMARY}   ╚═══════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "   ${ICON_ROCKET} ${ITALIC}Lightning-fast Claude Code statusline with intelligent activity tracking${NC}"
+echo -e "   ${ITALIC}Lightning-fast Claude Code statusline with intelligent activity tracking${NC}"
 echo
 echo
 
@@ -248,11 +248,9 @@ echo
 echo
 
 if command -v claude &> /dev/null; then
-    echo -e "  • Claude Code detected - setting up personalities..."
+    echo -e "  ${DIM}• Claude Code detected - setting up personalities...${NC}"
     
     if "$BIN_PATH" init --non-interactive 2>/dev/null; then
-        print_success "Configuration completed"
-        echo
         echo -e "  ${BOLD}${PRIMARY}Ready to Use!${NC}"
     else
         print_warning "Auto-configuration failed"
@@ -268,11 +266,4 @@ else
     echo -e "    2. Run: ${NC}claude-code-personalities init${NC}"
 fi
 
-echo
-echo
-
-echo -e "  ${BOLD}${PRIMARY}Available Commands:${NC}"
-echo -e "    ${NC}claude-code-personalities init${NC}          ${DIM}- Configure Claude Code${NC}"
-echo -e "    ${NC}claude-code-personalities status${NC}        ${DIM}- Check installation status${NC}"  
-echo -e "    ${NC}claude-code-personalities --help${NC}        ${DIM}- Show all commands${NC}"
 echo
