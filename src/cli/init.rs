@@ -277,11 +277,11 @@ async fn find_existing_binary() -> Result<Option<PathBuf>> {
 
 /// Helper functions for status output
 fn print_info(message: &str) {
-    println!("  {} {}", ICON_INFO.bright_black(), message.bright_black());
+    println!("  {} {}", ICON_INFO.dimmed(), message.dimmed());
 }
 
 fn print_success(message: &str) {
-    println!("  {} {}", ICON_CHECK.bright_black(), message.bright_black());
+    println!("  {} {}", ICON_CHECK.dimmed(), message.dimmed());
 }
 
 fn print_warning(message: &str) {
