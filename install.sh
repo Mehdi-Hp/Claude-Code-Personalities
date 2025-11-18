@@ -122,7 +122,6 @@ fi
 print_success "Dependencies verified"
 
 # Download latest release
-echo
 RELEASE_INFO=$(curl -sL "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 LATEST_VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' | sed 's/^v//')
 
@@ -132,13 +131,12 @@ if [[ -z "$LATEST_VERSION" ]] || [[ "$LATEST_VERSION" == "null" ]]; then
 fi
 
 # Show section header with version
-echo
 # Dim gray divider
 divider="${DIM}$(printf '%.0s─' $(seq 1 60))${NC}"
+echo
 echo -e "  $divider"
 echo -e "  ${PRIMARY}Installing the Binary v$LATEST_VERSION${NC}"
 echo -e "  $divider"
-echo
 
 # Construct binary name and download URL
 BINARY_NAME="claude-code-personalities-${PLATFORM}"
@@ -240,12 +238,8 @@ echo
 echo -e "  $divider"
 echo -e "  ${ICON_SUCCESS} ${BOLD}${NC} Claude Code Personalities Installed${NC}"
 echo -e "  $divider"
-echo
-echo
 
 # Auto-initialize Claude Code if possible
-echo
-
 if command -v claude &> /dev/null; then
     echo -e "  ${DIM}• Claude Code detected - setting up personalities...${NC}"
     
