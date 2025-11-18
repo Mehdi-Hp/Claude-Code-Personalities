@@ -368,12 +368,12 @@ mod tests {
             published_at: None,
             assets: vec![
                 GitHubAsset {
-                    name: "claude-code-personalities-x86_64-apple-darwin".to_string(),
+                    name: "claude-code-personalities-macos-x86_64".to_string(),
                     browser_download_url: "https://example.com/macos".to_string(),
                     size: 1024,
                 },
                 GitHubAsset {
-                    name: "claude-code-personalities-x86_64-linux".to_string(),
+                    name: "claude-code-personalities-linux-x86_64".to_string(),
                     browser_download_url: "https://example.com/linux".to_string(),
                     size: 1024,
                 },
@@ -382,11 +382,11 @@ mod tests {
             draft: false,
         };
 
-        let asset = vm.find_platform_asset(&release, "x86_64-apple-darwin");
+        let asset = vm.find_platform_asset(&release, "macos-x86_64");
         assert!(asset.is_some());
         assert_eq!(
             asset.unwrap().name,
-            "claude-code-personalities-x86_64-apple-darwin"
+            "claude-code-personalities-macos-x86_64"
         );
 
         let asset = vm.find_platform_asset(&release, "unsupported-platform");
