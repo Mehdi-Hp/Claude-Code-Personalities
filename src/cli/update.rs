@@ -287,11 +287,11 @@ async fn download_and_verify_binary(
         .with_context(|| "Failed to download update")?;
     print_success("Download completed");
 
-    print_info("Verifying download...");
-    verify_binary(&temp_binary.to_path_buf())
+    print_info("Verifying SHA256 checksum...");
+    verify_binary_sha256(asset, temp_binary)
         .await
-        .with_context(|| "Downloaded binary verification failed")?;
-    print_success("Binary verified");
+        .with_context(|| "SHA256 verification failed")?;
+    print_success("Checksum verified");
 
     Ok(())
 }
@@ -353,43 +353,54 @@ async fn verify_installation_and_cleanup(paths: &UpdatePaths, latest_version: &s
     Ok(())
 }
 
-/// Verify that a binary is valid and executable
-async fn verify_binary(binary_path: &PathBuf) -> Result<()> {
-    // Check that file exists and has content
-    let metadata = fs::metadata(binary_path)
+/// Verify binary integrity using SHA256 checksum
+async fn verify_binary_sha256(
+    asset: &crate::version::GitHubAsset,
+    binary_path: &Path,
+) -> Result<()> {
+    use sha2::{Digest, Sha256};
+
+    // Download the checksum file
+    let checksum_url = format!("{}.sha256", asset.browser_download_url);
+    let response = reqwest::get(&checksum_url)
         .await
-        .with_context(|| format!("Failed to get metadata for {}", binary_path.display()))?;
+        .with_context(|| format!("Failed to download checksum from {}", checksum_url))?;
 
-    if metadata.len() == 0 {
-        return Err(anyhow!("Downloaded binary is empty"));
+    if !response.status().is_success() {
+        return Err(anyhow!(
+            "Failed to download checksum: HTTP {}",
+            response.status()
+        ));
     }
 
-    if metadata.len() < 1024 {
-        return Err(anyhow!("Downloaded binary is suspiciously small"));
-    }
+    let checksum_content = response
+        .text()
+        .await
+        .with_context(|| "Failed to read checksum content")?;
 
-    // On Unix, check if it looks like an executable
-    #[cfg(unix)]
-    {
-        let content = fs::read(binary_path)
-            .await
-            .with_context(|| "Failed to read binary for verification")?;
+    // Parse expected hash (format: "hash  filename" or just "hash")
+    let expected_hash = checksum_content
+        .split_whitespace()
+        .next()
+        .ok_or_else(|| anyhow!("Invalid checksum file format"))?
+        .to_lowercase();
 
-        // Check for ELF magic number (Linux) or Mach-O magic (macOS)
-        if content.len() >= 4 {
-            let magic = &content[0..4];
-            let is_elf = magic == [0x7f, 0x45, 0x4c, 0x46]; // ELF
-            // Mach-O magic numbers (little-endian as stored on disk)
-            let is_macho_32 = magic == [0xce, 0xfa, 0xed, 0xfe]; // MH_MAGIC (32-bit)
-            let is_macho_64 = magic == [0xcf, 0xfa, 0xed, 0xfe]; // MH_MAGIC_64 (64-bit)
-            let is_fat_macho = magic == [0xca, 0xfe, 0xba, 0xbe]; // FAT_MAGIC (universal)
+    // Compute actual hash of downloaded binary
+    let binary_content = fs::read(binary_path)
+        .await
+        .with_context(|| format!("Failed to read binary: {}", binary_path.display()))?;
 
-            if !is_elf && !is_macho_32 && !is_macho_64 && !is_fat_macho {
-                return Err(anyhow!(
-                    "Downloaded file does not appear to be a valid executable"
-                ));
-            }
-        }
+    let mut hasher = Sha256::new();
+    hasher.update(&binary_content);
+    let actual_hash = format!("{:x}", hasher.finalize());
+
+    // Compare hashes
+    if actual_hash != expected_hash {
+        return Err(anyhow!(
+            "Checksum mismatch!\nExpected: {}\nActual:   {}",
+            expected_hash,
+            actual_hash
+        ));
     }
 
     Ok(())
@@ -532,64 +543,7 @@ fn print_warning(message: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use tempfile::{NamedTempFile, TempDir};
-
-    #[tokio::test]
-    async fn test_verify_binary_valid() {
-        let mut temp_file = NamedTempFile::new().unwrap();
-
-        // Write platform-appropriate magic number + some content
-        #[cfg(target_os = "macos")]
-        temp_file.write_all(&[0xcf, 0xfa, 0xed, 0xfe]).unwrap(); // Mach-O 64-bit magic
-        #[cfg(target_os = "linux")]
-        temp_file.write_all(&[0x7f, 0x45, 0x4c, 0x46]).unwrap(); // ELF magic
-        temp_file.write_all(&vec![0; 2000]).unwrap(); // Pad to reasonable size
-        temp_file.flush().unwrap();
-
-        let path = temp_file.path().to_path_buf();
-        verify_binary(&path).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_verify_binary_empty() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let path = temp_file.path().to_path_buf();
-
-        let result = verify_binary(&path).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("empty"));
-    }
-
-    #[tokio::test]
-    async fn test_verify_binary_too_small() {
-        let mut temp_file = NamedTempFile::new().unwrap();
-        temp_file.write_all(b"small").unwrap();
-        temp_file.flush().unwrap();
-
-        let path = temp_file.path().to_path_buf();
-        let result = verify_binary(&path).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("small"));
-    }
-
-    #[tokio::test]
-    #[cfg(unix)]
-    async fn test_verify_binary_invalid_format() {
-        let mut temp_file = NamedTempFile::new().unwrap();
-
-        // Write non-executable content
-        temp_file
-            .write_all(b"This is not an executable file")
-            .unwrap();
-        temp_file.write_all(&vec![0; 2000]).unwrap(); // Pad to reasonable size
-        temp_file.flush().unwrap();
-
-        let path = temp_file.path().to_path_buf();
-        let result = verify_binary(&path).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("valid executable"));
-    }
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_cleanup_old_backups() {
