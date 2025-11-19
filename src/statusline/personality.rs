@@ -5,7 +5,7 @@
 
 use crate::kaomoji::{
     get_default_tool_kaomoji, get_file_kaomoji, get_mood_kaomoji, get_pattern_kaomoji,
-    get_tool_kaomoji,
+    get_time_kaomoji, get_tool_kaomoji,
 };
 use crate::state::{PersonalityModifier, SessionState};
 
@@ -37,6 +37,11 @@ pub fn determine_personality(
 
     // Check consecutive action patterns (including extreme cases like Code Berserker)
     if let Some(kaomoji) = get_pattern_kaomoji(state.consecutive_actions) {
+        return kaomoji.personality();
+    }
+
+    // Check for time-based personalities (before defaults)
+    if let Some(kaomoji) = get_time_kaomoji() {
         return kaomoji.personality();
     }
 
@@ -178,5 +183,30 @@ mod tests {
         let state = create_test_state(0, 0);
         let personality = determine_personality(&state, "Edit", Some("README.md"), None);
         assert_eq!(personality, "φ(．．) Documentation Writer");
+
+        // Pattern should override time (not easily testable with system time dependency, but conceptually true)
+    }
+
+    #[test]
+    fn test_time_based_fallback() {
+        // This test is a bit tricky because it depends on the system time.
+        // However, we can verify that if no other personality matches, we fall back to EITHER
+        // a time-based personality OR the default personality.
+        
+        let state = create_test_state(0, 0);
+        // Using a tool that doesn't have a specific high-priority personality
+        let personality = determine_personality(&state, "OtherTool", None, None);
+        
+        // It should be one of the time-based ones OR the default "Booting up..."
+        // or specific tool default if "OtherTool" maps to something (it maps to Booting Up in default_tool_kaomoji)
+        
+        let possible_personalities = vec![
+            "(ʘ,ʘ) Night Owl",
+            "( -_-)旦~ Caffeinated",
+            "ヽ(⌐■_■)ノ♪♬ TGIFFFFF",
+            "( ˘ ³˘) Chillin",
+        ];
+        
+        assert!(possible_personalities.contains(&personality.as_str()));
     }
 }
