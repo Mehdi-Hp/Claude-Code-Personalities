@@ -11,15 +11,15 @@ use crate::state::PersonalityModifier;
 pub mod default;
 pub mod file;
 pub mod mood;
-pub mod tool;
 pub mod time;
+pub mod tool;
 
 // Re-export commonly used kaomojis
 pub use default::*;
 pub use file::*;
 pub use mood::*;
-pub use tool::*;
 pub use time::*;
+pub use tool::*;
 
 /// A kaomoji personality consisting of a text-face and description
 #[derive(Debug, Clone, PartialEq)]

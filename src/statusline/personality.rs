@@ -5,9 +5,10 @@
 
 use crate::kaomoji::{
     get_default_tool_kaomoji, get_file_kaomoji, get_mood_kaomoji, get_pattern_kaomoji,
-    get_time_kaomoji, get_tool_kaomoji,
+    get_time_kaomoji_for, get_tool_kaomoji,
 };
 use crate::state::{PersonalityModifier, SessionState};
+use chrono::{DateTime, Local};
 
 /// Determine the appropriate personality based on context and state
 pub fn determine_personality(
@@ -15,6 +16,17 @@ pub fn determine_personality(
     tool_name: &str,
     file_path: Option<&str>,
     command: Option<&str>,
+) -> String {
+    determine_personality_at(state, tool_name, file_path, command, Local::now())
+}
+
+/// Determine personality at a specific time (used for testing)
+pub fn determine_personality_at(
+    state: &SessionState,
+    tool_name: &str,
+    file_path: Option<&str>,
+    command: Option<&str>,
+    now: DateTime<Local>,
 ) -> String {
     // Check for frustrated mood first (highest priority)
     if let PersonalityModifier::Frustrated = state.mood.get_personality_modifier() {
@@ -41,7 +53,7 @@ pub fn determine_personality(
     }
 
     // Check for time-based personalities (before defaults)
-    if let Some(kaomoji) = get_time_kaomoji() {
+    if let Some(kaomoji) = get_time_kaomoji_for(now) {
         return kaomoji.personality();
     }
 
@@ -63,6 +75,7 @@ pub fn determine_personality(
 mod tests {
     use super::*;
     use crate::types::Activity;
+    use chrono::TimeZone;
 
     // Helper function to create test state
     fn create_test_state(error_count: u32, consecutive_actions: u32) -> SessionState {
@@ -97,18 +110,25 @@ mod tests {
         }
     }
 
+    // Helper to create a test time (10 AM on Tuesday - no time-based personality)
+    fn test_time() -> DateTime<Local> {
+        Local.with_ymd_and_hms(2024, 1, 2, 10, 0, 0).unwrap()
+    }
+
     #[test]
     fn test_frustration_states() {
+        let time = test_time();
+
         let state = create_test_state(5, 0);
-        let personality = determine_personality(&state, "Edit", None, None);
+        let personality = determine_personality_at(&state, "Edit", None, None, time);
         assert_eq!(personality, "(╯°□°)╯︵ ┻━┻ Table Flipper");
 
         let state = create_test_state(3, 0);
-        let personality = determine_personality(&state, "Edit", None, None);
+        let personality = determine_personality_at(&state, "Edit", None, None, time);
         assert_eq!(personality, "(ノಠ益ಠ)ノ Error Warrior");
 
         let state = create_test_state(2, 0);
-        let personality = determine_personality(&state, "Edit", None, None);
+        let personality = determine_personality_at(&state, "Edit", None, None, time);
         assert_eq!(personality, "ლ(╹◡╹ლ) Cowder");
     }
 
@@ -189,24 +209,26 @@ mod tests {
 
     #[test]
     fn test_time_based_fallback() {
-        // This test is a bit tricky because it depends on the system time.
-        // However, we can verify that if no other personality matches, we fall back to EITHER
-        // a time-based personality OR the default personality.
-        
         let state = create_test_state(0, 0);
-        // Using a tool that doesn't have a specific high-priority personality
-        let personality = determine_personality(&state, "OtherTool", None, None);
-        
-        // It should be one of the time-based ones OR the default "Booting up..."
-        // or specific tool default if "OtherTool" maps to something (it maps to Booting Up in default_tool_kaomoji)
-        
-        let possible_personalities = vec![
-            "(ʘ,ʘ) Night Owl",
-            "( -_-)旦~ Caffeinated",
-            "ヽ(⌐■_■)ノ♪♬ TGIFFFFF",
-            "( ˘ ³˘) Chillin",
-        ];
-        
-        assert!(possible_personalities.contains(&personality.as_str()));
+
+        // Test Night Owl (2 AM)
+        let night_time = Local.with_ymd_and_hms(2024, 1, 2, 2, 0, 0).unwrap();
+        let personality = determine_personality_at(&state, "OtherTool", None, None, night_time);
+        assert_eq!(personality, "(ʘ,ʘ) Night Owl");
+
+        // Test Caffeinated (6 AM)
+        let morning_time = Local.with_ymd_and_hms(2024, 1, 2, 6, 0, 0).unwrap();
+        let personality = determine_personality_at(&state, "OtherTool", None, None, morning_time);
+        assert_eq!(personality, "( -_-)旦~ Caffeinated");
+
+        // Test TGIFFFFF (Friday 6 PM)
+        let friday_evening = Local.with_ymd_and_hms(2024, 1, 5, 18, 0, 0).unwrap(); // Jan 5, 2024 is Friday
+        let personality = determine_personality_at(&state, "OtherTool", None, None, friday_evening);
+        assert_eq!(personality, "ヽ(⌐■_■)ノ♪♬ TGIFFFFF");
+
+        // Test default (10 AM Tuesday - no time-based personality)
+        let default_time = test_time();
+        let personality = determine_personality_at(&state, "OtherTool", None, None, default_time);
+        assert_eq!(personality, "( ˘ ³˘) Chillin");
     }
 }
