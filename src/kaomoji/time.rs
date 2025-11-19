@@ -1,5 +1,5 @@
-use chrono::{Local, Timelike, Datelike};
 use crate::kaomoji::Kaomoji;
+use chrono::{DateTime, Datelike, Local, Timelike};
 
 // Night Owl (Midnight - 5 AM)
 pub const NIGHT_OWL: Kaomoji = Kaomoji::new("(ʘ,ʘ)", "Night Owl");
@@ -12,7 +12,11 @@ pub const TGIFFFFF: Kaomoji = Kaomoji::new("ヽ(⌐■_■)ノ♪♬", "TGIFFFFF
 
 /// Get time-based kaomoji if applicable
 pub fn get_time_kaomoji() -> Option<&'static Kaomoji> {
-    let now = Local::now();
+    get_time_kaomoji_for(Local::now())
+}
+
+/// Get time-based kaomoji for a specific time (used for testing)
+pub fn get_time_kaomoji_for(now: DateTime<Local>) -> Option<&'static Kaomoji> {
     let hour = now.hour();
     let weekday = now.weekday();
 
