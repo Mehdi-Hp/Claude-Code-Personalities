@@ -379,10 +379,12 @@ async fn verify_binary(binary_path: &PathBuf) -> Result<()> {
         if content.len() >= 4 {
             let magic = &content[0..4];
             let is_elf = magic == [0x7f, 0x45, 0x4c, 0x46]; // ELF
-            let is_macho = magic == [0xfe, 0xed, 0xfa, 0xce] || magic == [0xfe, 0xed, 0xfa, 0xcf]; // Mach-O
-            let is_fat_macho = magic == [0xca, 0xfe, 0xba, 0xbe]; // Fat Mach-O
+            // Mach-O magic numbers (little-endian as stored on disk)
+            let is_macho_32 = magic == [0xce, 0xfa, 0xed, 0xfe]; // MH_MAGIC (32-bit)
+            let is_macho_64 = magic == [0xcf, 0xfa, 0xed, 0xfe]; // MH_MAGIC_64 (64-bit)
+            let is_fat_macho = magic == [0xca, 0xfe, 0xba, 0xbe]; // FAT_MAGIC (universal)
 
-            if !is_elf && !is_macho && !is_fat_macho {
+            if !is_elf && !is_macho_32 && !is_macho_64 && !is_fat_macho {
                 return Err(anyhow!(
                     "Downloaded file does not appear to be a valid executable"
                 ));
@@ -537,7 +539,10 @@ mod tests {
     async fn test_verify_binary_valid() {
         let mut temp_file = NamedTempFile::new().unwrap();
 
-        // Write ELF magic number + some content
+        // Write platform-appropriate magic number + some content
+        #[cfg(target_os = "macos")]
+        temp_file.write_all(&[0xcf, 0xfa, 0xed, 0xfe]).unwrap(); // Mach-O 64-bit magic
+        #[cfg(target_os = "linux")]
         temp_file.write_all(&[0x7f, 0x45, 0x4c, 0x46]).unwrap(); // ELF magic
         temp_file.write_all(&vec![0; 2000]).unwrap(); // Pad to reasonable size
         temp_file.flush().unwrap();
