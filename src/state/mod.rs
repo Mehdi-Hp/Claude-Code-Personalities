@@ -324,6 +324,106 @@ impl SessionState {
         // If git command fails, keep existing cached value (don't set to None)
     }
 
+    /// Check git working tree status in a specific directory and update the state with caching.
+    ///
+    /// This is the same as `refresh_git_status()` but runs git commands in the specified directory.
+    /// Results are cached for 2 seconds to avoid performance overhead on every statusline render.
+    ///
+    /// # Arguments
+    /// * `current_dir` - The directory to run git commands in
+    pub async fn refresh_git_status_in_dir(&mut self, current_dir: &str) {
+        // Use cached value if still fresh
+        if !self.should_refresh_git_status() {
+            return;
+        }
+
+        // Run git status --porcelain in the specified directory
+        let output = tokio::process::Command::new("git")
+            .args(["status", "--porcelain"])
+            .current_dir(current_dir)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .output()
+            .await;
+
+        if let Ok(output) = output {
+            if output.status.success() {
+                // Working tree is dirty if there's any output
+                let has_changes = !output.stdout.is_empty();
+                self.git_dirty = Some(has_changes);
+
+                // Count number of changed files (each line is a file)
+                if has_changes {
+                    let count = output
+                        .stdout
+                        .split(|&b| b == b'\n')
+                        .filter(|line| !line.is_empty())
+                        .count();
+                    self.git_dirty_count = Some(count);
+                } else {
+                    self.git_dirty_count = Some(0);
+                }
+
+                // Update cache timestamp
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                self.git_status_checked_at = Some(now);
+            }
+        }
+        // If git command fails, keep existing cached value (don't set to None)
+    }
+
+    /// Refresh git branch from the specified directory.
+    ///
+    /// This method runs `git branch --show-current` to get the current branch.
+    /// Uses the same 2-second cache as git status to avoid performance overhead.
+    ///
+    /// # Arguments
+    /// * `current_dir` - The directory to run git commands in
+    pub async fn refresh_git_branch(&mut self, current_dir: &str) {
+        // Use same cache check as git_status - if we just refreshed, skip
+        if !self.should_refresh_git_status() {
+            return;
+        }
+
+        // Try modern git first (2.22+)
+        if let Ok(output) = tokio::process::Command::new("git")
+            .args(["branch", "--show-current"])
+            .current_dir(current_dir)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .output()
+            .await
+        {
+            if output.status.success() {
+                let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !branch.is_empty() {
+                    self.git_branch = Some(branch);
+                    return;
+                }
+            }
+        }
+
+        // Fallback for older git or detached HEAD
+        if let Ok(output) = tokio::process::Command::new("git")
+            .args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .current_dir(current_dir)
+            .env("GIT_OPTIONAL_LOCKS", "0")
+            .output()
+            .await
+        {
+            if output.status.success() {
+                let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !branch.is_empty() && branch != "HEAD" {
+                    self.git_branch = Some(branch);
+                    return;
+                }
+            }
+        }
+
+        // If both fail, don't overwrite existing cached value
+    }
+
     /// Clean up session state files for the given session ID.
     ///
     /// This function removes both the state file and error count file.

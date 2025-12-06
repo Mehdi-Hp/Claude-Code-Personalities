@@ -81,9 +81,27 @@ pub async fn run_statusline() -> Result<()> {
         .await
         .with_context(|| "Failed to load personality preferences")?;
 
+    // Get current directory from workspace for git operations
+    let current_dir = claude_input
+        .workspace
+        .as_ref()
+        .and_then(|w| w.current_dir.as_deref());
+
+    // Refresh git branch if enabled (with caching to avoid performance overhead)
+    // This runs git commands in the correct project directory
+    if prefs.show_git_branch {
+        if let Some(dir) = current_dir {
+            state.refresh_git_branch(dir).await;
+        }
+    }
+
     // Refresh git status if enabled (with caching to avoid performance overhead)
     if prefs.show_git_status {
-        state.refresh_git_status().await;
+        if let Some(dir) = current_dir {
+            state.refresh_git_status_in_dir(dir).await;
+        } else {
+            state.refresh_git_status().await;
+        }
     }
 
     // Check for updates if enabled (uses cache to avoid API rate limits)
