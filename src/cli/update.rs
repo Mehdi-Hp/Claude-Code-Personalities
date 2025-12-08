@@ -44,21 +44,21 @@ impl Default for UpdateOptions {
 /// - User cancels update when in interactive mode
 /// - Binary verification fails after installation
 pub async fn update_personalities(options: UpdateOptions) -> Result<()> {
-    intro("Checking for Claude Code Personalities updates")?;
+    intro("Checking for updates")?;
 
-    // Step 1: Check for updates and get release info
     let version_manager =
         VersionManager::new().with_context(|| "Failed to initialize version manager")?;
 
-    let latest_release = check_and_get_release(&version_manager, &options).await?;
+    let Some(latest_release) = check_and_get_release(&version_manager, &options).await? else {
+        outro("Already on the latest version")?;
+        return Ok(());
+    };
 
-    // Step 2: Show update information and get user confirmation
     let should_proceed = show_update_info_and_confirm(&latest_release, &options).await?;
     if !should_proceed {
         return Ok(());
     }
 
-    // Step 3: Perform the actual update
     perform_update(&version_manager, &latest_release).await?;
 
     Ok(())
@@ -67,7 +67,7 @@ pub async fn update_personalities(options: UpdateOptions) -> Result<()> {
 async fn check_and_get_release(
     version_manager: &VersionManager,
     options: &UpdateOptions,
-) -> Result<crate::version::GitHubRelease> {
+) -> Result<Option<crate::version::GitHubRelease>> {
     let update_info = version_manager
         .check_for_update()
         .await
@@ -76,20 +76,18 @@ async fn check_and_get_release(
     if let Some(release) = update_info {
         if release.prerelease && !options.include_prereleases {
             print_status("Latest release is a pre-release. Use --include-prereleases to update.");
-            return Err(anyhow!("Pre-release version available, but not included"));
+            return Ok(None);
         }
-        Ok(release)
+        Ok(Some(release))
+    } else if options.force {
+        print_status("Force update requested...");
+        let release = version_manager
+            .get_latest_release()
+            .await
+            .with_context(|| "Failed to get latest release for force update")?;
+        Ok(Some(release))
     } else {
-        print_status("Already running the latest version.");
-        if options.force {
-            print_status("Force update requested...");
-            version_manager
-                .get_latest_release()
-                .await
-                .with_context(|| "Failed to get latest release for force update")
-        } else {
-            Err(anyhow!("Already running latest version"))
-        }
+        Ok(None)
     }
 }
 
