@@ -1,11 +1,9 @@
 use anyhow::{Context, Result, anyhow};
 use cliclack::{confirm, intro, outro};
-use colored::Colorize;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
 use crate::cli::settings::get_claude_dir;
-use crate::icons::{ICON_CHECK, ICON_INFO, ICON_WARNING};
 use crate::platform::Platform;
 use crate::version::{
     CURRENT_VERSION, VersionManager, format_changelog, format_version_comparison,
@@ -70,7 +68,6 @@ async fn check_and_get_release(
     version_manager: &VersionManager,
     options: &UpdateOptions,
 ) -> Result<crate::version::GitHubRelease> {
-    print_info("Checking latest version...");
     let update_info = version_manager
         .check_for_update()
         .await
@@ -78,16 +75,14 @@ async fn check_and_get_release(
 
     if let Some(release) = update_info {
         if release.prerelease && !options.include_prereleases {
-            print_info(
-                "Latest release is a pre-release. Use --include-prereleases to update to it.",
-            );
+            print_status("Latest release is a pre-release. Use --include-prereleases to update.");
             return Err(anyhow!("Pre-release version available, but not included"));
         }
         Ok(release)
     } else {
-        print_success("You are already running the latest version!");
+        print_status("Already running the latest version.");
         if options.force {
-            print_info("Force update requested, continuing anyway...");
+            print_status("Force update requested...");
             version_manager
                 .get_latest_release()
                 .await
@@ -107,39 +102,31 @@ async fn show_update_info_and_confirm(
         .strip_prefix('v')
         .unwrap_or(&latest_release.tag_name);
     let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
-    println!();
-    println!(
-        "{} {}",
-        format!("{}Update Available:", "\u{f135} ").bold().green(),
-        comparison
-    );
 
-    if let Some(name) = &latest_release.name {
-        println!("{} {}", format!("{}Release:", "\u{f044} ").bold(), name);
-    }
+    println!();
+    print_status(&format!("{comparison} available"));
 
     let changelog = format_changelog(latest_release);
     if changelog != "No changelog available" {
         println!();
-        println!("{}", "📝 What's New:".bold().yellow());
+        print_status("What's new:");
         for line in changelog.lines().take(5) {
-            println!("   {line}");
+            println!("    {line}");
         }
         if changelog.lines().count() > 5 {
-            println!("   ... (view full changelog on GitHub)");
+            println!("    ...");
         }
     }
 
-    // Get user confirmation if interactive
     if options.interactive {
         println!();
-        let should_update = confirm("Do you want to update now?")
+        let should_update = confirm("Update now?")
             .initial_value(true)
             .interact()
             .with_context(|| "Failed to get user confirmation for update")?;
 
         if !should_update {
-            print_info("Update cancelled.");
+            print_status("Update cancelled.");
             return Ok(false);
         }
     }
@@ -151,15 +138,11 @@ async fn perform_update(
     version_manager: &VersionManager,
     latest_release: &crate::version::GitHubRelease,
 ) -> Result<()> {
-    // Step 1: Detect platform and find appropriate asset
-    print_info("Detecting platform...");
     let platform = Platform::detect().with_context(|| "Failed to detect current platform")?;
 
     if !platform.is_supported() {
         return Err(anyhow!("Unsupported platform: {}", platform.description()));
     }
-
-    print_success(&format!("Platform: {}", platform.description()));
 
     let asset = version_manager
         .find_platform_asset(latest_release, &platform.target)
@@ -170,16 +153,12 @@ async fn perform_update(
             )
         })?;
 
-    // Step 2: Set up paths and verify current installation
     let paths = setup_update_paths().await?;
 
-    // Step 3: Download and verify the new binary
+    println!();
     download_and_verify_binary(version_manager, asset, &paths.temp_binary).await?;
-
-    // Step 4: Backup and replace binary
     backup_and_replace_binary(&paths).await?;
 
-    // Step 5: Verify installation and cleanup
     let latest_version = latest_release
         .tag_name
         .strip_prefix('v')
@@ -271,47 +250,30 @@ async fn download_and_verify_binary(
     asset: &crate::version::GitHubAsset,
     temp_binary: &Path,
 ) -> Result<()> {
-    let size_mb = asset.size / 1_048_576; // Convert to MB using integer division
-    if size_mb > 0 {
-        print_info(&format!("Downloading {} ({} MB)...", asset.name, size_mb));
-    } else {
-        let size_kilobytes = asset.size / 1024; // Show in KB for smaller files
-        print_info(&format!(
-            "Downloading {} ({} KB)...",
-            asset.name, size_kilobytes
-        ));
-    }
+    print_status("Downloading...");
     version_manager
         .download_asset(asset, temp_binary)
         .await
         .with_context(|| "Failed to download update")?;
-    print_success("Download completed");
 
-    print_info("Verifying SHA256 checksum...");
+    print_status("Verifying...");
     verify_binary_sha256(asset, temp_binary)
         .await
         .with_context(|| "SHA256 verification failed")?;
-    print_success("Checksum verified");
 
     Ok(())
 }
 
 async fn backup_and_replace_binary(paths: &UpdatePaths) -> Result<()> {
-    print_info("Creating backup of current version...");
+    print_status("Installing...");
     fs::copy(&paths.current_binary, &paths.backup_binary)
         .await
         .with_context(|| format!("Failed to create backup: {}", paths.backup_binary.display()))?;
-    print_success(&format!(
-        "Backup created: {}",
-        paths.backup_binary.display()
-    ));
 
-    print_info("Installing updated binary...");
     fs::rename(&paths.temp_binary, &paths.current_binary)
         .await
         .with_context(|| "Failed to replace current binary with updated version")?;
 
-    // Set executable permissions
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -325,30 +287,29 @@ async fn backup_and_replace_binary(paths: &UpdatePaths) -> Result<()> {
             .with_context(|| "Failed to set executable permissions on updated binary")?;
     }
 
-    print_success("Binary updated successfully");
     Ok(())
 }
 
 async fn verify_installation_and_cleanup(paths: &UpdatePaths, latest_version: &str) -> Result<()> {
-    print_info("Verifying installation...");
     let new_version = get_binary_version(&paths.current_binary)
         .await
         .with_context(|| "Failed to verify new binary version")?;
-
-    if new_version.trim_start_matches('v') == latest_version {
-        print_success(&format!("Update verified: now running v{latest_version}"));
-    } else {
-        print_warning(&format!(
-            "Version mismatch: expected v{latest_version}, got {new_version}"
-        ));
-    }
 
     cleanup_old_backups(&paths.claude_dir)
         .await
         .with_context(|| "Failed to clean up old backups")?;
 
-    println!();
-    print_update_success(CURRENT_VERSION, latest_version, &paths.current_binary)?;
+    if new_version.trim_start_matches('v') == latest_version {
+        println!();
+        outro(format!("Updated to v{latest_version}"))?;
+        print_update_success(CURRENT_VERSION);
+    } else {
+        println!();
+        outro(format!(
+            "Updated (expected v{latest_version}, got {new_version})"
+        ))?;
+        print_update_success(CURRENT_VERSION);
+    }
 
     Ok(())
 }
@@ -462,82 +423,20 @@ async fn cleanup_old_backups(claude_dir: &PathBuf) -> Result<()> {
 
     // Remove all but the newest 3 backups
     for (path, _) in backup_files.iter().skip(3) {
-        if let Err(e) = fs::remove_file(path).await {
-            print_warning(&format!(
-                "Failed to remove old backup {}: {}",
-                path.display(),
-                e
-            ));
-        }
+        // Silently ignore cleanup failures - not critical
+        let _ = fs::remove_file(path).await;
     }
 
     Ok(())
 }
 
-/// Print update success message
-fn print_update_success(old_version: &str, new_version: &str, binary_path: &Path) -> Result<()> {
-    outro(format!(
-        "{} Claude Code Personalities Updated Successfully!",
-        ICON_CHECK.green()
-    ))?;
-
+fn print_update_success(old_version: &str) {
     println!();
-
-    let version_change = format!("v{old_version} → v{new_version}");
-    println!(
-        "{} {}",
-        format!("{}Version:", "\u{f135} ").bold(),
-        version_change.green()
-    );
-    println!(
-        "{} {}",
-        format!("{}Location:", "\u{f07b} ").bold(),
-        binary_path.display()
-    );
-    println!();
-
-    println!("{}", "What's Next:".bold().cyan());
-    println!("  1. Your personalities will continue working with new features!");
-    println!(
-        "  2. Check status with: {}",
-        "claude-code-personalities status".cyan()
-    );
-    println!();
-
-    println!("{}", "Need Help?".bold().magenta());
-    println!(
-        "  {} View configuration options",
-        "claude-code-personalities config".cyan()
-    );
-    println!(
-        "  {} Get help and usage info",
-        "claude-code-personalities help".cyan()
-    );
-    println!(
-        "  {} Report issues on GitHub",
-        "https://github.com/Mehdi-Hp/claude-code-personalities/issues".cyan()
-    );
-    println!();
-
-    println!(
-        "{} Your Claude Code personalities are now up to date!",
-        "\u{f135}".yellow()
-    );
-
-    Ok(())
+    println!("  Backup: ~/.claude/claude-code-personalities.backup.{old_version}");
 }
 
-/// Helper functions for status output
-fn print_info(message: &str) {
-    println!("  {} {}", ICON_INFO.cyan(), message);
-}
-
-fn print_success(message: &str) {
-    println!("  {} {}", ICON_CHECK.green(), message);
-}
-
-fn print_warning(message: &str) {
-    println!("  {} {}", ICON_WARNING.yellow(), message);
+fn print_status(message: &str) {
+    println!("  {message}");
 }
 
 #[cfg(test)]
