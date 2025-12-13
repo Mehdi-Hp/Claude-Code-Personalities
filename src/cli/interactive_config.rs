@@ -101,6 +101,7 @@ impl ConfigApp {
             .unwrap_or(0);
 
         vec![
+            // Personality (standalone)
             ConfigOption {
                 name: "Personality",
                 pref_key: "Personality",
@@ -110,6 +111,7 @@ impl ConfigApp {
                 enabled: prefs.show_personality,
                 option_type: OptionType::Toggle,
             },
+            // Activity section with Icon, Label, and Context children
             ConfigOption {
                 name: "Activity",
                 pref_key: "Activity",
@@ -117,6 +119,24 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_activity,
+                option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Icon",
+                pref_key: "Activity Icon",
+                depth: 1,
+                parent: Some("Activity"),
+                is_last_child: false,
+                enabled: prefs.show_activity_icon,
+                option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Label",
+                pref_key: "Activity Label",
+                depth: 1,
+                parent: Some("Activity"),
+                is_last_child: false,
+                enabled: prefs.show_activity_label,
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
@@ -128,6 +148,7 @@ impl ConfigApp {
                 enabled: prefs.show_context,
                 option_type: OptionType::Toggle,
             },
+            // Git section with Icon, Label, Branch, and Status children
             ConfigOption {
                 name: "Git",
                 pref_key: "Git",
@@ -135,6 +156,15 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_git,
+                option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Icon",
+                pref_key: "Git Icon",
+                depth: 1,
+                parent: Some("Git"),
+                is_last_child: false,
+                enabled: prefs.show_git_icon,
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
@@ -155,6 +185,7 @@ impl ConfigApp {
                 enabled: prefs.show_git_status,
                 option_type: OptionType::Toggle,
             },
+            // Directory section with Icon and Label children
             ConfigOption {
                 name: "Current Directory",
                 pref_key: "Current Directory",
@@ -165,6 +196,25 @@ impl ConfigApp {
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
+                name: "Icon",
+                pref_key: "Directory Icon",
+                depth: 1,
+                parent: Some("Current Directory"),
+                is_last_child: false,
+                enabled: prefs.show_directory_icon,
+                option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Label",
+                pref_key: "Directory Label",
+                depth: 1,
+                parent: Some("Current Directory"),
+                is_last_child: true,
+                enabled: prefs.show_directory_label,
+                option_type: OptionType::Toggle,
+            },
+            // Model section with Icon and Label children
+            ConfigOption {
                 name: "Model",
                 pref_key: "Model",
                 depth: 0,
@@ -174,57 +224,31 @@ impl ConfigApp {
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
+                name: "Icon",
+                pref_key: "Model Icon",
+                depth: 1,
+                parent: Some("Model"),
+                is_last_child: false,
+                enabled: prefs.show_model_icon,
+                option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Label",
+                pref_key: "Model Label",
+                depth: 1,
+                parent: Some("Model"),
+                is_last_child: true,
+                enabled: prefs.show_model_label,
+                option_type: OptionType::Toggle,
+            },
+            // Standalone options
+            ConfigOption {
                 name: "Update Available",
                 pref_key: "Update Available",
                 depth: 0,
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_update_available,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
-                name: "Icons",
-                pref_key: "Icons",
-                depth: 0,
-                parent: None,
-                is_last_child: false,
-                enabled: prefs.use_icons,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
-                name: "Activity",
-                pref_key: "Activity Icon",
-                depth: 1,
-                parent: Some("Icons"),
-                is_last_child: false,
-                enabled: prefs.show_activity_icon,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
-                name: "Git",
-                pref_key: "Git Icon",
-                depth: 1,
-                parent: Some("Icons"),
-                is_last_child: false,
-                enabled: prefs.show_git_icon,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
-                name: "Directory",
-                pref_key: "Directory Icon",
-                depth: 1,
-                parent: Some("Icons"),
-                is_last_child: false,
-                enabled: prefs.show_directory_icon,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
-                name: "Model",
-                pref_key: "Model Icon",
-                depth: 1,
-                parent: Some("Icons"),
-                is_last_child: true,
-                enabled: prefs.show_model_icon,
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
@@ -345,11 +369,40 @@ impl ConfigApp {
             // Update preferences
             self.prefs.update_from_selections(&selections);
 
+            // Auto-disable parents with no enabled children
+            self.auto_disable_empty_parents();
+
             // Refresh options list
             self.options = Self::build_options(&self.prefs);
         } else if self.cursor == self.options.len() {
             // "Done" option selected
             self.should_quit = true;
+        }
+    }
+
+    /// Auto-disable parent sections when all their children are disabled
+    fn auto_disable_empty_parents(&mut self) {
+        // Activity: disable if Icon=false AND Label=false AND Context=false
+        if !self.prefs.show_activity_icon
+            && !self.prefs.show_activity_label
+            && !self.prefs.show_context
+        {
+            self.prefs.show_activity = false;
+        }
+
+        // Git: disable if Icon=false AND Branch=false AND Status=false
+        if !self.prefs.show_git_icon && !self.prefs.show_git_branch && !self.prefs.show_git_status {
+            self.prefs.show_git = false;
+        }
+
+        // Directory: disable if Icon=false AND Label=false
+        if !self.prefs.show_directory_icon && !self.prefs.show_directory_label {
+            self.prefs.show_current_dir = false;
+        }
+
+        // Model: disable if Icon=false AND Label=false
+        if !self.prefs.show_model_icon && !self.prefs.show_model_label {
+            self.prefs.show_model = false;
         }
     }
 
