@@ -97,31 +97,6 @@ async fn configure_display() -> Result<()> {
     let prefs_path = PersonalityPreferences::get_preferences_path()
         .with_context(|| "Failed to get preferences file path for display")?;
 
-    // Get final state for summary
-    let final_options = updated_prefs.get_display_options();
-    let enabled_features: Vec<&str> = final_options
-        .iter()
-        .filter_map(|(name, enabled)| if *enabled { Some(*name) } else { None })
-        .collect();
-
-    let disabled_features: Vec<&str> = final_options
-        .iter()
-        .filter_map(|(name, enabled)| if !enabled { Some(*name) } else { None })
-        .collect();
-
-    // Show summary
-    println!("\nEnabled features:");
-    for feature in &enabled_features {
-        println!("  {} {}", ICON_CHECK.green(), feature);
-    }
-
-    if !disabled_features.is_empty() {
-        println!("\nDisabled features:");
-        for feature in disabled_features {
-            println!("  {} {}", ICON_WARNING.yellow(), feature);
-        }
-    }
-
     outro(format!(
         "{} Display configuration saved to: {}",
         ICON_CHECK.green(),

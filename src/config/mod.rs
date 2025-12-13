@@ -1,3 +1,3 @@
 pub mod preferences;
 
-pub use preferences::PersonalityPreferences;
+pub use preferences::{PersonalityPreferences, StatuslineSection};

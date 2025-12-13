@@ -1,6 +1,17 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+/// Helper to create a command with test config that uses defaults
+fn cargo_run_with_test_config() -> Command {
+    let mut cmd = Command::new("cargo");
+    // Point to non-existent file so defaults are used
+    cmd.env(
+        "CLAUDE_PERSONALITIES_CONFIG",
+        "/tmp/nonexistent_test_config.json",
+    );
+    cmd
+}
+
 #[tokio::test]
 async fn test_statusline_end_to_end() {
     // Use a unique session ID each time to avoid cached state
@@ -23,7 +34,7 @@ async fn test_statusline_end_to_end() {
     );
 
     // Build the binary first
-    let output = Command::new("cargo")
+    let output = cargo_run_with_test_config()
         .args(["build", "--release"])
         .output()
         .expect("Failed to build binary");
@@ -35,7 +46,7 @@ async fn test_statusline_end_to_end() {
     );
 
     // Test statusline mode
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -86,7 +97,7 @@ async fn test_hook_mode() {
     }"#;
 
     // Test hook mode
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -121,7 +132,7 @@ async fn test_hook_mode() {
         }
     }"#;
 
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -164,7 +175,7 @@ async fn test_hook_mode() {
 
 #[test]
 fn test_cli_help() {
-    let output = Command::new("cargo")
+    let output = cargo_run_with_test_config()
         .args(["run", "--", "help"])
         .output()
         .expect("Failed to run help command");
@@ -182,7 +193,7 @@ fn test_cli_help() {
 fn test_invalid_json_input() {
     let invalid_json = "not json at all";
 
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -220,7 +231,7 @@ async fn test_personality_progression() {
     }}"#
     );
 
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -247,7 +258,7 @@ async fn test_personality_progression() {
     }}"#
     );
 
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -275,7 +286,7 @@ async fn test_personality_progression() {
     }}"#
     );
 
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--hook", "pre-tool"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -295,7 +306,7 @@ async fn test_personality_progression() {
     assert!(output.status.success());
 
     // 4. Check statusline shows documentation personality
-    let mut child = Command::new("cargo")
+    let mut child = cargo_run_with_test_config()
         .args(["run", "--", "--statusline"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

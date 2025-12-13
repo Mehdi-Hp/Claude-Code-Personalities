@@ -17,7 +17,7 @@ use ratatui::{
 };
 use std::io;
 
-use crate::config::PersonalityPreferences;
+use crate::config::{PersonalityPreferences, StatuslineSection};
 use crate::state::SessionState;
 use crate::statusline::{WorkspaceInfo, build_statusline};
 use crate::types::Activity;
@@ -48,6 +48,8 @@ enum OptionType {
         choices: &'static [&'static str],
         current_index: usize,
     },
+    /// Move section position in statusline (left/right arrows)
+    Move { section: StatuslineSection },
 }
 
 /// A hierarchical config option with tree structure information
@@ -101,7 +103,7 @@ impl ConfigApp {
             .unwrap_or(0);
 
         vec![
-            // Personality (standalone)
+            // Personality section with Move child
             ConfigOption {
                 name: "Personality",
                 pref_key: "Personality",
@@ -111,7 +113,18 @@ impl ConfigApp {
                 enabled: prefs.show_personality,
                 option_type: OptionType::Toggle,
             },
-            // Activity section with Icon, Label, and Context children
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Personality",
+                depth: 1,
+                parent: Some("Personality"),
+                is_last_child: true,
+                enabled: true, // Move is always "enabled" (just a control)
+                option_type: OptionType::Move {
+                    section: StatuslineSection::Personality,
+                },
+            },
+            // Activity section with Move, Icon, Label, and Context children
             ConfigOption {
                 name: "Activity",
                 pref_key: "Activity",
@@ -120,6 +133,17 @@ impl ConfigApp {
                 is_last_child: false,
                 enabled: prefs.show_activity,
                 option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Activity",
+                depth: 1,
+                parent: Some("Activity"),
+                is_last_child: false,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::Activity,
+                },
             },
             ConfigOption {
                 name: "Icon",
@@ -148,7 +172,7 @@ impl ConfigApp {
                 enabled: prefs.show_context,
                 option_type: OptionType::Toggle,
             },
-            // Git section with Icon, Label, Branch, and Status children
+            // Git section with Move, Icon, Branch, and Status children
             ConfigOption {
                 name: "Git",
                 pref_key: "Git",
@@ -157,6 +181,17 @@ impl ConfigApp {
                 is_last_child: false,
                 enabled: prefs.show_git,
                 option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Git",
+                depth: 1,
+                parent: Some("Git"),
+                is_last_child: false,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::Git,
+                },
             },
             ConfigOption {
                 name: "Icon",
@@ -185,7 +220,7 @@ impl ConfigApp {
                 enabled: prefs.show_git_status,
                 option_type: OptionType::Toggle,
             },
-            // Directory section with Icon and Label children
+            // Directory section with Move, Icon and Label children
             ConfigOption {
                 name: "Current Directory",
                 pref_key: "Current Directory",
@@ -194,6 +229,17 @@ impl ConfigApp {
                 is_last_child: false,
                 enabled: prefs.show_current_dir,
                 option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Directory",
+                depth: 1,
+                parent: Some("Current Directory"),
+                is_last_child: false,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::Directory,
+                },
             },
             ConfigOption {
                 name: "Icon",
@@ -213,7 +259,7 @@ impl ConfigApp {
                 enabled: prefs.show_directory_label,
                 option_type: OptionType::Toggle,
             },
-            // Model section with Icon and Label children
+            // Model section with Move, Icon and Label children
             ConfigOption {
                 name: "Model",
                 pref_key: "Model",
@@ -222,6 +268,17 @@ impl ConfigApp {
                 is_last_child: false,
                 enabled: prefs.show_model,
                 option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Model",
+                depth: 1,
+                parent: Some("Model"),
+                is_last_child: false,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::Model,
+                },
             },
             ConfigOption {
                 name: "Icon",
@@ -241,7 +298,7 @@ impl ConfigApp {
                 enabled: prefs.show_model_label,
                 option_type: OptionType::Toggle,
             },
-            // Standalone options
+            // Update Available with Move child
             ConfigOption {
                 name: "Update Available",
                 pref_key: "Update Available",
@@ -252,6 +309,18 @@ impl ConfigApp {
                 option_type: OptionType::Toggle,
             },
             ConfigOption {
+                name: "Move",
+                pref_key: "Move Update",
+                depth: 1,
+                parent: Some("Update Available"),
+                is_last_child: true,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::UpdateAvailable,
+                },
+            },
+            // Colors (standalone, not reorderable)
+            ConfigOption {
                 name: "Colors",
                 pref_key: "Colors",
                 depth: 0,
@@ -260,6 +329,7 @@ impl ConfigApp {
                 enabled: prefs.use_colors,
                 option_type: OptionType::Toggle,
             },
+            // Separators (standalone, not reorderable)
             ConfigOption {
                 name: "Separators",
                 pref_key: "Separators",
@@ -272,6 +342,7 @@ impl ConfigApp {
                     current_index: separator_index,
                 },
             },
+            // Debug Info with Move child
             ConfigOption {
                 name: "Debug Info",
                 pref_key: "Debug Info",
@@ -280,6 +351,17 @@ impl ConfigApp {
                 is_last_child: false,
                 enabled: prefs.display.show_debug_info,
                 option_type: OptionType::Toggle,
+            },
+            ConfigOption {
+                name: "Move",
+                pref_key: "Move Debug",
+                depth: 1,
+                parent: Some("Debug Info"),
+                is_last_child: true,
+                enabled: true,
+                option_type: OptionType::Move {
+                    section: StatuslineSection::DebugInfo,
+                },
             },
         ]
     }
@@ -306,6 +388,42 @@ impl ConfigApp {
 
             // Rebuild options to reflect the change
             self.options = Self::build_options(&self.prefs);
+        }
+    }
+
+    /// Move a section left or right in the statusline order
+    fn move_section(&mut self, direction: i32) {
+        if self.cursor >= self.options.len() {
+            return;
+        }
+
+        let opt = &self.options[self.cursor];
+        if let OptionType::Move { section } = &opt.option_type {
+            // Find current position of the section
+            if let Some(idx) = self.prefs.section_order.iter().position(|s| s == section) {
+                let len = self.prefs.section_order.len();
+                let new_idx = (idx as i32 + direction).clamp(0, len as i32 - 1) as usize;
+
+                // Only swap if actually moving
+                if new_idx != idx {
+                    self.prefs.section_order.swap(idx, new_idx);
+                    // Rebuild options to reflect the change (preview will update)
+                    self.options = Self::build_options(&self.prefs);
+                }
+            }
+        }
+    }
+
+    /// Handle left/right key press - routes to move_section or cycle_selection
+    fn handle_horizontal_key(&mut self, direction: i32) {
+        if self.cursor >= self.options.len() {
+            return;
+        }
+
+        match &self.options[self.cursor].option_type {
+            OptionType::Move { .. } => self.move_section(direction),
+            OptionType::Select { .. } => self.cycle_selection(direction),
+            OptionType::Toggle => {} // No horizontal action for toggles
         }
     }
 
@@ -511,10 +629,10 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.move_cursor_down();
                         }
                         KeyCode::Left | KeyCode::Char('h') => {
-                            app.cycle_selection(-1);
+                            app.handle_horizontal_key(-1);
                         }
                         KeyCode::Right | KeyCode::Char('l') => {
-                            app.cycle_selection(1);
+                            app.handle_horizontal_key(1);
                         }
                         KeyCode::Char(' ') => {
                             app.toggle_current();
@@ -563,18 +681,13 @@ fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
     let workspace = create_preview_workspace();
     let statusline = build_statusline(&state, "Sonnet", &app.prefs, Some(&workspace), None);
 
-    // Fancy block with decorative title
     let block = Block::default()
-        .title(Line::from(vec![
-            Span::styled("✨ ", Style::default().fg(Color::Yellow)),
-            Span::styled(
-                "Statusline Preview",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" ✨", Style::default().fg(Color::Yellow)),
-        ]))
+        .title(Line::from(vec![Span::styled(
+            "Preview",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )]))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan))
         .padding(Padding::horizontal(2)); // Horizontal padding only
@@ -653,40 +766,85 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
                 ));
             }
 
-            // Checkbox
-            spans.push(Span::styled(checkbox, Style::default().fg(check_color)));
-            spans.push(Span::raw(" "));
+            // Handle different option types
+            match &opt.option_type {
+                OptionType::Move { section } => {
+                    // No checkbox for Move - just show position indicator
+                    let is_selected = idx == app.cursor;
 
-            // Option name
-            spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
+                    // Find current position in section_order
+                    let position = app
+                        .prefs
+                        .section_order
+                        .iter()
+                        .position(|s| s == section)
+                        .map(|p| p + 1) // 1-indexed for display
+                        .unwrap_or(0);
+                    let total = app.prefs.section_order.len();
 
-            // For Select type options, show the current value with cycling arrows
-            if let OptionType::Select {
-                choices,
-                current_index,
-            } = &opt.option_type
-            {
-                let current_value = choices[*current_index];
-                let is_selected = idx == app.cursor;
+                    // Option name
+                    spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
+                    spans.push(Span::raw("  ")); // spacing
 
-                spans.push(Span::raw("  ")); // spacing
+                    // Position indicator with arrows when selected
+                    let pos_str = format!("{position}/{total}");
+                    if is_selected {
+                        spans.push(Span::styled("◀ ", Style::default().fg(Color::Cyan)));
+                        spans.push(Span::styled(
+                            pos_str,
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        ));
+                        spans.push(Span::styled(" ▶", Style::default().fg(Color::Cyan)));
+                    } else {
+                        spans.push(Span::styled(
+                            format!("  {pos_str}  "),
+                            Style::default().fg(Color::DarkGray),
+                        ));
+                    }
+                }
+                OptionType::Select {
+                    choices,
+                    current_index,
+                } => {
+                    // Checkbox
+                    spans.push(Span::styled(checkbox, Style::default().fg(check_color)));
+                    spans.push(Span::raw(" "));
 
-                if is_selected {
-                    // Show arrows when selected to indicate cycling
-                    spans.push(Span::styled("◀ ", Style::default().fg(Color::Cyan)));
-                    spans.push(Span::styled(
-                        current_value,
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD),
-                    ));
-                    spans.push(Span::styled(" ▶", Style::default().fg(Color::Cyan)));
-                } else {
-                    // Just show the value when not selected
-                    spans.push(Span::styled(
-                        current_value,
-                        Style::default().fg(Color::DarkGray),
-                    ));
+                    // Option name
+                    spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
+
+                    let current_value = choices[*current_index];
+                    let is_selected = idx == app.cursor;
+
+                    spans.push(Span::raw("  ")); // spacing
+
+                    if is_selected {
+                        // Show arrows when selected to indicate cycling
+                        spans.push(Span::styled("◀ ", Style::default().fg(Color::Cyan)));
+                        spans.push(Span::styled(
+                            current_value,
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        ));
+                        spans.push(Span::styled(" ▶", Style::default().fg(Color::Cyan)));
+                    } else {
+                        // Just show the value when not selected
+                        spans.push(Span::styled(
+                            current_value,
+                            Style::default().fg(Color::DarkGray),
+                        ));
+                    }
+                }
+                OptionType::Toggle => {
+                    // Checkbox
+                    spans.push(Span::styled(checkbox, Style::default().fg(check_color)));
+                    spans.push(Span::raw(" "));
+
+                    // Option name
+                    spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
                 }
             }
 
