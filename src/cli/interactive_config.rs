@@ -61,6 +61,12 @@ impl ConfigApp {
             // Toggle the selected one
             if selections.contains(&name) {
                 selections.retain(|&x| x != name);
+
+                // Dependency: When "Activity" is hidden, also hide "Activity Context"
+                // (context is meaningless without the activity it describes)
+                if name == "Activity" {
+                    selections.retain(|&x| x != "Activity Context");
+                }
             } else {
                 selections.push(name);
             }
