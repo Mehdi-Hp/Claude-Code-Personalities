@@ -178,7 +178,7 @@ pub fn build_statusline(
                     String::new()
                 };
 
-                let spacing = if prefs.display.compact_mode { "" } else { " " };
+                let spacing = " ";
 
                 if parts.is_empty() {
                     parts.push(workspace_text);
@@ -278,7 +278,7 @@ pub fn build_statusline(
                     String::new()
                 };
 
-                let spacing = if prefs.display.compact_mode { "" } else { " " };
+                let spacing = " ";
 
                 if parts.is_empty() {
                     parts.push(branch_text);
@@ -352,7 +352,7 @@ pub fn build_statusline(
             String::new()
         };
 
-        let spacing = if prefs.display.compact_mode { "" } else { " " };
+        let spacing = " ";
 
         if parts.is_empty() {
             parts.push(activity_text);
@@ -397,7 +397,7 @@ pub fn build_statusline(
             String::new()
         };
 
-        let spacing = if prefs.display.compact_mode { "" } else { " " };
+        let spacing = " ";
 
         if parts.is_empty() {
             parts.push(colored_model);
@@ -433,7 +433,7 @@ pub fn build_statusline(
             String::new()
         };
 
-        let spacing = if prefs.display.compact_mode { "" } else { " " };
+        let spacing = " ";
 
         if parts.is_empty() {
             parts.push(colored_update);
@@ -461,7 +461,7 @@ pub fn build_statusline(
             String::new()
         };
 
-        let spacing = if prefs.display.compact_mode { "" } else { " " };
+        let spacing = " ";
 
         let debug_text = if prefs.use_colors {
             prefs.theme.apply_separator(&debug_info)
@@ -834,37 +834,6 @@ mod tests {
         let statusline_minimal = build_statusline(&state, "Opus", &prefs_minimal, None, None);
         // Should be empty since we disabled everything important
         assert!(statusline_minimal.is_empty());
-    }
-
-    #[test]
-    fn test_compact_mode() {
-        use crate::types::Activity;
-        let state = SessionState {
-            activity: Activity::Editing,
-            current_job: Some("test.js".to_string()),
-            ..Default::default()
-        };
-
-        // Normal mode
-        let prefs_normal = PersonalityPreferences {
-            use_colors: false, // Disable colors for easier testing
-            ..Default::default()
-        };
-        let statusline_normal = build_statusline(&state, "Opus", &prefs_normal, None, None);
-
-        // Compact mode
-        let prefs_compact = PersonalityPreferences {
-            use_colors: false, // Disable colors for easier testing
-            display: DisplayConfig {
-                compact_mode: true,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let statusline_compact = build_statusline(&state, "Opus", &prefs_compact, None, None);
-
-        // Compact mode should be shorter due to less spacing
-        assert!(statusline_compact.len() < statusline_normal.len());
     }
 
     #[test]
