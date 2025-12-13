@@ -543,21 +543,39 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
         })
         .collect();
 
-    // Add "Done" option
-    let done_content = Line::from(vec![
-        Span::styled("→ ", Style::default().fg(Color::Yellow)),
-        Span::raw("Done"),
-    ]);
+    // Add separator before Done button
+    let separator_line = Line::from(Span::styled(
+        "─────────────────────────────",
+        Style::default().fg(Color::DarkGray),
+    ));
+    items.push(ListItem::new(separator_line));
 
-    let done_style = if app.cursor == app.options.len() {
-        Style::default()
-            .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD)
+    // Add "Done" button with pill-style design
+    let is_done_selected = app.cursor == app.options.len();
+
+    let done_content = if is_done_selected {
+        // Selected state: highlighted pill button
+        Line::from(vec![
+            Span::styled("  ", Style::default()),
+            Span::styled(
+                " ✓ Save & Exit ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ])
     } else {
-        Style::default()
+        // Unselected state: subtle outline button
+        Line::from(vec![
+            Span::styled("  ", Style::default()),
+            Span::styled("[ ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Save & Exit", Style::default().fg(Color::White)),
+            Span::styled(" ]", Style::default().fg(Color::DarkGray)),
+        ])
     };
 
-    items.push(ListItem::new(done_content).style(done_style));
+    items.push(ListItem::new(done_content));
 
     let list = List::new(items).block(
         Block::default()
