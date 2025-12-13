@@ -12,16 +12,24 @@ type Result<T> = std::result::Result<T, PersonalityError>;
 pub struct DisplayConfig {
     /// Show separator dots between elements
     pub show_separators: bool,
+    /// The separator character to use between elements
+    #[serde(default = "default_separator")]
+    pub separator_char: String,
     /// Use compact mode (fewer spaces)
     pub compact_mode: bool,
     /// Show debugging info (error counts, session info)
     pub show_debug_info: bool,
 }
 
+fn default_separator() -> String {
+    "\u{2022}".to_string() // • bullet
+}
+
 impl Default for DisplayConfig {
     fn default() -> Self {
         Self {
             show_separators: true,
+            separator_char: default_separator(),
             compact_mode: false,
             show_debug_info: false,
         }
@@ -391,6 +399,7 @@ mod tests {
     fn test_display_config_defaults() {
         let display = DisplayConfig::default();
         assert!(display.show_separators);
+        assert_eq!(display.separator_char, "\u{2022}"); // • bullet
         assert!(!display.compact_mode);
         assert!(!display.show_debug_info);
     }
