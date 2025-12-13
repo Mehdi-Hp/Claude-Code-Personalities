@@ -310,11 +310,20 @@ If experiencing slowness, check:
 ## Development
 
 ### Building from Source
-```bash
-git clone https://github.com/Mehdi-Hp/claude-code-personalities
-cd claude-code-personalities
-cargo build --release
 
+**Use `just` for development commands** - the project uses a justfile for common tasks:
+```bash
+just              # Show available commands
+just build        # Build release binary
+just test         # Run tests
+just lint         # Run clippy
+just develop-link # Link dev binary for testing (creates symlink)
+just develop-unlink # Restore original binary
+```
+
+Manual build:
+```bash
+cargo build --release
 # Binary at target/release/claude-code-personalities
 ```
 
