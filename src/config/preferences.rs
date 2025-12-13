@@ -61,10 +61,9 @@ pub struct PersonalityPreferences {
     pub show_model: bool,
     #[serde(default = "default_true")]
     pub show_update_available: bool,
-    pub use_icons: bool,
     pub use_colors: bool,
 
-    // Per-section icon toggles (children of use_icons)
+    // Per-section icon toggles
     #[serde(default = "default_true")]
     pub show_activity_icon: bool,
     #[serde(default = "default_true")]
@@ -73,6 +72,14 @@ pub struct PersonalityPreferences {
     pub show_directory_icon: bool,
     #[serde(default = "default_true")]
     pub show_model_icon: bool,
+
+    // Per-section label toggles
+    #[serde(default = "default_true")]
+    pub show_activity_label: bool,
+    #[serde(default = "default_true")]
+    pub show_directory_label: bool,
+    #[serde(default = "default_true")]
+    pub show_model_label: bool,
 
     // Advanced configurations
     #[serde(default)]
@@ -101,13 +108,16 @@ impl Default for PersonalityPreferences {
             show_current_dir: false, // Hidden by default per user request
             show_model: true,
             show_update_available: true, // Show update indicator by default
-            use_icons: true,
             use_colors: true,
             // Per-section icon toggles (all enabled by default)
             show_activity_icon: true,
             show_git_icon: true,
             show_directory_icon: true,
             show_model_icon: true,
+            // Per-section label toggles (all enabled by default)
+            show_activity_label: true,
+            show_directory_label: true,
+            show_model_label: true,
             display: DisplayConfig::default(),
             theme: Theme::default(),
         }
@@ -217,7 +227,6 @@ impl PersonalityPreferences {
             ("Current Directory", self.show_current_dir),
             ("Model", self.show_model),
             ("Update Available", self.show_update_available),
-            ("Icons", self.use_icons),
             ("Colors", self.use_colors),
             ("Separators", self.display.show_separators),
             ("Debug Info", self.display.show_debug_info),
@@ -236,12 +245,14 @@ impl PersonalityPreferences {
         self.show_current_dir = false;
         self.show_model = false;
         self.show_update_available = false;
-        self.use_icons = false;
         self.use_colors = false;
         self.show_activity_icon = false;
         self.show_git_icon = false;
         self.show_directory_icon = false;
         self.show_model_icon = false;
+        self.show_activity_label = false;
+        self.show_directory_label = false;
+        self.show_model_label = false;
         self.display.show_separators = false;
         self.display.show_debug_info = false;
 
@@ -257,12 +268,14 @@ impl PersonalityPreferences {
                 "Current Directory" => self.show_current_dir = true,
                 "Model" => self.show_model = true,
                 "Update Available" => self.show_update_available = true,
-                "Icons" => self.use_icons = true,
                 "Colors" => self.use_colors = true,
                 "Activity Icon" => self.show_activity_icon = true,
                 "Git Icon" => self.show_git_icon = true,
                 "Directory Icon" => self.show_directory_icon = true,
                 "Model Icon" => self.show_model_icon = true,
+                "Activity Label" => self.show_activity_label = true,
+                "Directory Label" => self.show_directory_label = true,
+                "Model Label" => self.show_model_label = true,
                 "Separators" => self.display.show_separators = true,
                 "Debug Info" => self.display.show_debug_info = true,
                 _ => {} // Ignore unknown options
@@ -288,13 +301,16 @@ mod tests {
         assert!(!prefs.show_current_dir); // Should be false by default
         assert!(prefs.show_model);
         assert!(prefs.show_update_available); // Should be true by default
-        assert!(prefs.use_icons);
         assert!(prefs.use_colors);
         // Per-section icon toggles
         assert!(prefs.show_activity_icon);
         assert!(prefs.show_git_icon);
         assert!(prefs.show_directory_icon);
         assert!(prefs.show_model_icon);
+        // Per-section label toggles
+        assert!(prefs.show_activity_label);
+        assert!(prefs.show_directory_label);
+        assert!(prefs.show_model_label);
     }
 
     #[test]
@@ -302,7 +318,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 12); // Includes Update Available option
+        assert_eq!(options.len(), 11); // Removed Icons (now per-section)
         assert!(options.iter().any(|(name, _)| *name == "Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Activity"));
         assert!(options.iter().any(|(name, _)| *name == "Activity Context")); // Unified context
@@ -311,7 +327,6 @@ mod tests {
         assert!(options.iter().any(|(name, _)| *name == "Current Directory"));
         assert!(options.iter().any(|(name, _)| *name == "Model"));
         assert!(options.iter().any(|(name, _)| *name == "Update Available"));
-        assert!(options.iter().any(|(name, _)| *name == "Icons"));
         assert!(options.iter().any(|(name, _)| *name == "Colors"));
         assert!(options.iter().any(|(name, _)| *name == "Separators"));
         assert!(options.iter().any(|(name, _)| *name == "Debug Info"));
@@ -322,7 +337,7 @@ mod tests {
         let mut prefs = PersonalityPreferences::default();
 
         // Select only a few options
-        let selections = vec!["Personality", "Icons", "Activity Icon"];
+        let selections = vec!["Personality", "Activity Icon", "Activity Label"];
         prefs.update_from_selections(&selections);
 
         assert!(prefs.show_personality);
@@ -334,13 +349,16 @@ mod tests {
         assert!(!prefs.show_current_dir);
         assert!(!prefs.show_model);
         assert!(!prefs.show_update_available);
-        assert!(prefs.use_icons);
         assert!(!prefs.use_colors);
         // Per-section icon toggles
         assert!(prefs.show_activity_icon);
         assert!(!prefs.show_git_icon);
         assert!(!prefs.show_directory_icon);
         assert!(!prefs.show_model_icon);
+        // Per-section label toggles
+        assert!(prefs.show_activity_label);
+        assert!(!prefs.show_directory_label);
+        assert!(!prefs.show_model_label);
     }
 
     #[tokio::test]
