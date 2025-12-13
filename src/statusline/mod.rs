@@ -170,9 +170,9 @@ pub fn build_statusline(
             if !workspace_text.is_empty() {
                 let separator = if prefs.display.show_separators {
                     if prefs.use_colors {
-                        prefs.theme.apply_separator("•")
+                        prefs.theme.apply_separator(&prefs.display.separator_char)
                     } else {
-                        "•".to_string()
+                        prefs.display.separator_char.clone()
                     }
                 } else {
                     String::new()
@@ -270,9 +270,9 @@ pub fn build_statusline(
 
                 let separator = if prefs.display.show_separators {
                     if prefs.use_colors {
-                        prefs.theme.apply_separator("•")
+                        prefs.theme.apply_separator(&prefs.display.separator_char)
                     } else {
-                        "•".to_string()
+                        prefs.display.separator_char.clone()
                     }
                 } else {
                     String::new()
@@ -344,9 +344,9 @@ pub fn build_statusline(
         let activity_text = activity_parts.join(" ");
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                prefs.theme.apply_separator("•")
+                prefs.theme.apply_separator(&prefs.display.separator_char)
             } else {
-                "•".to_string()
+                prefs.display.separator_char.clone()
             }
         } else {
             String::new()
@@ -389,9 +389,9 @@ pub fn build_statusline(
 
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                prefs.theme.apply_separator("•")
+                prefs.theme.apply_separator(&prefs.display.separator_char)
             } else {
-                "•".to_string()
+                prefs.display.separator_char.clone()
             }
         } else {
             String::new()
@@ -425,9 +425,9 @@ pub fn build_statusline(
 
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                prefs.theme.apply_separator("•")
+                prefs.theme.apply_separator(&prefs.display.separator_char)
             } else {
-                "•".to_string()
+                prefs.display.separator_char.clone()
             }
         } else {
             String::new()
@@ -453,9 +453,9 @@ pub fn build_statusline(
 
         let separator = if prefs.display.show_separators {
             if prefs.use_colors {
-                prefs.theme.apply_separator("•")
+                prefs.theme.apply_separator(&prefs.display.separator_char)
             } else {
-                "•".to_string()
+                prefs.display.separator_char.clone()
             }
         } else {
             String::new()
