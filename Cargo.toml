@@ -38,6 +38,7 @@ semver = "1.0"
 flate2 = "1.0"
 tar = "0.4"
 sha2 = "0.10"
+unicode-width = "0.2"
 
 [profile.release]
 lto = true
