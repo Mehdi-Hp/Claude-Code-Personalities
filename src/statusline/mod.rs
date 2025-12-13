@@ -5,7 +5,7 @@ use colored::Colorize;
 use serde::Deserialize;
 use std::io::{self, Read};
 
-use crate::config::PersonalityPreferences;
+use crate::config::{PersonalityPreferences, StatuslineSection};
 use crate::icons::{ICON_FOLDER, ICON_GIT_BRANCH, get_activity_icon, get_model_icon};
 use crate::state::SessionState;
 use crate::version::VersionManager;
@@ -151,352 +151,19 @@ pub fn build_statusline(
 ) -> String {
     let mut parts = Vec::new();
 
-    // Personality (bold)
-    if prefs.show_personality {
-        let personality_text = if prefs.use_colors {
-            prefs
-                .theme
-                .apply_personality_with_context(&state.personality, state)
-        } else {
-            state.personality.clone()
-        };
-        parts.push(personality_text);
-    }
-
-    // Workspace information
-    if prefs.show_current_dir {
-        if let Some(workspace) = workspace {
-            let workspace_text = format_workspace_info(workspace, prefs);
-            if !workspace_text.is_empty() {
-                let separator = if prefs.display.show_separators {
-                    if prefs.use_colors {
-                        prefs.theme.apply_separator(&prefs.display.separator_char)
-                    } else {
-                        prefs.display.separator_char.clone()
-                    }
-                } else {
-                    String::new()
-                };
-
-                let spacing = " ";
-
-                if parts.is_empty() {
-                    parts.push(workspace_text);
-                } else if prefs.display.show_separators {
-                    parts.push(format!("{spacing}{separator}{spacing}{workspace_text}"));
-                } else {
-                    parts.push(format!("{spacing}{workspace_text}"));
-                }
-            }
-        }
-    }
-
-    // Git branch (separate section)
-    if prefs.show_git && prefs.show_git_branch {
-        if let Some(branch) = &state.git_branch {
-            if !branch.is_empty() {
-                // Build git text piece by piece: icon + label + status
-                let mut git_parts = Vec::new();
-
-                // Icon
-                if prefs.show_git_icon {
-                    git_parts.push(ICON_GIT_BRANCH.to_string());
-                }
-
-                // Branch name (controlled by show_git_branch in outer condition)
-                let branch_display = if !branch.contains('/') {
-                    format!("{} branch", branch)
-                } else {
-                    branch.clone()
-                };
-                git_parts.push(branch_display);
-
-                // Combine icon and branch name
-                let base_text = git_parts.join(" ");
-
-                // Build final text with colors and status
-                let branch_text = if prefs.use_colors {
-                    let base_colored = if !branch.contains('/') {
-                        // Apply color to branch part, dim the "branch" suffix
-                        let branch_part = if prefs.show_git_icon {
-                            format!("{} {}", ICON_GIT_BRANCH, branch)
-                        } else {
-                            branch.clone()
-                        };
-                        format!(
-                            "{}{}",
-                            prefs.theme.apply_file(&branch_part),
-                            " branch".dimmed()
-                        )
-                    } else {
-                        prefs.theme.apply_file(&base_text)
-                    };
-
-                    // Add git status indicator if enabled
-                    if prefs.show_git_status {
-                        if let Some(is_dirty) = state.git_dirty {
-                            let status_text = if is_dirty {
-                                let count = state.git_dirty_count.unwrap_or(0);
-                                if count > 0 {
-                                    prefs.theme.apply_warning(&format!(" ±{}", count))
-                                } else {
-                                    prefs.theme.apply_warning(" ±")
-                                }
-                            } else {
-                                prefs.theme.apply_success(" ✓")
-                            };
-                            format!("{base_colored}{status_text}")
-                        } else {
-                            base_colored
-                        }
-                    } else {
-                        base_colored
-                    }
-                } else {
-                    // No colors - simple concatenation
-                    if prefs.show_git_status {
-                        if let Some(is_dirty) = state.git_dirty {
-                            let status_text = if is_dirty {
-                                let count = state.git_dirty_count.unwrap_or(0);
-                                if count > 0 {
-                                    format!(" ±{}", count)
-                                } else {
-                                    " ±".to_string()
-                                }
-                            } else {
-                                " ✓".to_string()
-                            };
-                            format!("{base_text}{status_text}")
-                        } else {
-                            base_text
-                        }
-                    } else {
-                        base_text
-                    }
-                };
-
-                // Only add to parts if there's something to show
-                if !branch_text.is_empty() {
-                    let separator = if prefs.display.show_separators {
-                        if prefs.use_colors {
-                            prefs.theme.apply_separator(&prefs.display.separator_char)
-                        } else {
-                            prefs.display.separator_char.clone()
-                        }
-                    } else {
-                        String::new()
-                    };
-
-                    let spacing = " ";
-
-                    if parts.is_empty() {
-                        parts.push(branch_text);
-                    } else if prefs.display.show_separators {
-                        parts.push(format!("{spacing}{separator}{spacing}{branch_text}"));
-                    } else {
-                        parts.push(format!("{spacing}{branch_text}"));
-                    }
-                }
-            }
-        }
-    }
-
-    // Activity with icon
-    if prefs.show_activity {
-        let activity_icon = if prefs.show_activity_icon {
-            get_activity_icon(&state.activity)
-        } else {
-            ""
+    // Iterate over section order from preferences
+    for section in &prefs.section_order {
+        let section_text = match section {
+            StatuslineSection::Personality => render_personality_section(state, prefs),
+            StatuslineSection::Directory => render_directory_section(workspace, prefs),
+            StatuslineSection::Git => render_git_section(state, prefs),
+            StatuslineSection::Activity => render_activity_section(state, prefs),
+            StatuslineSection::Model => render_model_section(model_name, prefs),
+            StatuslineSection::UpdateAvailable => render_update_section(update_available, prefs),
+            StatuslineSection::DebugInfo => render_debug_section(state, prefs),
         };
 
-        let mut activity_parts = Vec::new();
-        if !activity_icon.is_empty() {
-            let colored_icon = if prefs.use_colors {
-                prefs.theme.apply_activity(activity_icon)
-            } else {
-                activity_icon.to_string()
-            };
-            activity_parts.push(colored_icon);
-        }
-        // Only show activity label text if enabled
-        if prefs.show_activity_label {
-            let activity_str = if prefs.use_colors {
-                prefs.theme.apply_activity(&state.activity.to_string())
-            } else {
-                state.activity.to_string()
-            };
-            activity_parts.push(activity_str);
-        }
-
-        // Context (shows command name OR file depending on activity)
-        if prefs.show_context {
-            // Check for command name first (for bash operations)
-            if let Some(job) = &state.current_job {
-                if !job.is_empty() {
-                    let job_text = if prefs.use_colors {
-                        prefs.theme.apply_file(job)
-                    } else {
-                        job.clone()
-                    };
-                    activity_parts.push(job_text);
-                }
-            }
-            // Otherwise check for file (for edit/read operations)
-            else if let Some(file) = &state.current_file {
-                if !file.is_empty() {
-                    let file_text = if prefs.use_colors {
-                        prefs.theme.apply_file(file)
-                    } else {
-                        file.clone()
-                    };
-                    activity_parts.push(file_text);
-                }
-            }
-        }
-
-        let activity_text = activity_parts.join(" ");
-        let separator = if prefs.display.show_separators {
-            if prefs.use_colors {
-                prefs.theme.apply_separator(&prefs.display.separator_char)
-            } else {
-                prefs.display.separator_char.clone()
-            }
-        } else {
-            String::new()
-        };
-
-        let spacing = " ";
-
-        if parts.is_empty() {
-            parts.push(activity_text);
-        } else if prefs.display.show_separators {
-            parts.push(format!("{spacing}{separator}{spacing}{activity_text}"));
-        } else {
-            parts.push(format!("{spacing}{activity_text}"));
-        }
-    }
-
-    // Error indicators removed - no longer showing warning/error icons
-
-    // Model indicator
-    if prefs.show_model {
-        let model_icon = if prefs.show_model_icon {
-            get_model_icon(model_name)
-        } else {
-            ""
-        };
-
-        // Build model text piece by piece: icon + label
-        let mut model_parts = Vec::new();
-        if !model_icon.is_empty() {
-            model_parts.push(model_icon.to_string());
-        }
-        if prefs.show_model_label {
-            model_parts.push(model_name.to_string());
-        }
-
-        // Skip if nothing to show
-        if !model_parts.is_empty() {
-            let model_text = model_parts.join(" ");
-
-            let colored_model = if prefs.use_colors {
-                prefs
-                    .theme
-                    .apply_model_color_with_context(&model_text, model_name)
-            } else {
-                model_text
-            };
-
-            let separator = if prefs.display.show_separators {
-                if prefs.use_colors {
-                    prefs.theme.apply_separator(&prefs.display.separator_char)
-                } else {
-                    prefs.display.separator_char.clone()
-                }
-            } else {
-                String::new()
-            };
-
-            let spacing = " ";
-
-            if parts.is_empty() {
-                parts.push(colored_model);
-            } else if prefs.display.show_separators {
-                parts.push(format!("{spacing}{separator}{spacing}{colored_model}"));
-            } else {
-                parts.push(format!("{spacing}{colored_model}"));
-            }
-        }
-    }
-
-    // Update available indicator
-    if let Some(version) = update_available {
-        let update_icon = "\u{f062}"; // nf-fa-arrow_up (always show icon for updates)
-        let update_text = if update_icon.is_empty() {
-            format!("v{version}")
-        } else {
-            format!("{update_icon} v{version}")
-        };
-
-        let colored_update = if prefs.use_colors {
-            prefs.theme.apply_success(&update_text)
-        } else {
-            update_text
-        };
-
-        let separator = if prefs.display.show_separators {
-            if prefs.use_colors {
-                prefs.theme.apply_separator(&prefs.display.separator_char)
-            } else {
-                prefs.display.separator_char.clone()
-            }
-        } else {
-            String::new()
-        };
-
-        let spacing = " ";
-
-        if parts.is_empty() {
-            parts.push(colored_update);
-        } else if prefs.display.show_separators {
-            parts.push(format!("{spacing}{separator}{spacing}{colored_update}"));
-        } else {
-            parts.push(format!("{spacing}{colored_update}"));
-        }
-    }
-
-    // Debug info (if enabled)
-    if prefs.display.show_debug_info {
-        let debug_info = format!(
-            "[E:{} C:{} S:{}]",
-            state.error_count, state.consecutive_actions, state.session_id
-        );
-
-        let separator = if prefs.display.show_separators {
-            if prefs.use_colors {
-                prefs.theme.apply_separator(&prefs.display.separator_char)
-            } else {
-                prefs.display.separator_char.clone()
-            }
-        } else {
-            String::new()
-        };
-
-        let spacing = " ";
-
-        let debug_text = if prefs.use_colors {
-            prefs.theme.apply_separator(&debug_info)
-        } else {
-            debug_info
-        };
-
-        if parts.is_empty() {
-            parts.push(debug_text);
-        } else if prefs.display.show_separators {
-            parts.push(format!("{spacing}{separator}{spacing}{debug_text}"));
-        } else {
-            parts.push(format!("{spacing}{debug_text}"));
-        }
+        add_section_to_parts(&mut parts, section_text, prefs);
     }
 
     parts.join("")
@@ -535,6 +202,309 @@ fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferenc
         prefs.theme.apply_directory(&workspace_text)
     } else {
         workspace_text
+    }
+}
+
+/// Render the personality section
+fn render_personality_section(
+    state: &SessionState,
+    prefs: &PersonalityPreferences,
+) -> Option<String> {
+    if !prefs.show_personality {
+        return None;
+    }
+    let personality_text = if prefs.use_colors {
+        prefs
+            .theme
+            .apply_personality_with_context(&state.personality, state)
+    } else {
+        state.personality.clone()
+    };
+    Some(personality_text)
+}
+
+/// Render the directory/workspace section
+fn render_directory_section(
+    workspace: Option<&WorkspaceInfo>,
+    prefs: &PersonalityPreferences,
+) -> Option<String> {
+    if !prefs.show_current_dir {
+        return None;
+    }
+    let workspace = workspace?;
+    let workspace_text = format_workspace_info(workspace, prefs);
+    if workspace_text.is_empty() {
+        return None;
+    }
+    Some(workspace_text)
+}
+
+/// Render the git branch section
+fn render_git_section(state: &SessionState, prefs: &PersonalityPreferences) -> Option<String> {
+    if !prefs.show_git || !prefs.show_git_branch {
+        return None;
+    }
+    let branch = state.git_branch.as_ref()?;
+    if branch.is_empty() {
+        return None;
+    }
+
+    // Build git text piece by piece: icon + label + status
+    let mut git_parts = Vec::new();
+
+    // Icon
+    if prefs.show_git_icon {
+        git_parts.push(ICON_GIT_BRANCH.to_string());
+    }
+
+    // Branch name
+    let branch_display = if !branch.contains('/') {
+        format!("{} branch", branch)
+    } else {
+        branch.clone()
+    };
+    git_parts.push(branch_display);
+
+    // Combine icon and branch name
+    let base_text = git_parts.join(" ");
+
+    // Build final text with colors and status
+    let branch_text = if prefs.use_colors {
+        let base_colored = if !branch.contains('/') {
+            let branch_part = if prefs.show_git_icon {
+                format!("{} {}", ICON_GIT_BRANCH, branch)
+            } else {
+                branch.clone()
+            };
+            format!(
+                "{}{}",
+                prefs.theme.apply_file(&branch_part),
+                " branch".dimmed()
+            )
+        } else {
+            prefs.theme.apply_file(&base_text)
+        };
+
+        // Add git status indicator if enabled
+        if prefs.show_git_status {
+            if let Some(is_dirty) = state.git_dirty {
+                let status_text = if is_dirty {
+                    let count = state.git_dirty_count.unwrap_or(0);
+                    if count > 0 {
+                        prefs.theme.apply_warning(&format!(" ±{}", count))
+                    } else {
+                        prefs.theme.apply_warning(" ±")
+                    }
+                } else {
+                    prefs.theme.apply_success(" ✓")
+                };
+                format!("{base_colored}{status_text}")
+            } else {
+                base_colored
+            }
+        } else {
+            base_colored
+        }
+    } else {
+        // No colors - simple concatenation
+        if prefs.show_git_status {
+            if let Some(is_dirty) = state.git_dirty {
+                let status_text = if is_dirty {
+                    let count = state.git_dirty_count.unwrap_or(0);
+                    if count > 0 {
+                        format!(" ±{}", count)
+                    } else {
+                        " ±".to_string()
+                    }
+                } else {
+                    " ✓".to_string()
+                };
+                format!("{base_text}{status_text}")
+            } else {
+                base_text
+            }
+        } else {
+            base_text
+        }
+    };
+
+    if branch_text.is_empty() {
+        return None;
+    }
+    Some(branch_text)
+}
+
+/// Render the activity section
+fn render_activity_section(state: &SessionState, prefs: &PersonalityPreferences) -> Option<String> {
+    if !prefs.show_activity {
+        return None;
+    }
+
+    let activity_icon = if prefs.show_activity_icon {
+        get_activity_icon(&state.activity)
+    } else {
+        ""
+    };
+
+    let mut activity_parts = Vec::new();
+    if !activity_icon.is_empty() {
+        let colored_icon = if prefs.use_colors {
+            prefs.theme.apply_activity(activity_icon)
+        } else {
+            activity_icon.to_string()
+        };
+        activity_parts.push(colored_icon);
+    }
+
+    // Only show activity label text if enabled
+    if prefs.show_activity_label {
+        let activity_str = if prefs.use_colors {
+            prefs.theme.apply_activity(&state.activity.to_string())
+        } else {
+            state.activity.to_string()
+        };
+        activity_parts.push(activity_str);
+    }
+
+    // Context (shows command name OR file depending on activity)
+    if prefs.show_context {
+        // Check for command name first (for bash operations)
+        if let Some(job) = &state.current_job {
+            if !job.is_empty() {
+                let job_text = if prefs.use_colors {
+                    prefs.theme.apply_file(job)
+                } else {
+                    job.clone()
+                };
+                activity_parts.push(job_text);
+            }
+        }
+        // Otherwise check for file (for edit/read operations)
+        else if let Some(file) = &state.current_file {
+            if !file.is_empty() {
+                let file_text = if prefs.use_colors {
+                    prefs.theme.apply_file(file)
+                } else {
+                    file.clone()
+                };
+                activity_parts.push(file_text);
+            }
+        }
+    }
+
+    let activity_text = activity_parts.join(" ");
+    if activity_text.is_empty() {
+        return None;
+    }
+    Some(activity_text)
+}
+
+/// Render the model section
+fn render_model_section(model_name: &str, prefs: &PersonalityPreferences) -> Option<String> {
+    if !prefs.show_model {
+        return None;
+    }
+
+    let model_icon = if prefs.show_model_icon {
+        get_model_icon(model_name)
+    } else {
+        ""
+    };
+
+    // Build model text piece by piece: icon + label
+    let mut model_parts = Vec::new();
+    if !model_icon.is_empty() {
+        model_parts.push(model_icon.to_string());
+    }
+    if prefs.show_model_label {
+        model_parts.push(model_name.to_string());
+    }
+
+    if model_parts.is_empty() {
+        return None;
+    }
+
+    let model_text = model_parts.join(" ");
+    let colored_model = if prefs.use_colors {
+        prefs
+            .theme
+            .apply_model_color_with_context(&model_text, model_name)
+    } else {
+        model_text
+    };
+
+    Some(colored_model)
+}
+
+/// Render the update available section
+fn render_update_section(
+    update_available: Option<&str>,
+    prefs: &PersonalityPreferences,
+) -> Option<String> {
+    let version = update_available?;
+    let update_icon = "\u{f062}"; // nf-fa-arrow_up
+    let update_text = if update_icon.is_empty() {
+        format!("v{version}")
+    } else {
+        format!("{update_icon} v{version}")
+    };
+
+    let colored_update = if prefs.use_colors {
+        prefs.theme.apply_success(&update_text)
+    } else {
+        update_text
+    };
+
+    Some(colored_update)
+}
+
+/// Render the debug info section
+fn render_debug_section(state: &SessionState, prefs: &PersonalityPreferences) -> Option<String> {
+    if !prefs.display.show_debug_info {
+        return None;
+    }
+
+    let debug_info = format!(
+        "[E:{} C:{} S:{}]",
+        state.error_count, state.consecutive_actions, state.session_id
+    );
+
+    let debug_text = if prefs.use_colors {
+        prefs.theme.apply_separator(&debug_info)
+    } else {
+        debug_info
+    };
+
+    Some(debug_text)
+}
+
+/// Helper to add a section with proper separator handling
+fn add_section_to_parts(
+    parts: &mut Vec<String>,
+    section_text: Option<String>,
+    prefs: &PersonalityPreferences,
+) {
+    let Some(text) = section_text else {
+        return;
+    };
+    if text.is_empty() {
+        return;
+    }
+
+    if parts.is_empty() {
+        parts.push(text);
+    } else {
+        let spacing = " ";
+        if prefs.display.show_separators {
+            let separator = if prefs.use_colors {
+                prefs.theme.apply_separator(&prefs.display.separator_char)
+            } else {
+                prefs.display.separator_char.clone()
+            };
+            parts.push(format!("{spacing}{separator}{spacing}{text}"));
+        } else {
+            parts.push(format!("{spacing}{text}"));
+        }
     }
 }
 
