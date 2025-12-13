@@ -22,12 +22,29 @@ use crate::state::SessionState;
 use crate::statusline::{WorkspaceInfo, build_statusline};
 use crate::types::Activity;
 
+/// A hierarchical config option with tree structure information
+#[derive(Clone)]
+struct ConfigOption {
+    /// Display name shown in the menu
+    name: &'static str,
+    /// Key used for preferences lookup/update
+    pref_key: &'static str,
+    /// Whether this option is currently enabled
+    enabled: bool,
+    /// Nesting depth: 0 = top-level, 1 = child
+    depth: usize,
+    /// Parent option name (for checking if parent is enabled)
+    parent: Option<&'static str>,
+    /// Whether this is the last child in its group (for └─ vs ├─)
+    is_last_child: bool,
+}
+
 /// Application state for the interactive config TUI
 struct ConfigApp {
     /// Current preferences being edited
     prefs: PersonalityPreferences,
-    /// List of all display options with their current states
-    options: Vec<(&'static str, bool)>,
+    /// Hierarchical list of config options
+    options: Vec<ConfigOption>,
     /// Current cursor position
     cursor: usize,
     /// Whether the app should quit
@@ -36,7 +53,7 @@ struct ConfigApp {
 
 impl ConfigApp {
     fn new(prefs: PersonalityPreferences) -> Self {
-        let options = prefs.get_display_options();
+        let options = Self::build_options(&prefs);
         Self {
             prefs,
             options,
@@ -45,37 +62,218 @@ impl ConfigApp {
         }
     }
 
+    /// Build the hierarchical options list from preferences
+    fn build_options(prefs: &PersonalityPreferences) -> Vec<ConfigOption> {
+        vec![
+            ConfigOption {
+                name: "Personality",
+                pref_key: "Personality",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_personality,
+            },
+            ConfigOption {
+                name: "Activity",
+                pref_key: "Activity",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_activity,
+            },
+            ConfigOption {
+                name: "Context",
+                pref_key: "Activity Context",
+                depth: 1,
+                parent: Some("Activity"),
+                is_last_child: true,
+                enabled: prefs.show_context,
+            },
+            ConfigOption {
+                name: "Git",
+                pref_key: "Git",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_git,
+            },
+            ConfigOption {
+                name: "Branch",
+                pref_key: "Git Branch",
+                depth: 1,
+                parent: Some("Git"),
+                is_last_child: false,
+                enabled: prefs.show_git_branch,
+            },
+            ConfigOption {
+                name: "Status",
+                pref_key: "Git Status",
+                depth: 1,
+                parent: Some("Git"),
+                is_last_child: true,
+                enabled: prefs.show_git_status,
+            },
+            ConfigOption {
+                name: "Current Directory",
+                pref_key: "Current Directory",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_current_dir,
+            },
+            ConfigOption {
+                name: "Model",
+                pref_key: "Model",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_model,
+            },
+            ConfigOption {
+                name: "Update Available",
+                pref_key: "Update Available",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.show_update_available,
+            },
+            ConfigOption {
+                name: "Icons",
+                pref_key: "Icons",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.use_icons,
+            },
+            ConfigOption {
+                name: "Activity",
+                pref_key: "Activity Icon",
+                depth: 1,
+                parent: Some("Icons"),
+                is_last_child: false,
+                enabled: prefs.show_activity_icon,
+            },
+            ConfigOption {
+                name: "Git",
+                pref_key: "Git Icon",
+                depth: 1,
+                parent: Some("Icons"),
+                is_last_child: false,
+                enabled: prefs.show_git_icon,
+            },
+            ConfigOption {
+                name: "Directory",
+                pref_key: "Directory Icon",
+                depth: 1,
+                parent: Some("Icons"),
+                is_last_child: false,
+                enabled: prefs.show_directory_icon,
+            },
+            ConfigOption {
+                name: "Model",
+                pref_key: "Model Icon",
+                depth: 1,
+                parent: Some("Icons"),
+                is_last_child: true,
+                enabled: prefs.show_model_icon,
+            },
+            ConfigOption {
+                name: "Colors",
+                pref_key: "Colors",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.use_colors,
+            },
+            ConfigOption {
+                name: "Separators",
+                pref_key: "Separators",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.display.show_separators,
+            },
+            ConfigOption {
+                name: "Compact Mode",
+                pref_key: "Compact Mode",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.display.compact_mode,
+            },
+            ConfigOption {
+                name: "Debug Info",
+                pref_key: "Debug Info",
+                depth: 0,
+                parent: None,
+                is_last_child: false,
+                enabled: prefs.display.show_debug_info,
+            },
+        ]
+    }
+
+    /// Check if a parent option is enabled (for determining if children are interactive)
+    fn is_parent_enabled(&self, parent_name: &str) -> bool {
+        self.options
+            .iter()
+            .find(|opt| opt.pref_key == parent_name || opt.name == parent_name)
+            .map(|opt| opt.enabled)
+            .unwrap_or(true)
+    }
+
+    /// Check if the option at the given index is interactive (can be toggled)
+    fn is_option_interactive(&self, idx: usize) -> bool {
+        if idx >= self.options.len() {
+            return true; // "Done" button is always interactive
+        }
+        let opt = &self.options[idx];
+        if opt.depth == 0 {
+            return true; // Top-level options are always interactive
+        }
+        // Children are interactive only if their parent is enabled
+        if let Some(parent) = opt.parent {
+            self.is_parent_enabled(parent)
+        } else {
+            true
+        }
+    }
+
     /// Toggle the option at the current cursor position
     fn toggle_current(&mut self) {
         if self.cursor < self.options.len() {
-            // Toggle the option
-            let (name, _) = self.options[self.cursor];
+            // Don't toggle disabled children
+            if !self.is_option_interactive(self.cursor) {
+                return;
+            }
 
-            // Get current selections
+            // Get the pref_key of the option to toggle
+            let pref_key = self.options[self.cursor].pref_key;
+
+            // Get current selections based on pref_key
             let mut selections: Vec<&str> = self
                 .options
                 .iter()
-                .filter_map(|(n, enabled)| if *enabled { Some(*n) } else { None })
+                .filter_map(|opt| {
+                    if opt.enabled {
+                        Some(opt.pref_key)
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
             // Toggle the selected one
-            if selections.contains(&name) {
-                selections.retain(|&x| x != name);
-
-                // Dependency: When "Activity" is hidden, also hide "Activity Context"
-                // (context is meaningless without the activity it describes)
-                if name == "Activity" {
-                    selections.retain(|&x| x != "Activity Context");
-                }
+            if selections.contains(&pref_key) {
+                selections.retain(|&x| x != pref_key);
             } else {
-                selections.push(name);
+                selections.push(pref_key);
             }
 
             // Update preferences
             self.prefs.update_from_selections(&selections);
 
             // Refresh options list
-            self.options = self.prefs.get_display_options();
+            self.options = Self::build_options(&self.prefs);
         } else if self.cursor == self.options.len() {
             // "Done" option selected
             self.should_quit = true;
@@ -85,6 +283,10 @@ impl ConfigApp {
     fn move_cursor_up(&mut self) {
         if self.cursor > 0 {
             self.cursor -= 1;
+            // Skip disabled children
+            while self.cursor > 0 && !self.is_option_interactive(self.cursor) {
+                self.cursor -= 1;
+            }
         }
     }
 
@@ -92,6 +294,10 @@ impl ConfigApp {
         // +1 for "Done" option
         if self.cursor < self.options.len() {
             self.cursor += 1;
+            // Skip disabled children
+            while self.cursor < self.options.len() && !self.is_option_interactive(self.cursor) {
+                self.cursor += 1;
+            }
         }
     }
 }
@@ -262,23 +468,69 @@ fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
     f.render_widget(preview_widget, area);
 }
 
-/// Render the options list
+/// Render the options list with tree-style hierarchy
 fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
     let mut items: Vec<ListItem> = app
         .options
         .iter()
         .enumerate()
-        .map(|(idx, (name, enabled))| {
-            let visibility = if *enabled { "Visible" } else { "Hidden " };
-            let visibility_color = if *enabled { Color::Green } else { Color::Gray };
+        .map(|(idx, opt)| {
+            // Determine if this child's parent is enabled
+            let is_child_disabled = opt.depth > 0
+                && opt
+                    .parent
+                    .map(|p| !app.is_parent_enabled(p))
+                    .unwrap_or(false);
 
-            let content = Line::from(vec![
-                Span::styled("[", Style::default().fg(Color::DarkGray)),
-                Span::styled(visibility, Style::default().fg(visibility_color)),
-                Span::styled("] ", Style::default().fg(Color::DarkGray)),
-                Span::raw(*name),
-            ]);
+            // Tree prefix for children
+            let tree_prefix = if opt.depth > 0 {
+                if opt.is_last_child {
+                    " └─ "
+                } else {
+                    " ├─ "
+                }
+            } else {
+                ""
+            };
 
+            // Checkbox with checkmark or empty
+            let checkbox = if opt.enabled { "[✓]" } else { "[ ]" };
+            let check_color = if is_child_disabled {
+                Color::DarkGray
+            } else if opt.enabled {
+                Color::Green
+            } else {
+                Color::DarkGray
+            };
+
+            // Text color based on disabled state
+            let text_color = if is_child_disabled {
+                Color::DarkGray
+            } else {
+                Color::White
+            };
+
+            // Build the content line
+            let mut spans = Vec::new();
+
+            // Tree connector (dimmed)
+            if !tree_prefix.is_empty() {
+                spans.push(Span::styled(
+                    tree_prefix,
+                    Style::default().fg(Color::DarkGray),
+                ));
+            }
+
+            // Checkbox
+            spans.push(Span::styled(checkbox, Style::default().fg(check_color)));
+            spans.push(Span::raw(" "));
+
+            // Option name
+            spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
+
+            let content = Line::from(spans);
+
+            // Highlight selected row
             let style = if idx == app.cursor {
                 Style::default()
                     .bg(Color::DarkGray)
@@ -294,7 +546,7 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
     // Add "Done" option
     let done_content = Line::from(vec![
         Span::styled("→ ", Style::default().fg(Color::Yellow)),
-        Span::raw("Done - Save and Exit"),
+        Span::raw("Done"),
     ]);
 
     let done_style = if app.cursor == app.options.len() {
@@ -311,6 +563,7 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
         Block::default()
             .title("Configure Display Options")
             .borders(Borders::ALL)
+            .padding(Padding::new(2, 2, 1, 1)) // left, right, top, bottom
             .style(Style::default().fg(Color::White)),
     );
 

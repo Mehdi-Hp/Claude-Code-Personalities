@@ -45,6 +45,9 @@ pub struct PersonalityPreferences {
     #[serde(default)]
     pub show_current_file: bool,
 
+    // Git master toggle (parent of show_git_branch, show_git_status)
+    #[serde(default = "default_true")]
+    pub show_git: bool,
     #[serde(default = "default_true")]
     pub show_git_branch: bool,
     #[serde(default = "default_true")]
@@ -55,6 +58,16 @@ pub struct PersonalityPreferences {
     pub show_update_available: bool,
     pub use_icons: bool,
     pub use_colors: bool,
+
+    // Per-section icon toggles (children of use_icons)
+    #[serde(default = "default_true")]
+    pub show_activity_icon: bool,
+    #[serde(default = "default_true")]
+    pub show_git_icon: bool,
+    #[serde(default = "default_true")]
+    pub show_directory_icon: bool,
+    #[serde(default = "default_true")]
+    pub show_model_icon: bool,
 
     // Advanced configurations
     #[serde(default)]
@@ -77,6 +90,7 @@ impl Default for PersonalityPreferences {
             show_context: true,
             show_current_job: false,  // Deprecated
             show_current_file: false, // Deprecated
+            show_git: true,           // Git master toggle
             show_git_branch: true,
             show_git_status: true,   // Enabled by default
             show_current_dir: false, // Hidden by default per user request
@@ -84,6 +98,11 @@ impl Default for PersonalityPreferences {
             show_update_available: true, // Show update indicator by default
             use_icons: true,
             use_colors: true,
+            // Per-section icon toggles (all enabled by default)
+            show_activity_icon: true,
+            show_git_icon: true,
+            show_directory_icon: true,
+            show_model_icon: true,
             display: DisplayConfig::default(),
             theme: Theme::default(),
         }
@@ -207,6 +226,7 @@ impl PersonalityPreferences {
         self.show_personality = false;
         self.show_activity = false;
         self.show_context = false;
+        self.show_git = false;
         self.show_git_branch = false;
         self.show_git_status = false;
         self.show_current_dir = false;
@@ -214,6 +234,10 @@ impl PersonalityPreferences {
         self.show_update_available = false;
         self.use_icons = false;
         self.use_colors = false;
+        self.show_activity_icon = false;
+        self.show_git_icon = false;
+        self.show_directory_icon = false;
+        self.show_model_icon = false;
         self.display.show_separators = false;
         self.display.compact_mode = false;
         self.display.show_debug_info = false;
@@ -224,6 +248,7 @@ impl PersonalityPreferences {
                 "Personality" => self.show_personality = true,
                 "Activity" => self.show_activity = true,
                 "Activity Context" => self.show_context = true,
+                "Git" => self.show_git = true,
                 "Git Branch" => self.show_git_branch = true,
                 "Git Status" => self.show_git_status = true,
                 "Current Directory" => self.show_current_dir = true,
@@ -231,6 +256,10 @@ impl PersonalityPreferences {
                 "Update Available" => self.show_update_available = true,
                 "Icons" => self.use_icons = true,
                 "Colors" => self.use_colors = true,
+                "Activity Icon" => self.show_activity_icon = true,
+                "Git Icon" => self.show_git_icon = true,
+                "Directory Icon" => self.show_directory_icon = true,
+                "Model Icon" => self.show_model_icon = true,
                 "Separators" => self.display.show_separators = true,
                 "Compact Mode" => self.display.compact_mode = true,
                 "Debug Info" => self.display.show_debug_info = true,
@@ -251,6 +280,7 @@ mod tests {
         assert!(prefs.show_personality);
         assert!(prefs.show_activity);
         assert!(prefs.show_context); // Unified context field
+        assert!(prefs.show_git); // Git master toggle
         assert!(prefs.show_git_branch); // Should be true by default
         assert!(prefs.show_git_status); // Should be true by default
         assert!(!prefs.show_current_dir); // Should be false by default
@@ -258,6 +288,11 @@ mod tests {
         assert!(prefs.show_update_available); // Should be true by default
         assert!(prefs.use_icons);
         assert!(prefs.use_colors);
+        // Per-section icon toggles
+        assert!(prefs.show_activity_icon);
+        assert!(prefs.show_git_icon);
+        assert!(prefs.show_directory_icon);
+        assert!(prefs.show_model_icon);
     }
 
     #[test]
@@ -286,12 +321,13 @@ mod tests {
         let mut prefs = PersonalityPreferences::default();
 
         // Select only a few options
-        let selections = vec!["Personality", "Icons"];
+        let selections = vec!["Personality", "Icons", "Activity Icon"];
         prefs.update_from_selections(&selections);
 
         assert!(prefs.show_personality);
         assert!(!prefs.show_activity);
         assert!(!prefs.show_context); // Unified context field
+        assert!(!prefs.show_git); // Git master toggle
         assert!(!prefs.show_git_branch);
         assert!(!prefs.show_git_status);
         assert!(!prefs.show_current_dir);
@@ -299,6 +335,11 @@ mod tests {
         assert!(!prefs.show_update_available);
         assert!(prefs.use_icons);
         assert!(!prefs.use_colors);
+        // Per-section icon toggles
+        assert!(prefs.show_activity_icon);
+        assert!(!prefs.show_git_icon);
+        assert!(!prefs.show_directory_icon);
+        assert!(!prefs.show_model_icon);
     }
 
     #[tokio::test]
