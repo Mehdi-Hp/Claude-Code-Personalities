@@ -15,8 +15,6 @@ pub struct DisplayConfig {
     /// The separator character to use between elements
     #[serde(default = "default_separator")]
     pub separator_char: String,
-    /// Use compact mode (fewer spaces)
-    pub compact_mode: bool,
     /// Show debugging info (error counts, session info)
     pub show_debug_info: bool,
 }
@@ -30,7 +28,6 @@ impl Default for DisplayConfig {
         Self {
             show_separators: true,
             separator_char: default_separator(),
-            compact_mode: false,
             show_debug_info: false,
         }
     }
@@ -223,7 +220,6 @@ impl PersonalityPreferences {
             ("Icons", self.use_icons),
             ("Colors", self.use_colors),
             ("Separators", self.display.show_separators),
-            ("Compact Mode", self.display.compact_mode),
             ("Debug Info", self.display.show_debug_info),
         ]
     }
@@ -247,7 +243,6 @@ impl PersonalityPreferences {
         self.show_directory_icon = false;
         self.show_model_icon = false;
         self.display.show_separators = false;
-        self.display.compact_mode = false;
         self.display.show_debug_info = false;
 
         // Set selected ones to true
@@ -269,7 +264,6 @@ impl PersonalityPreferences {
                 "Directory Icon" => self.show_directory_icon = true,
                 "Model Icon" => self.show_model_icon = true,
                 "Separators" => self.display.show_separators = true,
-                "Compact Mode" => self.display.compact_mode = true,
                 "Debug Info" => self.display.show_debug_info = true,
                 _ => {} // Ignore unknown options
             }
@@ -308,7 +302,7 @@ mod tests {
         let prefs = PersonalityPreferences::default();
         let options = prefs.get_display_options();
 
-        assert_eq!(options.len(), 13); // Includes Update Available option
+        assert_eq!(options.len(), 12); // Includes Update Available option
         assert!(options.iter().any(|(name, _)| *name == "Personality"));
         assert!(options.iter().any(|(name, _)| *name == "Activity"));
         assert!(options.iter().any(|(name, _)| *name == "Activity Context")); // Unified context
@@ -320,7 +314,6 @@ mod tests {
         assert!(options.iter().any(|(name, _)| *name == "Icons"));
         assert!(options.iter().any(|(name, _)| *name == "Colors"));
         assert!(options.iter().any(|(name, _)| *name == "Separators"));
-        assert!(options.iter().any(|(name, _)| *name == "Compact Mode"));
         assert!(options.iter().any(|(name, _)| *name == "Debug Info"));
     }
 
@@ -379,7 +372,7 @@ mod tests {
         let mut prefs = PersonalityPreferences {
             show_personality: false,
             display: DisplayConfig {
-                compact_mode: true,
+                show_debug_info: true,
                 ..Default::default()
             },
             ..Default::default()
@@ -387,12 +380,12 @@ mod tests {
 
         // Verify initial non-default state
         assert!(!prefs.show_personality);
-        assert!(prefs.display.compact_mode);
+        assert!(prefs.display.show_debug_info);
 
         // Test full reset using assignment from default
         prefs = PersonalityPreferences::default();
         assert!(prefs.show_personality); // Back to default
-        assert!(!prefs.display.compact_mode); // Back to default
+        assert!(!prefs.display.show_debug_info); // Back to default
     }
 
     #[test]
@@ -400,7 +393,6 @@ mod tests {
         let display = DisplayConfig::default();
         assert!(display.show_separators);
         assert_eq!(display.separator_char, "\u{2022}"); // • bullet
-        assert!(!display.compact_mode);
         assert!(!display.show_debug_info);
     }
 }

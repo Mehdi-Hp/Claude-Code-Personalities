@@ -249,15 +249,6 @@ impl ConfigApp {
                 },
             },
             ConfigOption {
-                name: "Compact Mode",
-                pref_key: "Compact Mode",
-                depth: 0,
-                parent: None,
-                is_last_child: false,
-                enabled: prefs.display.compact_mode,
-                option_type: OptionType::Toggle,
-            },
-            ConfigOption {
                 name: "Debug Info",
                 pref_key: "Debug Info",
                 depth: 0,
