@@ -22,6 +22,34 @@ use crate::state::SessionState;
 use crate::statusline::{WorkspaceInfo, build_statusline};
 use crate::types::Activity;
 
+/// Available separator character options
+const SEPARATOR_OPTIONS: &[&str] = &[
+    "\u{2022}", // • bullet (default)
+    "\u{22c5}", // ⋅ dot operator
+    "|",        // | pipe
+    "\u{2731}", // ✱ heavy asterisk
+    "\u{271c}", // ✜ heavy open centre cross
+    "\u{2748}", // ❈ heavy sparkle
+    "\u{2743}", // ❃ heavy teardrop-spoked pinwheel
+    "\u{2724}", // ✤ heavy four balloon-spoked asterisk
+    "\u{274b}", // ❋ heavy eight teardrop-spoked propeller
+    "\u{2726}", // ✦ black four pointed star
+    "\u{2014}", // — em dash
+    "\u{fe31}", // ︱ presentation form vertical line
+];
+
+/// Type of configuration option
+#[derive(Clone)]
+enum OptionType {
+    /// Simple on/off toggle
+    Toggle,
+    /// Selection from a list of choices
+    Select {
+        choices: &'static [&'static str],
+        current_index: usize,
+    },
+}
+
 /// A hierarchical config option with tree structure information
 #[derive(Clone)]
 struct ConfigOption {
@@ -37,6 +65,8 @@ struct ConfigOption {
     parent: Option<&'static str>,
     /// Whether this is the last child in its group (for └─ vs ├─)
     is_last_child: bool,
+    /// Type of option (Toggle or Select)
+    option_type: OptionType,
 }
 
 /// Application state for the interactive config TUI
@@ -64,6 +94,12 @@ impl ConfigApp {
 
     /// Build the hierarchical options list from preferences
     fn build_options(prefs: &PersonalityPreferences) -> Vec<ConfigOption> {
+        // Find current separator index
+        let separator_index = SEPARATOR_OPTIONS
+            .iter()
+            .position(|&s| s == prefs.display.separator_char)
+            .unwrap_or(0);
+
         vec![
             ConfigOption {
                 name: "Personality",
@@ -72,6 +108,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_personality,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Activity",
@@ -80,6 +117,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_activity,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Context",
@@ -88,6 +126,7 @@ impl ConfigApp {
                 parent: Some("Activity"),
                 is_last_child: true,
                 enabled: prefs.show_context,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Git",
@@ -96,6 +135,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_git,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Branch",
@@ -104,6 +144,7 @@ impl ConfigApp {
                 parent: Some("Git"),
                 is_last_child: false,
                 enabled: prefs.show_git_branch,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Status",
@@ -112,6 +153,7 @@ impl ConfigApp {
                 parent: Some("Git"),
                 is_last_child: true,
                 enabled: prefs.show_git_status,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Current Directory",
@@ -120,6 +162,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_current_dir,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Model",
@@ -128,6 +171,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_model,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Update Available",
@@ -136,6 +180,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.show_update_available,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Icons",
@@ -144,6 +189,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.use_icons,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Activity",
@@ -152,6 +198,7 @@ impl ConfigApp {
                 parent: Some("Icons"),
                 is_last_child: false,
                 enabled: prefs.show_activity_icon,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Git",
@@ -160,6 +207,7 @@ impl ConfigApp {
                 parent: Some("Icons"),
                 is_last_child: false,
                 enabled: prefs.show_git_icon,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Directory",
@@ -168,6 +216,7 @@ impl ConfigApp {
                 parent: Some("Icons"),
                 is_last_child: false,
                 enabled: prefs.show_directory_icon,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Model",
@@ -176,6 +225,7 @@ impl ConfigApp {
                 parent: Some("Icons"),
                 is_last_child: true,
                 enabled: prefs.show_model_icon,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Colors",
@@ -184,6 +234,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.use_colors,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Separators",
@@ -192,6 +243,10 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.display.show_separators,
+                option_type: OptionType::Select {
+                    choices: SEPARATOR_OPTIONS,
+                    current_index: separator_index,
+                },
             },
             ConfigOption {
                 name: "Compact Mode",
@@ -200,6 +255,7 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.display.compact_mode,
+                option_type: OptionType::Toggle,
             },
             ConfigOption {
                 name: "Debug Info",
@@ -208,8 +264,34 @@ impl ConfigApp {
                 parent: None,
                 is_last_child: false,
                 enabled: prefs.display.show_debug_info,
+                option_type: OptionType::Toggle,
             },
         ]
+    }
+
+    /// Cycle through selection options (for Select type options)
+    fn cycle_selection(&mut self, direction: i32) {
+        if self.cursor >= self.options.len() {
+            return; // On Done button or separator
+        }
+
+        let opt = &self.options[self.cursor];
+        if let OptionType::Select {
+            choices,
+            current_index,
+        } = &opt.option_type
+        {
+            let new_index =
+                ((*current_index as i32 + direction).rem_euclid(choices.len() as i32)) as usize;
+
+            // Update preferences based on pref_key
+            if opt.pref_key == "Separators" {
+                self.prefs.display.separator_char = choices[new_index].to_string();
+            }
+
+            // Rebuild options to reflect the change
+            self.options = Self::build_options(&self.prefs);
+        }
     }
 
     /// Check if a parent option is enabled (for determining if children are interactive)
@@ -384,6 +466,12 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Down | KeyCode::Char('j') => {
                             app.move_cursor_down();
                         }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            app.cycle_selection(-1);
+                        }
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            app.cycle_selection(1);
+                        }
                         KeyCode::Char(' ') => {
                             app.toggle_current();
                         }
@@ -528,6 +616,36 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
             // Option name
             spans.push(Span::styled(opt.name, Style::default().fg(text_color)));
 
+            // For Select type options, show the current value with cycling arrows
+            if let OptionType::Select {
+                choices,
+                current_index,
+            } = &opt.option_type
+            {
+                let current_value = choices[*current_index];
+                let is_selected = idx == app.cursor;
+
+                spans.push(Span::raw("  ")); // spacing
+
+                if is_selected {
+                    // Show arrows when selected to indicate cycling
+                    spans.push(Span::styled("◀ ", Style::default().fg(Color::Cyan)));
+                    spans.push(Span::styled(
+                        current_value,
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ));
+                    spans.push(Span::styled(" ▶", Style::default().fg(Color::Cyan)));
+                } else {
+                    // Just show the value when not selected
+                    spans.push(Span::styled(
+                        current_value,
+                        Style::default().fg(Color::DarkGray),
+                    ));
+                }
+            }
+
             let content = Line::from(spans);
 
             // Highlight selected row
@@ -590,9 +708,10 @@ fn render_options(f: &mut Frame, area: Rect, app: &ConfigApp) {
 
 /// Render help text
 fn render_help(f: &mut Frame, area: Rect) {
-    let help_text = Paragraph::new("↑↓/jk Navigate • Space Toggle • Enter/q/Ctrl+C Save & Exit")
-        .style(Style::default().fg(Color::DarkGray))
-        .block(Block::default().borders(Borders::ALL));
+    let help_text =
+        Paragraph::new("↑↓/jk Navigate • ←→/hl Cycle • Space Toggle • Enter/q/Ctrl+C Save & Exit")
+            .style(Style::default().fg(Color::DarkGray))
+            .block(Block::default().borders(Borders::ALL));
 
     f.render_widget(help_text, area);
 }
