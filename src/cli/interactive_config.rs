@@ -19,7 +19,7 @@ use std::io;
 
 use crate::config::{PersonalityPreferences, StatuslineSection};
 use crate::state::SessionState;
-use crate::statusline::{WorkspaceInfo, build_statusline};
+use crate::statusline::{WorkspaceInfo, build_statusline_with_positions};
 use crate::types::Activity;
 
 /// Available separator character options
@@ -437,30 +437,16 @@ impl ConfigApp {
     }
 
     /// Check if the option at the given index is interactive (can be toggled)
-    fn is_option_interactive(&self, idx: usize) -> bool {
-        if idx >= self.options.len() {
-            return true; // "Done" button is always interactive
-        }
-        let opt = &self.options[idx];
-        if opt.depth == 0 {
-            return true; // Top-level options are always interactive
-        }
-        // Children are interactive only if their parent is enabled
-        if let Some(parent) = opt.parent {
-            self.is_parent_enabled(parent)
-        } else {
-            true
-        }
+    /// All options are now always interactive to prevent stuck states.
+    /// Children of disabled parents are visually dimmed but can still be toggled
+    /// (which auto-enables their parent).
+    fn is_option_interactive(&self, _idx: usize) -> bool {
+        true
     }
 
     /// Toggle the option at the current cursor position
     fn toggle_current(&mut self) {
         if self.cursor < self.options.len() {
-            // Don't toggle disabled children
-            if !self.is_option_interactive(self.cursor) {
-                return;
-            }
-
             // Get the pref_key of the option to toggle
             let pref_key = self.options[self.cursor].pref_key;
 
@@ -477,18 +463,27 @@ impl ConfigApp {
                 })
                 .collect();
 
+            // Determine if we're enabling or disabling
+            let is_enabling = !selections.contains(&pref_key);
+
             // Toggle the selected one
-            if selections.contains(&pref_key) {
-                selections.retain(|&x| x != pref_key);
-            } else {
+            if is_enabling {
                 selections.push(pref_key);
+            } else {
+                selections.retain(|&x| x != pref_key);
             }
 
             // Update preferences
             self.prefs.update_from_selections(&selections);
 
-            // Auto-disable parents with no enabled children
-            self.auto_disable_empty_parents();
+            // Smart auto-enable/disable based on action
+            if is_enabling {
+                // Enabling a child? Auto-enable its parent too
+                self.auto_enable_parent_if_needed(pref_key);
+            } else {
+                // Disabling something? Auto-disable empty parents
+                self.auto_disable_empty_parents();
+            }
 
             // Refresh options list
             self.options = Self::build_options(&self.prefs);
@@ -521,6 +516,25 @@ impl ConfigApp {
         // Model: disable if Icon=false AND Label=false
         if !self.prefs.show_model_icon && !self.prefs.show_model_label {
             self.prefs.show_model = false;
+        }
+    }
+
+    /// Auto-enable parent section when enabling a child option
+    fn auto_enable_parent_if_needed(&mut self, pref_key: &str) {
+        match pref_key {
+            "Activity Icon" | "Activity Label" | "Activity Context" => {
+                self.prefs.show_activity = true;
+            }
+            "Git Icon" | "Git Branch" | "Git Status" => {
+                self.prefs.show_git = true;
+            }
+            "Directory Icon" | "Directory Label" => {
+                self.prefs.show_current_dir = true;
+            }
+            "Model Icon" | "Model Label" => {
+                self.prefs.show_model = true;
+            }
+            _ => {}
         }
     }
 
@@ -571,6 +585,27 @@ fn create_preview_workspace() -> WorkspaceInfo {
     WorkspaceInfo {
         current_dir: Some("/home/user/projects/claude-code-personalities".to_string()),
         project_dir: Some("/home/user/projects/claude-code-personalities".to_string()),
+    }
+}
+
+/// Map a config option to its corresponding statusline section
+fn get_section_for_option(opt: &ConfigOption) -> Option<StatuslineSection> {
+    match opt.pref_key {
+        "Personality" | "Move Personality" => Some(StatuslineSection::Personality),
+        "Activity" | "Move Activity" | "Activity Icon" | "Activity Label" | "Activity Context" => {
+            Some(StatuslineSection::Activity)
+        }
+        "Git" | "Move Git" | "Git Icon" | "Git Branch" | "Git Status" => {
+            Some(StatuslineSection::Git)
+        }
+        "Current Directory" | "Move Directory" | "Directory Icon" | "Directory Label" => {
+            Some(StatuslineSection::Directory)
+        }
+        "Model" | "Move Model" | "Model Icon" | "Model Label" => Some(StatuslineSection::Model),
+        "Update Available" | "Move Update" => Some(StatuslineSection::UpdateAvailable),
+        "Debug Info" | "Move Debug" => Some(StatuslineSection::DebugInfo),
+        // Colors, Separators don't map to a specific section
+        _ => None,
     }
 }
 
@@ -659,7 +694,7 @@ fn ui(f: &mut Frame, app: &ConfigApp) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5), // Preview section (compact)
+            Constraint::Length(6), // Preview section (statusline + indicator)
             Constraint::Min(10),   // Options list
             Constraint::Length(3), // Help text
         ])
@@ -675,11 +710,19 @@ fn ui(f: &mut Frame, app: &ConfigApp) {
     render_help(f, chunks[2]);
 }
 
-/// Render the statusline preview
+/// Render the statusline preview with section indicator
 fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
     let state = create_preview_state();
     let workspace = create_preview_workspace();
-    let statusline = build_statusline(&state, "Sonnet", &app.prefs, Some(&workspace), None);
+    let (statusline, positions) =
+        build_statusline_with_positions(&state, "Sonnet", &app.prefs, Some(&workspace), None);
+
+    // Get the section for the currently selected option
+    let highlighted_section = if app.cursor < app.options.len() {
+        get_section_for_option(&app.options[app.cursor])
+    } else {
+        None
+    };
 
     let block = Block::default()
         .title(Line::from(vec![Span::styled(
@@ -702,8 +745,28 @@ fn render_preview(f: &mut Frame, area: Rect, app: &ConfigApp) {
             Text::raw(statusline.clone())
         });
 
-    // Add empty line before to vertically center the single-line statusline
+    // Build indicator line if we have a highlighted section
+    let indicator_line = if let Some(section) = highlighted_section {
+        if let Some(&(start, width)) = positions.positions.get(&section) {
+            // Create indicator line: spaces up to start, then underline chars for width
+            let mut indicator = String::new();
+            for _ in 0..start {
+                indicator.push(' ');
+            }
+            for _ in 0..width {
+                indicator.push('─'); // Box drawing horizontal
+            }
+            Line::from(Span::styled(indicator, Style::default().fg(Color::Cyan)))
+        } else {
+            Line::from("") // Section not in current statusline (e.g., disabled)
+        }
+    } else {
+        Line::from("") // No section highlighted (Colors/Separators/Done)
+    };
+
+    // Build the text: empty line + statusline + indicator
     text.lines.insert(0, Line::from(""));
+    text.lines.push(indicator_line);
 
     let preview_widget = Paragraph::new(text)
         .block(block)

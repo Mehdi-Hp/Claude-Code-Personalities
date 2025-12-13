@@ -2,8 +2,11 @@ pub mod personality;
 
 use anyhow::Result;
 use colored::Colorize;
+use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::io::{self, Read};
+use unicode_width::UnicodeWidthStr;
 
 use crate::config::{PersonalityPreferences, StatuslineSection};
 use crate::icons::{ICON_FOLDER, ICON_GIT_BRANCH, get_activity_icon, get_model_icon};
@@ -506,6 +509,78 @@ fn add_section_to_parts(
             parts.push(format!("{spacing}{text}"));
         }
     }
+}
+
+/// Tracks the position and width of each section in the rendered statusline
+#[derive(Debug, Default)]
+pub struct SectionPositions {
+    /// Map from section to (start_position, width) in display characters
+    pub positions: HashMap<StatuslineSection, (usize, usize)>,
+}
+
+/// Strip ANSI escape codes and calculate display width
+fn strip_ansi_display_width(s: &str) -> usize {
+    // Regex to match ANSI escape sequences
+    let ansi_regex = Regex::new(r"\x1b\[[0-9;]*m").unwrap();
+    let stripped = ansi_regex.replace_all(s, "");
+    // Use unicode-width for accurate display width
+    UnicodeWidthStr::width(stripped.as_ref())
+}
+
+/// Build statusline with position tracking for each section
+#[must_use]
+pub fn build_statusline_with_positions(
+    state: &SessionState,
+    model_name: &str,
+    prefs: &PersonalityPreferences,
+    workspace: Option<&WorkspaceInfo>,
+    update_available: Option<&str>,
+) -> (String, SectionPositions) {
+    let mut parts = Vec::new();
+    let mut positions = SectionPositions::default();
+    let mut current_pos: usize = 0;
+
+    // Iterate over section order from preferences
+    for section in &prefs.section_order {
+        let section_text = match section {
+            StatuslineSection::Personality => render_personality_section(state, prefs),
+            StatuslineSection::Directory => render_directory_section(workspace, prefs),
+            StatuslineSection::Git => render_git_section(state, prefs),
+            StatuslineSection::Activity => render_activity_section(state, prefs),
+            StatuslineSection::Model => render_model_section(model_name, prefs),
+            StatuslineSection::UpdateAvailable => render_update_section(update_available, prefs),
+            StatuslineSection::DebugInfo => render_debug_section(state, prefs),
+        };
+
+        if let Some(ref text) = section_text {
+            if !text.is_empty() {
+                // Calculate the position and width before adding separator
+                let section_start = if parts.is_empty() {
+                    0
+                } else {
+                    // Account for spacing and separator: " | " or " "
+                    let separator_width = if prefs.display.show_separators {
+                        3 // " | " = space + separator + space
+                    } else {
+                        1 // " " = single space
+                    };
+                    current_pos + separator_width
+                };
+
+                let section_width = strip_ansi_display_width(text);
+                positions
+                    .positions
+                    .insert(section.clone(), (section_start, section_width));
+
+                // Update current position for next section
+                current_pos = section_start + section_width;
+            }
+        }
+
+        add_section_to_parts(&mut parts, section_text, prefs);
+    }
+
+    (parts.join(""), positions)
 }
 
 #[cfg(test)]
