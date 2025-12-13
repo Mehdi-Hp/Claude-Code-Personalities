@@ -11,11 +11,13 @@ type Result<T> = std::result::Result<T, PersonalityError>;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DisplayConfig {
     /// Show separator dots between elements
+    #[serde(default = "default_true")]
     pub show_separators: bool,
     /// The separator character to use between elements
     #[serde(default = "default_separator")]
     pub separator_char: String,
     /// Show debugging info (error counts, session info)
+    #[serde(default)]
     pub show_debug_info: bool,
 }
 
@@ -30,6 +32,35 @@ impl Default for DisplayConfig {
             separator_char: default_separator(),
             show_debug_info: false,
         }
+    }
+}
+
+/// Sections that can be reordered in the statusline
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StatuslineSection {
+    Personality,
+    Directory,
+    Git,
+    Activity,
+    Model,
+    UpdateAvailable,
+    DebugInfo,
+}
+
+impl StatuslineSection {
+    /// Get the default section order for the statusline
+    #[must_use]
+    pub fn default_order() -> Vec<StatuslineSection> {
+        vec![
+            Self::Personality,
+            Self::Directory,
+            Self::Git,
+            Self::Activity,
+            Self::Model,
+            Self::UpdateAvailable,
+            Self::DebugInfo,
+        ]
     }
 }
 
@@ -88,6 +119,10 @@ pub struct PersonalityPreferences {
     // Theme configuration
     #[serde(default)]
     pub theme: Theme,
+
+    // Section ordering for statusline
+    #[serde(default = "StatuslineSection::default_order")]
+    pub section_order: Vec<StatuslineSection>,
 }
 
 fn default_true() -> bool {
@@ -120,6 +155,7 @@ impl Default for PersonalityPreferences {
             show_model_label: true,
             display: DisplayConfig::default(),
             theme: Theme::default(),
+            section_order: StatuslineSection::default_order(),
         }
     }
 }
@@ -127,12 +163,21 @@ impl Default for PersonalityPreferences {
 impl PersonalityPreferences {
     /// Get the path to the preferences file.
     ///
+    /// Checks `CLAUDE_PERSONALITIES_CONFIG` environment variable first,
+    /// then falls back to `~/.claude/personalities_config.json`.
+    ///
     /// # Errors
     ///
     /// This function will return an error if:
     /// - The home directory cannot be determined
     /// - The HOME environment variable is not set
+    #[must_use]
     pub fn get_preferences_path() -> Result<PathBuf> {
+        // Allow override via environment variable (useful for testing)
+        if let Ok(path) = std::env::var("CLAUDE_PERSONALITIES_CONFIG") {
+            return Ok(PathBuf::from(path));
+        }
+
         let home = dirs::home_dir().ok_or_else(|| PersonalityError::System {
             message: "Could not find home directory".to_string(),
             suggestion: Some("Ensure the HOME environment variable is set".to_string()),
@@ -311,6 +356,9 @@ mod tests {
         assert!(prefs.show_activity_label);
         assert!(prefs.show_directory_label);
         assert!(prefs.show_model_label);
+        // Section order
+        assert_eq!(prefs.section_order.len(), 7);
+        assert_eq!(prefs.section_order[0], StatuslineSection::Personality);
     }
 
     #[test]
