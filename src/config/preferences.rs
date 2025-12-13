@@ -36,7 +36,7 @@ impl Default for DisplayConfig {
 }
 
 /// Sections that can be reordered in the statusline
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StatuslineSection {
     Personality,
