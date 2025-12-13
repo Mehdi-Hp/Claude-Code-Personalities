@@ -249,9 +249,9 @@ async fn reset_configuration() -> Result<()> {
 fn create_preview_state() -> SessionState {
     SessionState {
         session_id: "preview".to_string(),
-        activity: Activity::Coding,
+        activity: Activity::Debugging,
         current_job: None,
-        current_file: Some("main.rs".to_string()),
+        current_file: Some("tests/integration.rs".to_string()),
         git_branch: Some("main".to_string()),
         git_dirty: Some(true),    // Show dirty state in preview
         git_dirty_count: Some(3), // Show 3 dirty files in preview
