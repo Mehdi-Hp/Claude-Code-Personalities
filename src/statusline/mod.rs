@@ -90,14 +90,14 @@ pub async fn run_statusline() -> Result<()> {
 
     // Refresh git branch if enabled (with caching to avoid performance overhead)
     // This runs git commands in the correct project directory
-    if prefs.show_git_branch {
+    if prefs.show_git && prefs.show_git_branch {
         if let Some(dir) = current_dir {
             state.refresh_git_branch(dir).await;
         }
     }
 
     // Refresh git status if enabled (with caching to avoid performance overhead)
-    if prefs.show_git_status {
+    if prefs.show_git && prefs.show_git_status {
         if let Some(dir) = current_dir {
             state.refresh_git_status_in_dir(dir).await;
         } else {
@@ -192,11 +192,11 @@ pub fn build_statusline(
     }
 
     // Git branch (separate section)
-    if prefs.show_git_branch {
+    if prefs.show_git && prefs.show_git_branch {
         if let Some(branch) = &state.git_branch {
             if !branch.is_empty() {
-                // Add icon based on preference
-                let branch_with_icon = if prefs.use_icons {
+                // Add icon based on preference (check both master toggle and git-specific)
+                let branch_with_icon = if prefs.use_icons && prefs.show_git_icon {
                     format!("{} {}", ICON_GIT_BRANCH, branch)
                 } else {
                     branch.clone()
@@ -293,7 +293,7 @@ pub fn build_statusline(
 
     // Activity with icon
     if prefs.show_activity {
-        let activity_icon = if prefs.use_icons {
+        let activity_icon = if prefs.use_icons && prefs.show_activity_icon {
             get_activity_icon(&state.activity)
         } else {
             ""
@@ -367,7 +367,7 @@ pub fn build_statusline(
 
     // Model indicator
     if prefs.show_model {
-        let model_icon = if prefs.use_icons {
+        let model_icon = if prefs.use_icons && prefs.show_model_icon {
             get_model_icon(model_name)
         } else {
             ""
@@ -485,8 +485,8 @@ pub fn build_statusline(
 fn format_workspace_info(workspace: &WorkspaceInfo, prefs: &PersonalityPreferences) -> String {
     let mut workspace_parts = Vec::new();
 
-    // Add folder icon if using icons
-    if prefs.use_icons {
+    // Add folder icon if using icons (check both master toggle and directory-specific)
+    if prefs.use_icons && prefs.show_directory_icon {
         workspace_parts.push(ICON_FOLDER.to_string());
     }
 
