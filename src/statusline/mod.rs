@@ -1,6 +1,7 @@
 pub mod personality;
 
 use anyhow::Result;
+use colored::Colorize;
 use serde::Deserialize;
 use std::io::{self, Read};
 
@@ -206,6 +207,13 @@ pub fn build_statusline(
                     // Apply color to branch part
                     let base_colored = prefs.theme.apply_file(&branch_with_icon);
 
+                    // Add "branch" suffix for simple branch names (no "/" in name)
+                    let base_colored = if !branch.contains('/') {
+                        format!("{}{}", base_colored, " branch".dimmed())
+                    } else {
+                        base_colored
+                    };
+
                     // Add git status indicator if enabled
                     if prefs.show_git_status {
                         if let Some(is_dirty) = state.git_dirty {
@@ -232,6 +240,13 @@ pub fn build_statusline(
                     }
                 } else {
                     // No colors - simple concatenation
+                    // Add "branch" suffix for simple branch names (no "/" in name)
+                    let branch_display = if !branch.contains('/') {
+                        format!("{} branch", branch_with_icon)
+                    } else {
+                        branch_with_icon
+                    };
+
                     if prefs.show_git_status {
                         if let Some(is_dirty) = state.git_dirty {
                             if is_dirty {
@@ -241,15 +256,15 @@ pub fn build_statusline(
                                 } else {
                                     " ±".to_string()
                                 };
-                                format!("{branch_with_icon}{status_text}")
+                                format!("{branch_display}{status_text}")
                             } else {
-                                format!("{branch_with_icon} ✓")
+                                format!("{branch_display} ✓")
                             }
                         } else {
-                            branch_with_icon
+                            branch_display
                         }
                     } else {
-                        branch_with_icon
+                        branch_display
                     }
                 };
 
