@@ -6,7 +6,8 @@ use tokio::fs;
 use crate::cli::settings::get_claude_dir;
 use crate::platform::Platform;
 use crate::version::{
-    CURRENT_VERSION, VersionManager, format_changelog, format_version_comparison,
+    CURRENT_VERSION, VersionManager, format_changelog, format_commits_as_changelog,
+    format_version_comparison, is_generic_changelog,
 };
 
 pub struct UpdateOptions {
@@ -54,7 +55,8 @@ pub async fn update_personalities(options: UpdateOptions) -> Result<()> {
         return Ok(());
     };
 
-    let should_proceed = show_update_info_and_confirm(&latest_release, &options).await?;
+    let should_proceed =
+        show_update_info_and_confirm(&version_manager, &latest_release, &options).await?;
     if !should_proceed {
         return Ok(());
     }
@@ -92,6 +94,7 @@ async fn check_and_get_release(
 }
 
 async fn show_update_info_and_confirm(
+    version_manager: &VersionManager,
     latest_release: &crate::version::GitHubRelease,
     options: &UpdateOptions,
 ) -> Result<bool> {
@@ -104,14 +107,28 @@ async fn show_update_info_and_confirm(
     println!();
     print_status(&format!("{comparison} available"));
 
+    // Get changelog, falling back to commit history if release notes are generic
     let changelog = format_changelog(latest_release);
-    if changelog != "No changelog available" {
+    let changelog = if is_generic_changelog(&changelog) {
+        // Fetch commits between versions as fallback
+        match version_manager
+            .fetch_commits_between(CURRENT_VERSION, &latest_release.tag_name)
+            .await
+        {
+            Ok(commits) if !commits.is_empty() => format_commits_as_changelog(&commits),
+            _ => changelog, // Keep original if fetch fails or no commits
+        }
+    } else {
+        changelog
+    };
+
+    if changelog != "No changelog available" && !is_generic_changelog(&changelog) {
         println!();
         print_status("What's new:");
-        for line in changelog.lines().take(5) {
+        for line in changelog.lines().take(10) {
             println!("    {line}");
         }
-        if changelog.lines().count() > 5 {
+        if changelog.lines().count() > 10 {
             println!("    ...");
         }
     }
