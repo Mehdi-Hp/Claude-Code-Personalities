@@ -9,6 +9,7 @@ type Result<T> = std::result::Result<T, PersonalityError>;
 
 /// Advanced display configuration options
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct DisplayConfig {
     /// Show separator dots between elements
     #[serde(default = "default_true")]
@@ -66,6 +67,7 @@ impl StatuslineSection {
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct PersonalityPreferences {
     // Basic display toggles
     pub show_personality: bool,
@@ -460,5 +462,37 @@ mod tests {
         assert!(display.show_separators);
         assert_eq!(display.separator_char, "\u{2022}"); // • bullet
         assert!(!display.show_debug_info);
+    }
+
+    #[test]
+    fn test_backward_compatibility_missing_fields() {
+        // Simulate an old config file missing new fields
+        let old_config = r#"{
+            "show_personality": true,
+            "show_activity": false
+        }"#;
+
+        // Should parse successfully, using defaults for missing fields
+        let prefs: PersonalityPreferences = serde_json::from_str(old_config).unwrap();
+        assert!(prefs.show_personality);
+        assert!(!prefs.show_activity);
+        // Missing fields should get defaults
+        assert!(prefs.show_context); // default is true
+        assert!(prefs.show_git); // default is true
+        assert!(prefs.use_colors); // default is true
+    }
+
+    #[test]
+    fn test_forward_compatibility_extra_fields() {
+        // Simulate a new config file with fields this binary doesn't know about
+        let future_config = r#"{
+            "show_personality": false,
+            "unknown_future_field": true,
+            "another_new_thing": "value"
+        }"#;
+
+        // Should parse successfully, ignoring unknown fields
+        let prefs: PersonalityPreferences = serde_json::from_str(future_config).unwrap();
+        assert!(!prefs.show_personality);
     }
 }
