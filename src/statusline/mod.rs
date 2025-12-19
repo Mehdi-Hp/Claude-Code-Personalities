@@ -5,7 +5,7 @@ use colored::Colorize;
 use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use unicode_width::UnicodeWidthStr;
 
 use crate::config::{PersonalityPreferences, StatuslineSection};
@@ -140,6 +140,7 @@ pub async fn run_statusline() -> Result<()> {
     );
 
     print!("{statusline}");
+    io::stdout().flush().ok();
 
     Ok(())
 }
