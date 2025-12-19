@@ -314,7 +314,12 @@ fn print_uninstall_success(
 
     // Critical restart warning
     println!();
-    println!("{}", "⚠️  IMPORTANT - RESTART REQUIRED ⚠️".bold().red());
+    println!(
+        "{} {} {}",
+        ICON_WARNING.red(),
+        "IMPORTANT - RESTART REQUIRED".bold().red(),
+        ICON_WARNING.red()
+    );
     println!(
         "{}",
         "You MUST restart Claude Code to complete the uninstall!".red()
