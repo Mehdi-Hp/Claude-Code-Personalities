@@ -4,7 +4,12 @@
 # For cross-platform releases, use GitHub Actions matrix builds instead
 set -euo pipefail
 
-echo "🚀 Building Claude Code Personalities locally..."
+# Nerd Font icons
+ICON_ROCKET=$(printf '\xef\x84\xb5')
+ICON_CHECK=$(printf '\xef\x91\x84')
+ICON_PACKAGE=$(printf '\xef\x91\xb7')
+
+echo "$ICON_ROCKET Building Claude Code Personalities locally..."
 
 # Clean build dir
 rm -rf build
@@ -42,9 +47,9 @@ fi
 
 # Show results
 size=$(du -h $binary_name | cut -f1)
-echo "✅ Built: $binary_name ($size)"
+echo "$ICON_CHECK Built: $binary_name ($size)"
 echo ""
-echo "📦 Local build complete! For multi-platform releases, use:"
+echo "$ICON_PACKAGE Local build complete! For multi-platform releases, use:"
 echo "   git tag v$VERSION && git push origin v$VERSION"
 echo ""
 ls -la
