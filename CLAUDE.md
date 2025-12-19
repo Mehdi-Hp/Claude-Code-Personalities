@@ -52,7 +52,7 @@ The entire system is contained in a single Rust binary that operates in differen
 claude-code-personalities
 ├── --statusline          # Generate statusline output (called by Claude Code)
 ├── --hook <type>         # Handle hook events (pre-tool, post-tool, session-end)
-├── install               # Install and configure Claude Code
+├── init                  # Initialize Claude Code settings for personalities
 ├── config                # Interactive configuration menu
 ├── status                # Check installation status
 ├── update                # Update to latest version
@@ -151,13 +151,18 @@ State is stored in `/tmp/claude_session_<session_id>.json`:
 
 ## Installation Process
 
-The `claude-code-personalities install` command:
+The `install.sh` script:
 
-1. **Copies binary** to `~/.claude/claude-code-personalities`
+1. **Downloads binary** from GitHub releases
+2. **Installs binary** to `~/.local/bin/claude-code-personalities`
+3. **Runs `init`** automatically to configure Claude Code
+
+The `claude-code-personalities init` command:
+
+1. **Creates/verifies** `~/.claude/` directory exists
 2. **Backs up** existing `settings.json` (timestamped)
-3. **Merges configuration** into `settings.json` (preserves existing hooks)
-4. **Creates default config** at `~/.claude/personalities_config.json`
-5. **Validates setup** by testing statusline and hooks
+3. **Configures statusline** and hooks in `settings.json`
+4. **Validates setup** by verifying configuration
 
 ## Configuration
 
@@ -293,7 +298,7 @@ claude-code-personalities status
 ### Update Issues
 1. Check binary location: `which claude-code-personalities`
 2. Run status check: `claude-code-personalities status`
-3. Reinstall if needed: `claude-code-personalities install --force`
+3. Reinitialize if needed: `claude-code-personalities init`
 
 ### Performance Issues
 The Rust implementation is designed for speed:

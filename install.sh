@@ -239,24 +239,17 @@ echo -e "  $divider"
 echo -e "  ${ICON_SUCCESS} ${BOLD}${NC} Claude Code Personalities Installed${NC}"
 echo -e "  $divider"
 
-# Auto-initialize Claude Code if possible
-if command -v claude &> /dev/null; then
-    echo -e "  ${DIM}• Claude Code detected - setting up personalities...${NC}"
-    
-    if "$BIN_PATH" init --non-interactive 2>/dev/null; then
-        echo -e "  ${BOLD}${PRIMARY}Ready to Use!${NC}"
-    else
-        print_warning "Auto-configuration failed"
-        echo
-        echo -e "  ${BOLD}${PRIMARY}Manual Setup Required${NC}"
-        echo -e "    Run: ${NC}claude-code-personalities init${NC}"
-    fi
+# Initialize personalities configuration
+echo -e "  ${DIM}• Setting up personalities...${NC}"
+
+if "$BIN_PATH" init --non-interactive 2>/dev/null; then
+    echo -e "  ${BOLD}${PRIMARY}Ready to Use!${NC}"
+    echo -e "    Restart Claude Code to see your new statusline"
 else
-    print_info "Claude Code not detected in PATH"
+    print_warning "Auto-configuration failed"
     echo
-    echo -e "  ${BOLD}${PRIMARY}Next Steps${NC}"
-    echo -e "    1. Install Claude Code if you haven't already"
-    echo -e "    2. Run: ${NC}claude-code-personalities init${NC}"
+    echo -e "  ${BOLD}${PRIMARY}Manual Setup Required${NC}"
+    echo -e "    Run: ${NC}claude-code-personalities init${NC}"
 fi
 
 echo
