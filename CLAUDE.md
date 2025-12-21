@@ -338,6 +338,26 @@ cargo build --release
 3. Add corresponding kaomoji to `src/kaomoji/`
 4. Rebuild and test
 
+### Releasing a New Version
+
+Use the `just release` command for the full release workflow:
+
+```bash
+just release 0.4.3
+```
+
+This automatically:
+1. Updates version in `Cargo.toml`
+2. Builds for all platforms (via `build-cross.sh`)
+3. Commits the version bump
+4. Creates and pushes a git tag
+5. GitHub Actions builds and publishes the release
+
+**Config Versioning**: When making breaking changes to `personalities_config.json`:
+1. Increment `CONFIG_VERSION` in `src/config/preferences.rs`
+2. Add migration logic in the `migrate()` function
+3. Document the change in the version comments
+
 ### Contributing
 - Follow existing code patterns
 - Add tests for new functionality
