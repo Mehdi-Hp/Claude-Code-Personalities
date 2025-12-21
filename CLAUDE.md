@@ -6,6 +6,7 @@
 
 - **NO EMOJIS**: Never use emojis in any files or output
 - **Nerd Font Icons Only**: If icons are needed, use Nerd Font UTF-8 byte sequences only (e.g., `\u{f07b}` for folder icon)
+- **Never replace local binary directly**: The developer is an end user too. Always use `claude-code-personalities update` or download from releases - never `cp` the binary directly. This ensures the update flow is tested.
 
 ## What is This?
 
