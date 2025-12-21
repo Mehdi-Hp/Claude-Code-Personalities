@@ -65,10 +65,19 @@ impl StatuslineSection {
     }
 }
 
+/// Current config version. Increment when making breaking changes.
+/// v1: Initial version (pre-0.4.0, had compact_mode)
+/// v2: Removed compact_mode from DisplayConfig (0.4.0+)
+pub const CONFIG_VERSION: u32 = 2;
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct PersonalityPreferences {
+    /// Config file version for compatibility detection
+    #[serde(default = "default_config_version")]
+    pub config_version: u32,
+
     // Basic display toggles
     pub show_personality: bool,
     pub show_activity: bool,
@@ -131,9 +140,16 @@ fn default_true() -> bool {
     true
 }
 
+fn default_config_version() -> u32 {
+    // Default to 1 for old configs without version field
+    // This triggers migration on first load
+    1
+}
+
 impl Default for PersonalityPreferences {
     fn default() -> Self {
         Self {
+            config_version: CONFIG_VERSION,
             show_personality: true,
             show_activity: true,
             show_context: true,
@@ -207,17 +223,36 @@ impl PersonalityPreferences {
                     source: e,
                     suggestion: Some("Check file permissions".to_string()),
                 })?;
-            let prefs: PersonalityPreferences =
+            let mut prefs: PersonalityPreferences =
                 serde_json::from_str(&content).map_err(|e| PersonalityError::Parsing {
                     context: "personality preferences file".to_string(),
                     input_preview: Some(content.chars().take(100).collect()),
                     source: e,
                     suggestion: Some("Check JSON syntax in preferences file".to_string()),
                 })?;
+
+            // Migrate old config versions
+            if prefs.config_version < CONFIG_VERSION {
+                prefs.migrate();
+                // Save migrated config so it's compatible with current version
+                prefs.save().await?;
+            }
+
             Ok(prefs)
         } else {
             Ok(Self::default())
         }
+    }
+
+    /// Migrate config from older versions to current version.
+    /// Called automatically when loading a config with older version.
+    fn migrate(&mut self) {
+        // v1 -> v2: compact_mode was removed from DisplayConfig
+        // No action needed - the field is simply ignored if present in JSON
+        // and won't be written on save
+
+        // Update to current version
+        self.config_version = CONFIG_VERSION;
     }
 
     /// Save preferences to file.
