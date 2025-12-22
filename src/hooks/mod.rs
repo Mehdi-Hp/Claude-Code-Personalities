@@ -818,7 +818,7 @@ mod tests {
         state.save().await.unwrap();
 
         // Verify file exists
-        let state_path = SessionState::get_state_path(&session_id);
+        let state_path = SessionState::get_state_path(&session_id).unwrap();
         assert!(state_path.exists());
 
         // Simulate session end cleanup

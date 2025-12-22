@@ -4,6 +4,62 @@ use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
+/// Characters that could cause shell injection if present in binary paths.
+/// These are dangerous when the path is used in a command string.
+const DANGEROUS_PATH_CHARS: &[char] = &[
+    '|', '&', ';', '$', '`', '"', '\'', '\\', '\n', '\r', '\t', '(', ')', '{', '}', '[', ']', '<',
+    '>', '!', '*', '?', '#', '~', '%',
+];
+
+/// Validate that a binary path is safe to use in shell commands.
+///
+/// Checks that:
+/// 1. Path is absolute (prevents PATH manipulation attacks)
+/// 2. Path doesn't contain shell metacharacters
+/// 3. Path doesn't contain path traversal sequences
+/// 4. Path is valid UTF-8
+///
+/// # Errors
+///
+/// Returns an error if the path contains dangerous characters or patterns.
+pub fn validate_binary_path(path: &Path) -> Result<()> {
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| anyhow!("Binary path contains invalid UTF-8"))?;
+
+    // Must be absolute path to prevent PATH manipulation
+    if !path.is_absolute() {
+        return Err(anyhow!(
+            "Binary path must be absolute, got: {}",
+            path.display()
+        ));
+    }
+
+    // Check for shell metacharacters
+    if let Some(dangerous_char) = path_str.chars().find(|c| DANGEROUS_PATH_CHARS.contains(c)) {
+        return Err(anyhow!(
+            "Binary path contains dangerous character '{}': {}",
+            dangerous_char,
+            path.display()
+        ));
+    }
+
+    // Check for path traversal (additional safety)
+    if path_str.contains("..") {
+        return Err(anyhow!(
+            "Binary path contains path traversal sequence: {}",
+            path.display()
+        ));
+    }
+
+    // Check path isn't too long (prevent buffer issues in some systems)
+    if path_str.len() > 4096 {
+        return Err(anyhow!("Binary path too long (max 4096 chars)"));
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
 pub struct ClaudeSettings {
     pub settings_path: PathBuf,
@@ -128,7 +184,12 @@ impl ClaudeSettings {
     /// This function will return an error if:
     /// - The binary path cannot be converted to a valid string
     /// - The binary path contains invalid UTF-8 characters
+    /// - The binary path contains dangerous shell metacharacters
     pub fn configure_statusline(&mut self, binary_path: &Path) -> Result<()> {
+        // Validate binary path for security
+        validate_binary_path(binary_path)
+            .with_context(|| "Binary path validation failed for statusline configuration")?;
+
         let statusline_config = serde_json::json!({
             "type": "command",
             "command": format!("{} --statusline", binary_path.to_str().ok_or_else(|| anyhow!("Invalid binary path"))?),
@@ -150,9 +211,14 @@ impl ClaudeSettings {
     /// This function will return an error if:
     /// - The binary path cannot be converted to a valid string
     /// - The binary path contains invalid UTF-8 characters
+    /// - The binary path contains dangerous shell metacharacters
     /// - JSON serialization of hook configuration fails
     /// - Existing hooks structure is malformed and cannot be parsed
     pub fn configure_hooks(&mut self, binary_path: &Path) -> Result<()> {
+        // Validate binary path for security
+        validate_binary_path(binary_path)
+            .with_context(|| "Binary path validation failed for hooks configuration")?;
+
         let binary_str = binary_path
             .to_str()
             .ok_or_else(|| anyhow!("Invalid binary path"))?;
@@ -992,5 +1058,90 @@ mod tests {
             "command": "/path/to/other-tool --some-flag"
         });
         assert!(!hook_contains_personality_command(&other_hook));
+    }
+
+    #[test]
+    fn test_validate_binary_path_valid() {
+        // Valid absolute paths
+        assert!(validate_binary_path(Path::new("/usr/local/bin/binary")).is_ok());
+        assert!(validate_binary_path(Path::new("/home/user/.local/bin/tool")).is_ok());
+        assert!(
+            validate_binary_path(Path::new("/Users/dev/.claude/claude-code-personalities")).is_ok()
+        );
+    }
+
+    #[test]
+    fn test_validate_binary_path_relative() {
+        // Relative paths should be rejected
+        assert!(validate_binary_path(Path::new("./binary")).is_err());
+        assert!(validate_binary_path(Path::new("binary")).is_err());
+        assert!(validate_binary_path(Path::new("../bin/binary")).is_err());
+    }
+
+    #[test]
+    fn test_validate_binary_path_shell_metacharacters() {
+        // Paths with shell metacharacters should be rejected
+        assert!(validate_binary_path(Path::new("/tmp/evil && rm -rf /")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/evil; malicious")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/evil | cat /etc/passwd")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/$(whoami)/binary")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/`whoami`/binary")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/evil\"quoted")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/evil'quoted")).is_err());
+        assert!(validate_binary_path(Path::new("/tmp/evil$VAR")).is_err());
+    }
+
+    #[test]
+    fn test_validate_binary_path_traversal() {
+        // Paths with traversal sequences should be rejected
+        assert!(validate_binary_path(Path::new("/tmp/../etc/passwd")).is_err());
+        assert!(validate_binary_path(Path::new("/home/user/../../root")).is_err());
+    }
+
+    #[test]
+    fn test_validate_binary_path_too_long() {
+        // Very long paths should be rejected
+        let long_path = format!("/{}", "a".repeat(5000));
+        assert!(validate_binary_path(Path::new(&long_path)).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_configure_statusline_rejects_dangerous_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+
+        let mut settings = ClaudeSettings::load_from_path(&settings_path)
+            .await
+            .unwrap();
+
+        // Should reject path with shell metacharacters
+        let dangerous_path = PathBuf::from("/tmp/evil && rm -rf /");
+        let result = settings.configure_statusline(&dangerous_path);
+        assert!(result.is_err(), "Expected error for dangerous path");
+        let err_str = result.unwrap_err().to_string();
+        assert!(
+            err_str.contains("validation failed") || err_str.contains("dangerous"),
+            "Error should mention validation: {err_str}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_configure_hooks_rejects_relative_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings_path = temp_dir.path().join("settings.json");
+
+        let mut settings = ClaudeSettings::load_from_path(&settings_path)
+            .await
+            .unwrap();
+
+        // Should reject relative path
+        let relative_path = PathBuf::from("./claude-code-personalities");
+        let result = settings.configure_hooks(&relative_path);
+        assert!(result.is_err(), "Expected error for relative path");
+        let err_str = result.unwrap_err().to_string();
+        assert!(
+            err_str.contains("validation failed") || err_str.contains("absolute"),
+            "Error should mention validation: {err_str}"
+        );
     }
 }

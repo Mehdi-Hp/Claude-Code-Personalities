@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -6,6 +6,62 @@ use tokio::fs;
 
 use crate::kaomoji::BOOTING_UP;
 use crate::types::Activity;
+
+/// Sanitize session ID to prevent path traversal attacks.
+///
+/// Only allows alphanumeric characters, hyphens, and underscores.
+/// Rejects any path traversal attempts (../, /, \).
+///
+/// # Errors
+///
+/// Returns an error if the session ID contains dangerous characters
+/// or path traversal sequences.
+fn sanitize_session_id(session_id: &str) -> Result<String> {
+    // Reject path traversal attempts
+    if session_id.contains("..") || session_id.contains('/') || session_id.contains('\\') {
+        return Err(anyhow!(
+            "Invalid session_id: contains path traversal characters"
+        ));
+    }
+
+    // Filter to only safe characters
+    let sanitized: String = session_id
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
+        .collect();
+
+    if sanitized.is_empty() {
+        return Err(anyhow!("Invalid session_id: empty after sanitization"));
+    }
+
+    // Limit length to prevent excessive file names
+    if sanitized.len() > 128 {
+        return Err(anyhow!("Invalid session_id: too long (max 128 chars)"));
+    }
+
+    Ok(sanitized)
+}
+
+/// Get the secure state directory for session files.
+///
+/// Uses a user-owned directory instead of world-readable /tmp.
+/// Falls back to /tmp if user directories are unavailable.
+fn get_secure_state_dir() -> PathBuf {
+    // Prefer XDG runtime dir (usually /run/user/<uid>, only accessible by user)
+    if let Some(runtime_dir) = dirs::runtime_dir() {
+        return runtime_dir.join("claude-code-personalities");
+    }
+
+    // Fall back to cache dir (~/.cache/claude-code-personalities)
+    if let Some(cache_dir) = dirs::cache_dir() {
+        return cache_dir.join("claude-code-personalities").join("state");
+    }
+
+    // Last resort: /tmp with a user-specific subdirectory
+    // Use username from environment to create user-specific directory
+    let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_string());
+    PathBuf::from("/tmp").join(format!("claude-code-personalities-{user}"))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MoodState {
@@ -120,7 +176,33 @@ impl SessionState {
     /// This function currently does not return errors in practice, as all failure cases
     /// fall back to creating a default state. It returns Result for API compatibility.
     pub async fn load(session_id: &str) -> Result<Self> {
-        let path = Self::get_state_path(session_id);
+        let path = match Self::get_state_path(session_id) {
+            Ok(p) => p,
+            Err(_) => {
+                // Invalid session ID - return default state
+                return Ok(Self {
+                    session_id: session_id.to_string(),
+                    ..Default::default()
+                });
+            }
+        };
+
+        // Ensure the state directory exists with secure permissions
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent).await.ok();
+                // Set restrictive permissions on Unix
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = std::fs::metadata(parent) {
+                        let mut perms = metadata.permissions();
+                        perms.set_mode(0o700);
+                        std::fs::set_permissions(parent, perms).ok();
+                    }
+                }
+            }
+        }
 
         if path.exists() {
             // Try to read existing state
@@ -150,9 +232,24 @@ impl SessionState {
     /// - The state file cannot be written due to permissions or I/O errors
     /// - File system operations fail during write
     pub async fn save(&self) -> Result<()> {
-        use anyhow::Context;
+        let path = Self::get_state_path(&self.session_id)
+            .with_context(|| format!("Invalid session ID: {}", self.session_id))?;
 
-        let path = Self::get_state_path(&self.session_id);
+        // Ensure directory exists with secure permissions
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent).await.with_context(|| {
+                    format!("Failed to create state directory: {}", parent.display())
+                })?;
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let perms = std::fs::Permissions::from_mode(0o700);
+                    std::fs::set_permissions(parent, perms).ok();
+                }
+            }
+        }
+
         let content = serde_json::to_string_pretty(self).with_context(|| {
             format!(
                 "Failed to serialize session state for session {}",
@@ -434,27 +531,54 @@ impl SessionState {
     /// This function will return an error if:
     /// - This function currently does not return errors as file removal failures are ignored
     pub async fn cleanup(session_id: &str) -> Result<()> {
-        let state_path = Self::get_state_path(session_id);
-        let error_path = Self::get_error_path(session_id);
+        // Ignore errors from invalid session IDs - nothing to clean up
+        if let Ok(state_path) = Self::get_state_path(session_id) {
+            let _ = fs::remove_file(&state_path).await;
+        }
 
-        // Ignore errors if files don't exist
-        let _ = fs::remove_file(&state_path).await;
-        let _ = fs::remove_file(&error_path).await;
+        if let Ok(error_path) = Self::get_error_path(session_id) {
+            let _ = fs::remove_file(&error_path).await;
+        }
 
         Ok(())
     }
 
-    #[must_use]
-    pub fn get_state_path(session_id: &str) -> PathBuf {
-        PathBuf::from(format!(
-            "/tmp/claude_code_personalities_activity_{session_id}.json"
-        ))
+    /// Get the path for session state file.
+    ///
+    /// Uses a secure directory and sanitized session ID to prevent:
+    /// - Path traversal attacks (../)
+    /// - Symlink attacks in /tmp
+    /// - Information disclosure to other users
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the session ID contains invalid characters.
+    pub fn get_state_path(session_id: &str) -> Result<PathBuf> {
+        let safe_id = sanitize_session_id(session_id)?;
+        let state_dir = get_secure_state_dir();
+        Ok(state_dir.join(format!("activity_{safe_id}.json")))
     }
 
-    fn get_error_path(session_id: &str) -> PathBuf {
-        PathBuf::from(format!(
-            "/tmp/claude_code_personalities_errors_{session_id}.count"
-        ))
+    /// Get the path for session state file (legacy, for backward compatibility).
+    ///
+    /// This version doesn't return Result for compatibility with existing code.
+    /// Falls back to a safe default if sanitization fails.
+    #[must_use]
+    pub fn get_state_path_legacy(session_id: &str) -> PathBuf {
+        match Self::get_state_path(session_id) {
+            Ok(path) => path,
+            Err(_) => {
+                // Fallback to a safe default path
+                let state_dir = get_secure_state_dir();
+                state_dir.join("activity_invalid_session.json")
+            }
+        }
+    }
+
+    fn get_error_path(session_id: &str) -> Result<PathBuf> {
+        let safe_id = sanitize_session_id(session_id)?;
+        let state_dir = get_secure_state_dir();
+        Ok(state_dir.join(format!("errors_{safe_id}.count")))
     }
 }
 
@@ -657,7 +781,7 @@ mod tests {
         state.save().await.unwrap();
 
         // Verify file exists
-        let state_path = SessionState::get_state_path(&session_id);
+        let state_path = SessionState::get_state_path(&session_id).unwrap();
         assert!(state_path.exists());
 
         // Cleanup
@@ -718,7 +842,12 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_json_handling() {
         let session_id = create_test_session_id();
-        let state_path = SessionState::get_state_path(&session_id);
+        let state_path = SessionState::get_state_path(&session_id).unwrap();
+
+        // Ensure parent directory exists
+        if let Some(parent) = state_path.parent() {
+            fs::create_dir_all(parent).await.ok();
+        }
 
         // Write invalid JSON
         fs::write(&state_path, "invalid json").await.unwrap();
@@ -736,5 +865,85 @@ mod tests {
         if state_path.exists() {
             fs::remove_file(&state_path).await.unwrap();
         }
+    }
+
+    #[tokio::test]
+    async fn test_path_traversal_rejection() {
+        // Test that path traversal attempts are rejected
+        let malicious_ids = vec![
+            "../../../etc/passwd",
+            "..%2F..%2Fetc%2Fpasswd",
+            "test/../../../etc/passwd",
+            "/etc/passwd",
+            "test/../../secret",
+            "..\\..\\windows\\system32",
+        ];
+
+        for id in malicious_ids {
+            let result = SessionState::get_state_path(id);
+            assert!(
+                result.is_err(),
+                "Path traversal should be rejected for: {}",
+                id
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_valid_session_ids() {
+        // Test that valid session IDs work
+        let valid_ids = vec![
+            "abc123",
+            "test-session-123",
+            "test_session_456",
+            "ABC-123_def",
+            "a",
+            "12345",
+        ];
+
+        for id in valid_ids {
+            let result = SessionState::get_state_path(id);
+            assert!(
+                result.is_ok(),
+                "Valid session ID should be accepted: {}",
+                id
+            );
+        }
+    }
+
+    #[test]
+    fn test_sanitize_session_id() {
+        // Valid IDs
+        assert!(sanitize_session_id("abc123").is_ok());
+        assert!(sanitize_session_id("test-session").is_ok());
+        assert!(sanitize_session_id("test_session").is_ok());
+
+        // Invalid IDs - path traversal
+        assert!(sanitize_session_id("../../../etc/passwd").is_err());
+        assert!(sanitize_session_id("test/../secret").is_err());
+        assert!(sanitize_session_id("/etc/passwd").is_err());
+        assert!(sanitize_session_id("test\\secret").is_err());
+
+        // Empty after sanitization
+        assert!(sanitize_session_id("!@#$%").is_err());
+
+        // Too long
+        let long_id = "a".repeat(200);
+        assert!(sanitize_session_id(&long_id).is_err());
+    }
+
+    #[test]
+    fn test_secure_state_dir() {
+        let dir = get_secure_state_dir();
+        // Should not be /tmp directly (should be a subdirectory)
+        assert!(
+            dir.to_string_lossy() != "/tmp",
+            "State dir should not be /tmp directly"
+        );
+        // Should contain our app name
+        assert!(
+            dir.to_string_lossy().contains("claude-code-personalities"),
+            "State dir should contain app name"
+        );
     }
 }
