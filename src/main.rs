@@ -52,7 +52,6 @@ async fn run() -> Result<()> {
         .subcommand(Command::new("update").about("Update to the latest version"))
         .subcommand(Command::new("uninstall").about("Remove Claude Code Personalities"))
         .subcommand(Command::new("status").about("Check installation status"))
-        .subcommand(Command::new("check-update").about("Check for available updates"))
         .subcommand(
             Command::new("config")
                 .about("Configure Claude Code Personalities display options")
@@ -93,7 +92,6 @@ async fn run() -> Result<()> {
             Some(("update", _)) => cli::update().await,
             Some(("uninstall", _)) => cli::uninstall().await,
             Some(("status", _)) => cli::status().await,
-            Some(("check-update", _)) => cli::check_update().await,
             Some(("config", sub_matches)) => {
                 let subcommand = sub_matches.subcommand().map(|(name, _)| name);
                 cli::config::handle_config_command(subcommand).await

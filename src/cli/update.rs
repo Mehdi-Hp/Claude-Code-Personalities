@@ -70,8 +70,9 @@ async fn check_and_get_release(
     version_manager: &VersionManager,
     options: &UpdateOptions,
 ) -> Result<Option<crate::version::GitHubRelease>> {
+    // Always fetch fresh data from GitHub (no cache) to ensure accurate version comparison
     let update_info = version_manager
-        .check_for_update()
+        .check_for_update_force()
         .await
         .with_context(|| "Failed to check for updates")?;
 

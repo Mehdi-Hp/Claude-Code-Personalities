@@ -212,8 +212,8 @@ fn print_init_success(binary_path: &Path, settings_path: &Path) -> Result<()> {
     );
     println!(
         "  {:35} {}",
-        "claude-code-personalities check-update".white(),
-        "- Check for updates".bright_black()
+        "claude-code-personalities update".white(),
+        "- Check for and install updates".bright_black()
     );
     println!(
         "  {:35} {}",

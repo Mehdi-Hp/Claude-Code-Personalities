@@ -139,64 +139,6 @@ pub async fn status() -> Result<()> {
     Ok(())
 }
 
-/// Check for available updates and display version information.
-///
-/// Always fetches fresh data from GitHub (no caching).
-///
-/// # Errors
-///
-/// This function will return an error if:
-/// - Version manager initialization fails
-/// - GitHub API requests fail or return invalid responses
-/// - Network connectivity issues prevent update checking
-/// - Version parsing or comparison fails
-pub async fn check_update() -> Result<()> {
-    use crate::version::{VersionManager, format_version_comparison};
-    use anyhow::Context;
-
-    println!("{}", "Checking for updates...".bold().blue());
-    println!();
-
-    let version_manager =
-        VersionManager::new().with_context(|| "Failed to initialize version manager")?;
-
-    print_info("Fetching latest version from GitHub...");
-
-    let update_info = version_manager
-        .check_for_update_force()
-        .await
-        .with_context(|| "Failed to check for updates")?;
-
-    if let Some(release) = update_info {
-        let latest_version = release
-            .tag_name
-            .strip_prefix('v')
-            .unwrap_or(&release.tag_name);
-        let comparison = format_version_comparison(CURRENT_VERSION, latest_version);
-
-        println!();
-        println!(
-            "{} {}",
-            format!("{}Update Available:", "\u{f135} ").bold().green(),
-            comparison
-        );
-        if let Some(name) = &release.name {
-            println!("{} {}", format!("{}Release:", "\u{f044} ").bold(), name);
-        }
-        println!();
-        println!(
-            "Run {} to update",
-            "claude-code-personalities update".cyan()
-        );
-    } else {
-        println!();
-        println!("{} You are running the latest version!", ICON_CHECK.green());
-        println!("Current version: v{CURRENT_VERSION}");
-    }
-
-    Ok(())
-}
-
 /// Display help information and available commands.
 ///
 /// # Errors
@@ -213,8 +155,7 @@ pub fn help() -> Result<()> {
     println!("  init          Initialize Claude Code settings for personalities");
     println!("  config        Customize statusline appearance and colors");
     println!("  status        Check installation and configuration status");
-    println!("  update        Check for and install updates");
-    println!("  check-update  Check for available updates");
+    println!("  update        Check for updates and install if available");
     println!("  uninstall     Remove personalities from Claude Code");
     println!("  help          Show this help message");
     println!();
@@ -228,9 +169,4 @@ pub fn help() -> Result<()> {
 
 fn get_claude_dir() -> Result<PathBuf> {
     settings::get_claude_dir()
-}
-
-/// Helper functions for status output
-fn print_info(message: &str) {
-    println!("  {} {}", ICON_INFO.cyan(), message);
 }

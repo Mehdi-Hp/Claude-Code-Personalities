@@ -42,10 +42,7 @@ claude-code-personalities install
 Claude Code Personalities includes automatic update checking:
 
 ```bash
-# Check for updates
-claude-code-personalities check-update
-
-# Update to latest version
+# Check for updates and install if available
 claude-code-personalities update
 ```
 
@@ -64,8 +61,7 @@ claude-code-personalities config              # Interactive configuration menu
 
 # Management
 claude-code-personalities status              # Check installation status
-claude-code-personalities update              # Update to latest version
-claude-code-personalities check-update        # Check for available updates
+claude-code-personalities update              # Check for updates and install if available
 claude-code-personalities uninstall           # Remove personalities (restart Claude required)
 claude-code-personalities help                # Show help with all options
 ```
