@@ -5,7 +5,7 @@ edition = "2024"
 description = "Dynamic text-face personalities for Claude Code's statusline"
 license = "WTFPL"
 repository = "https://github.com/kumamaki/claude-code-personalities"
-authors = ["Mehdi Hp <mehdi@example.com>"]
+authors = ["kumamaki"]
 
 [lib]
 name = "claude_code_personalities"
