@@ -703,7 +703,7 @@ mod tests {
         assert_eq!(get_model_icon("Opus"), ICON_OPUS);
         assert_eq!(get_model_icon("Sonnet"), ICON_SONNET);
         assert_eq!(get_model_icon("Haiku"), ICON_HAIKU);
-        assert_eq!(get_model_icon("Unknown"), ICON_CLAUDE_DEFAULT);
+        assert_eq!(get_model_icon("Unknown"), "");
     }
 
     #[test]

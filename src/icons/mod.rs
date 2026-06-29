@@ -34,7 +34,7 @@ pub fn get_model_icon(model_name: &str) -> &'static str {
         name if name.contains("opus") => ICON_OPUS,
         name if name.contains("sonnet") => ICON_SONNET,
         name if name.contains("haiku") => ICON_HAIKU,
-        _ => ICON_CLAUDE_DEFAULT,
+        _ => "",
     }
 }
 
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(get_model_icon("haiku"), ICON_HAIKU);
         assert_eq!(get_model_icon("Claude-3-Haiku"), ICON_HAIKU);
 
-        assert_eq!(get_model_icon("Unknown"), ICON_CLAUDE_DEFAULT);
-        assert_eq!(get_model_icon("GPT-4"), ICON_CLAUDE_DEFAULT);
+        assert_eq!(get_model_icon("Unknown"), "");
+        assert_eq!(get_model_icon("GPT-4"), "");
     }
 }
