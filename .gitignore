@@ -2,6 +2,7 @@
 target
 build
 .claude/settings.local.json
+.factory/settings.local.json
 
 # Logs
 logs
